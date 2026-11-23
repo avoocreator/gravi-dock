@@ -1,0 +1,13 @@
+[package]
+name = "island"
+version = "0.5.0"
+edition = "2021"
+description = "Antigravity Island (Rust): dynamic island vertikal di tepi kanan layar Windows."
+build = "build.rs"
+
+[dependencies]
+island-core = { path = "../core" }
+slint = { version = "1.8", default-features = false, features = ["std", "backend-winit", "renderer-femtovg", "compat-1-2"] }
+
+[build-dependencies]
+slint-build = "1.8"
