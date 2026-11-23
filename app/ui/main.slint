@@ -554,6 +554,7 @@ export component MainWindow inherits Window {
     callback gh-open();
     callback cal-open();
     callback session-action(int);
+    callback play-sfx();
 
     out property <length> hit-x: island.x;
     out property <length> hit-y: island.y;
@@ -668,7 +669,7 @@ export component MainWindow inherits Window {
                     background: Theme.chip;
                     HorizontalLayout {
                         padding-left: 4px; padding-right: 4px;
-                        for t[i] in root.tabs: TabBtn { text: t; on: root.tab == i; clicked => { root.tab = i; } }
+                        for t[i] in root.tabs: TabBtn { text: t; on: root.tab == i; clicked => { root.tab = i; root.play-sfx(); } }
                     }
                 }
 

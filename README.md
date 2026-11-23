@@ -35,7 +35,7 @@ cargo test -p island-core
 cargo build --release
 ```
 
-Hasil biner mandiri `.exe` berada di `target/release/island.exe`.
+Hasil biner mandiri `.exe` berada di `target/release/gravi-dock.exe`.
 
 ---
 

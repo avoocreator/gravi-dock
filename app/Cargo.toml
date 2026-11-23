@@ -1,9 +1,13 @@
 [package]
-name = "island"
+name = "gravi-dock"
 version = "0.5.0"
 edition = "2021"
 description = "Gravi Dock: Multi-dock Dynamic Island & AI companion for Windows (Rust + Slint)."
 build = "build.rs"
+
+[[bin]]
+name = "gravi-dock"
+path = "src/main.rs"
 
 [dependencies]
 island-core = { path = "../core" }

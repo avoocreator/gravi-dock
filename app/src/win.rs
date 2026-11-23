@@ -142,6 +142,9 @@ pub mod api {
     pub fn play_wav(path: &str) {
         unsafe { if path.is_empty() { PlaySoundW(wide("SystemExclamation").as_ptr(), std::ptr::null_mut(), 0x10000 | 1); } else { PlaySoundW(wide(path).as_ptr(), std::ptr::null_mut(), 0x20000 | 1); } }
     }
+    pub fn play_click() {
+        unsafe { PlaySoundW(wide("SystemAsterisk").as_ptr(), std::ptr::null_mut(), 0x10000 | 1); }
+    }
     pub fn uptime_str() -> String {
         let s = unsafe { GetTickCount64() / 1000 };
         let h = s / 3600;
@@ -310,6 +313,7 @@ pub mod api {
     pub fn proc_cpu(n: &[&str]) -> Vec<u64> { vec![0; n.len()] }
     pub fn shell_open(_: &str) {}
     pub fn play_wav(_: &str) {}
+    pub fn play_click() {}
     pub fn clip_seq() -> u32 { 0 }
     pub fn clip_get() -> Option<String> { None }
     pub fn clip_set(_: &str) {}

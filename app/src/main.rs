@@ -367,6 +367,14 @@ fn main() {
             }
         }
     });
+    ui.on_play_sfx({
+        let cfg = cfg.clone();
+        move || {
+            if cfg.lock().unwrap().sfx {
+                win::api::play_click();
+            }
+        }
+    });
 
     // ---- timer 1 dtk ----
     let last_cpu = Rc::new(Cell::new(win::api::cpu_times()));

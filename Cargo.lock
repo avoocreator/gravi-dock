@@ -1423,6 +1423,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "gravi-dock"
+version = "0.5.0"
+dependencies = [
+ "island-core",
+ "slint",
+ "slint-build",
+]
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2071,15 +2080,6 @@ dependencies = [
  "hermit-abi 0.3.9",
  "libc",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "island"
-version = "0.5.0"
-dependencies = [
- "island-core",
- "slint",
- "slint-build",
 ]
 
 [[package]]
