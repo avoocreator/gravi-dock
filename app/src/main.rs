@@ -267,6 +267,30 @@ fn main() {
     });
     ui.on_focus_pause({ let f = focus.clone(); move || f.borrow_mut().toggle_pause(ses::now_ms() / 1000) });
     ui.on_focus_stop({ let f = focus.clone(); move || f.borrow_mut().stop() });
+    let sw_running = Rc::new(Cell::new(false));
+    let sw_secs = Rc::new(Cell::new(0u64));
+    ui.on_sw_toggle({
+        let sw_running = sw_running.clone();
+        let ui = ui.as_weak();
+        move || {
+            let r = !sw_running.get();
+            sw_running.set(r);
+            if let Some(u) = ui.upgrade() { u.set_sw_running(r); }
+        }
+    });
+    ui.on_sw_reset({
+        let sw_running = sw_running.clone();
+        let sw_secs = sw_secs.clone();
+        let ui = ui.as_weak();
+        move || {
+            sw_running.set(false);
+            sw_secs.set(0);
+            if let Some(u) = ui.upgrade() {
+                u.set_sw_running(false);
+                u.set_sw_label("00:00".into());
+            }
+        }
+    });
     ui.on_copy_clip({ let c = clips.clone(); move |i| { if let Some(t) = c.borrow().get(i as usize) { win::api::clip_set(t); } } });
     ui.on_query_changed({
         let ui = ui.as_weak(); let apps = apps.clone(); let targets = targets.clone();
@@ -317,6 +341,7 @@ fn main() {
     let last_cpu = Rc::new(Cell::new(win::api::cpu_times()));
     let last_clip = Rc::new(Cell::new(win::api::clip_seq()));
     let last_adzan = Rc::new(Cell::new(-1i64));
+    let cpu_hist = Rc::new(RefCell::new(Vec::<f32>::new()));
     // heuristik CPU untuk ChatGPT / Claude Desktop (tanpa berkas sesi): [chatgpt, claude]
     let cpu_prev: Rc<RefCell<(i64, Vec<u64>)>> = Rc::new(RefCell::new((ses::now_ms(), win::api::proc_cpu(&["chatgpt.exe", "claude.exe"]))));
     let busy: Rc<RefCell<[(u8, u8, bool); 2]>> = Rc::new(RefCell::new([(0, 0, false); 2])); // (sibuk, tenang, aktif)
@@ -325,6 +350,7 @@ fn main() {
         let ui = ui.as_weak(); let cfg = cfg.clone(); let shared = shared.clone(); let extra = extra.clone();
         let focus = focus.clone(); let clips = clips.clone(); let cpu_prev = cpu_prev.clone(); let busy = busy.clone();
         let (media, media_idle, ctx_cell, hover_now, done_at, click_at, last_adzan) = (media.clone(), media_idle.clone(), ctx_cell.clone(), hover_now.clone(), done_at.clone(), click_at.clone(), last_adzan.clone());
+        let (sw_running, sw_secs, cpu_hist) = (sw_running.clone(), sw_secs.clone(), cpu_hist.clone());
         t1.start(TimerMode::Repeated, Duration::from_secs(1), move || {
             let Some(ui) = ui.upgrade() else { return };
             let n = win::api::now();
@@ -359,6 +385,32 @@ fn main() {
             ui.set_cpu(cpu); ui.set_cpu_text(format!("{:.0}%", cpu * 100.0).into());
             let (m, used, total) = win::api::mem();
             ui.set_mem(m); ui.set_mem_text(format!("{:.1}/{:.0} GB", used, total).into());
+            ui.set_uptime(win::api::uptime_str().into());
+
+            // cpu sparkline
+            {
+                let mut hist = cpu_hist.borrow_mut();
+                hist.push(cpu);
+                if hist.len() > 10 { hist.remove(0); }
+                let n = hist.len();
+                if n > 1 {
+                    let mut cmd = String::new();
+                    for (i, &v) in hist.iter().enumerate() {
+                        let x = (i as f32 * 58.0 / (n - 1) as f32) as i32;
+                        let y = (27.0 - (v.clamp(0.0, 1.0) * 23.0)) as i32;
+                        if i == 0 { cmd.push_str(&format!("M {} {} ", x, y)); }
+                        else { cmd.push_str(&format!("L {} {} ", x, y)); }
+                    }
+                    ui.set_cpu_sparkline(cmd.into());
+                }
+            }
+
+            // stopwatch
+            if sw_running.get() {
+                let s = sw_secs.get() + 1;
+                sw_secs.set(s);
+                ui.set_sw_label(format!("{:02}:{:02}", s / 60, s % 60).into());
+            }
 
             // cuaca + agenda
             {
@@ -473,6 +525,7 @@ fn main() {
         t2.start(TimerMode::Repeated, Duration::from_millis(40), move || {
             let Some(ui) = ui.upgrade() else { return };
             tick.set(tick.get() + 1);
+            ui.set_wave_tick(tick.get() as i32);
             let mut toggle = want_toggle.swap(false, Ordering::SeqCst);
             if tick.get() % 10 == 0 && signal.exists() { let _ = std::fs::remove_file(&signal); toggle = true; }
             if tick.get() % 250 == 0 { place(); win::api::topmost(hwnd.get()); }

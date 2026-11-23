@@ -397,6 +397,29 @@ component Ring inherits Rectangle {
     Text { text: root.value; color: Theme.fg; font-size: 13px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
 }
 
+component WaveformBar inherits Rectangle {
+    in property <length> h: 8px;
+    in property <color> tint: Theme.cyan;
+    width: 3.5px;
+    height: root.h;
+    border-radius: 1.75px;
+    background: root.tint;
+    animate height { duration: 160ms; easing: ease-in-out; }
+}
+
+component AudioWaveform inherits HorizontalLayout {
+    in property <bool> playing: false;
+    in property <int> tick: 0;
+    in property <color> tint: Theme.cyan;
+    spacing: 3px;
+    alignment: center;
+    WaveformBar { h: root.playing ? (sin(root.tick * 32deg) * 8px + 12px) : 4px; tint: root.tint; }
+    WaveformBar { h: root.playing ? (cos(root.tick * 42deg) * 10px + 14px) : 6px; tint: root.tint; }
+    WaveformBar { h: root.playing ? (sin(root.tick * 55deg + 25deg) * 12px + 15px) : 4px; tint: root.tint; }
+    WaveformBar { h: root.playing ? (cos(root.tick * 38deg + 50deg) * 9px + 13px) : 7px; tint: root.tint; }
+    WaveformBar { h: root.playing ? (sin(root.tick * 48deg + 80deg) * 11px + 14px) : 5px; tint: root.tint; }
+}
+
 component SessionRow inherits Tile {
     in property <SessionItem> item;
     in property <bool> breathe;
@@ -476,6 +499,9 @@ export component MainWindow inherits Window {
     in property <string> prayer-time;
     in property <string> prayer-left;
     in property <string> cpu-text;
+    in property <string> cpu-sparkline: "";
+    in property <string> uptime: "0m";
+    in property <int> wave-tick: 0;
     in property <string> mem-text;
     in property <float> cpu;
     in property <float> mem;
@@ -487,6 +513,11 @@ export component MainWindow inherits Window {
     in property <string> focus-phase: "Siap";
     in property <bool> focus-running;
     in property <int> focus-done;
+    in-out property <int> focus-mode: 0; // 0 Pomodoro, 1 Stopwatch
+    in property <string> sw-label: "00:00";
+    in property <bool> sw-running: false;
+    callback sw-toggle();
+    callback sw-reset();
     in property <[string]> clips;
     in property <[LaunchItem]> results;
     in-out property <bool> hover-open;
@@ -674,19 +705,33 @@ export component MainWindow inherits Window {
                         HorizontalLayout {
                             spacing: 8px;
                             Tile {
-                                height: 86px;
-                                HorizontalLayout {
-                                    padding: 14px; spacing: 12px;
-                                    Rectangle { width: 58px; Ring { y: (parent.height - self.height) / 2; p: root.cpu; tint: Theme.cyan; value: root.cpu-text; } }
-                                    VerticalLayout { alignment: center; spacing: 2px; Cap { text: "CPU"; } Text { text: "prosesor"; color: Theme.mut; font-size: 11px; } }
+                                height: 96px;
+                                VerticalLayout {
+                                    padding: 12px; spacing: 4px;
+                                    HorizontalLayout {
+                                        Cap { text: "CPU"; }
+                                        Text { text: root.cpu-text; color: Theme.cyan; font-size: 13px; font-weight: 700; horizontal-alignment: right; }
+                                    }
+                                    Path {
+                                        width: 100%; height: 32px;
+                                        viewbox-x: 0; viewbox-y: 0; viewbox-width: 58; viewbox-height: 30;
+                                        commands: root.cpu-sparkline != "" ? root.cpu-sparkline : "M 0 25 L 15 20 L 30 22 L 45 15 L 58 10";
+                                        stroke: Theme.cyan; stroke-width: 2.4px; fill: transparent;
+                                    }
+                                    Text { text: "Uptime: " + root.uptime; color: Theme.mut2; font-size: 10px; }
                                 }
                             }
                             Tile {
-                                height: 86px;
+                                height: 96px;
                                 HorizontalLayout {
-                                    padding: 14px; spacing: 12px;
-                                    Rectangle { width: 58px; Ring { y: (parent.height - self.height) / 2; p: root.mem; tint: #9b8cff; value: Math.round(root.mem * 100) + "%"; } }
-                                    VerticalLayout { alignment: center; spacing: 2px; Cap { text: "RAM"; } Text { text: root.mem-text; color: Theme.mut; font-size: 11px; overflow: elide; } }
+                                    padding: 12px; spacing: 10px;
+                                    Rectangle { width: 56px; Ring { y: (parent.height - self.height) / 2; p: root.mem; tint: #9b8cff; value: Math.round(root.mem * 100) + "%"; } }
+                                    VerticalLayout {
+                                        alignment: center; spacing: 2px;
+                                        Cap { text: "RAM"; }
+                                        Text { text: root.mem-text; color: Theme.fg; font-size: 12px; font-weight: 700; overflow: elide; }
+                                        Text { text: "20 GB LOQ"; color: Theme.mut2; font-size: 10px; }
+                                    }
                                 }
                             }
                         }
@@ -732,7 +777,13 @@ export component MainWindow inherits Window {
                             Rectangle {
                                 width: 64px; height: 64px; border-radius: 14px;
                                 background: @linear-gradient(135deg, Theme.cyan 0%, #9b8cff 100%);
-                                Text { text: "♪"; color: #00000099; font-size: 30px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                                if !root.media-playing: Text { text: "♪"; color: #00000099; font-size: 30px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                                if root.media-playing: AudioWaveform {
+                                    y: (parent.height - self.height) / 2;
+                                    playing: root.media-playing;
+                                    tick: root.wave-tick;
+                                    tint: #000000bb;
+                                }
                             }
                             VerticalLayout {
                                 alignment: center; spacing: 3px;
@@ -749,22 +800,59 @@ export component MainWindow inherits Window {
                     }
                 }
 
-                // ---------- Fokus ----------
+                // ---------- Fokus & Stopwatch ----------
                 if root.tab == 3: VerticalLayout {
-                    spacing: 14px;
+                    spacing: 12px;
                     alignment: start;
-                    Tile {
-                        height: 150px;
-                        VerticalLayout {
-                            alignment: center; spacing: 4px;
-                            Text { text: root.focus-label; color: Theme.fg; font-size: 60px; font-weight: 600; horizontal-alignment: center; }
-                            Text { text: root.focus-phase + "  ·  " + root.focus-done + " sesi selesai"; color: Theme.mut; font-size: 12px; horizontal-alignment: center; }
+                    Rectangle {
+                        height: 32px; border-radius: 16px; background: Theme.chip;
+                        HorizontalLayout {
+                            padding-left: 4px; padding-right: 4px;
+                            for m[i] in ["Pomodoro", "Stopwatch"]: Rectangle {
+                                width: (parent.width - 8px) / 2;
+                                height: 26px; y: 3px; border-radius: 13px;
+                                background: root.focus-mode == i ? Theme.surface : #00000000;
+                                Text {
+                                    text: m;
+                                    color: root.focus-mode == i ? Theme.fg : Theme.mut2;
+                                    font-size: 11px; font-weight: 700;
+                                    horizontal-alignment: center; vertical-alignment: center;
+                                }
+                                TouchArea { clicked => { root.focus-mode = i; } }
+                            }
                         }
                     }
-                    HorizontalLayout {
-                        alignment: center; spacing: 14px;
-                        IconBtn { glyph: "↺"; clicked => { root.focus-stop(); } }
-                        IconBtn { glyph: root.focus-running ? "⏸" : "▶"; primary: true; tint: Theme.amber; width: 56px; height: 56px; border-radius: 28px; clicked => { if root.focus-running { root.focus-pause(); } else { root.focus-start(); } } }
+                    if root.focus-mode == 0: VerticalLayout {
+                        spacing: 14px;
+                        Tile {
+                            height: 140px;
+                            VerticalLayout {
+                                alignment: center; spacing: 4px;
+                                Text { text: root.focus-label; color: Theme.fg; font-size: 58px; font-weight: 600; horizontal-alignment: center; }
+                                Text { text: root.focus-phase + "  ·  " + root.focus-done + " sesi selesai"; color: Theme.mut; font-size: 12px; horizontal-alignment: center; }
+                            }
+                        }
+                        HorizontalLayout {
+                            alignment: center; spacing: 14px;
+                            IconBtn { glyph: "↺"; clicked => { root.focus-stop(); } }
+                            IconBtn { glyph: root.focus-running ? "⏸" : "▶"; primary: true; tint: Theme.amber; width: 56px; height: 56px; border-radius: 28px; clicked => { if root.focus-running { root.focus-pause(); } else { root.focus-start(); } } }
+                        }
+                    }
+                    if root.focus-mode == 1: VerticalLayout {
+                        spacing: 14px;
+                        Tile {
+                            height: 140px;
+                            VerticalLayout {
+                                alignment: center; spacing: 4px;
+                                Text { text: root.sw-label; color: Theme.fg; font-size: 58px; font-weight: 600; horizontal-alignment: center; }
+                                Text { text: "Stopwatch Presisi"; color: Theme.cyan; font-size: 12px; horizontal-alignment: center; }
+                            }
+                        }
+                        HorizontalLayout {
+                            alignment: center; spacing: 14px;
+                            IconBtn { glyph: "↺"; clicked => { root.sw-reset(); } }
+                            IconBtn { glyph: root.sw-running ? "⏸" : "▶"; primary: true; tint: Theme.cyan; width: 56px; height: 56px; border-radius: 28px; clicked => { root.sw-toggle(); } }
+                        }
                     }
                 }
 

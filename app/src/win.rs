@@ -57,6 +57,7 @@ mod sys {
     #[link(name = "kernel32")]
     extern "system" {
         pub fn CreateMutexW(a: *mut c_void, own: i32, name: *const u16) -> *mut c_void;
+        pub fn GetTickCount64() -> u64;
         pub fn GetLastError() -> u32;
         pub fn GetLocalTime(t: *mut SYSTEMTIME);
         pub fn GetTimeZoneInformation(t: *mut TZI) -> u32;
@@ -139,6 +140,12 @@ pub mod api {
     pub fn shell_open(target: &str) { unsafe { ShellExecuteW(std::ptr::null_mut(), wide("open").as_ptr(), wide(target).as_ptr(), std::ptr::null(), std::ptr::null(), 1); } }
     pub fn play_wav(path: &str) {
         unsafe { if path.is_empty() { PlaySoundW(wide("SystemExclamation").as_ptr(), std::ptr::null_mut(), 0x10000 | 1); } else { PlaySoundW(wide(path).as_ptr(), std::ptr::null_mut(), 0x20000 | 1); } }
+    }
+    pub fn uptime_str() -> String {
+        let s = unsafe { GetTickCount64() / 1000 };
+        let h = s / 3600;
+        let m = (s % 3600) / 60;
+        if h > 0 { format!("{}j {}m", h, m) } else { format!("{}m", m) }
     }
     pub fn shell_open_args(file: &str, args: &str) { unsafe { ShellExecuteW(std::ptr::null_mut(), wide("open").as_ptr(), wide(file).as_ptr(), wide(args).as_ptr(), std::ptr::null(), 1); } }
     pub fn clip_seq() -> u32 { unsafe { GetClipboardSequenceNumber() } }
@@ -298,4 +305,5 @@ pub mod api {
     pub fn tz_hours() -> f64 { 7.0 }
     pub fn cpu_times() -> (u64, u64) { (0, 1) }
     pub fn mem() -> (f32, f32, f32) { (0.0, 0.0, 0.0) }
+    pub fn uptime_str() -> String { "1j 30m".into() }
 }
