@@ -42,6 +42,7 @@ mod sys {
         pub fn EmptyClipboard() -> i32;
         pub fn GetClipboardData(f: u32) -> *mut c_void;
         pub fn SetClipboardData(f: u32, h: *mut c_void) -> *mut c_void;
+        pub fn keybd_event(bVk: u8, bScan: u8, dwFlags: u32, dwExtraInfo: usize);
     }
     #[repr(C)] pub struct WNDCLASSW { pub style: u32, pub proc_: unsafe extern "system" fn(HWND, u32, usize, isize) -> isize, pub cls_extra: i32, pub wnd_extra: i32, pub inst: *mut c_void, pub icon: *mut c_void, pub cursor: *mut c_void, pub bg: *mut c_void, pub menu: *const u16, pub class: *const u16 }
     #[repr(C)] pub struct NID { pub size: u32, pub hwnd: HWND, pub id: u32, pub flags: u32, pub cb: u32, pub icon: *mut c_void, pub tip: [u16; 128], pub state: u32, pub smask: u32, pub info: [u16; 256], pub ver: u32, pub title: [u16; 64], pub iflags: u32, pub guid: [u8; 16], pub bicon: *mut c_void }
@@ -146,6 +147,17 @@ pub mod api {
         let h = s / 3600;
         let m = (s % 3600) / 60;
         if h > 0 { format!("{}j {}m", h, m) } else { format!("{}m", m) }
+    }
+    /// Tekan tombol 'y' lalu Enter pada jendela aktif untuk menyetujui izin aksi AI.
+    pub fn send_action_confirm() {
+        unsafe {
+            // 'y' keydown & keyup
+            keybd_event(0x59, 0, 0, 0);
+            keybd_event(0x59, 0, 2, 0);
+            // Enter keydown & keyup
+            keybd_event(0x0D, 0, 0, 0);
+            keybd_event(0x0D, 0, 2, 0);
+        }
     }
     pub fn shell_open_args(file: &str, args: &str) { unsafe { ShellExecuteW(std::ptr::null_mut(), wide("open").as_ptr(), wide(file).as_ptr(), wide(args).as_ptr(), std::ptr::null(), 1); } }
     pub fn clip_seq() -> u32 { unsafe { GetClipboardSequenceNumber() } }
@@ -306,4 +318,5 @@ pub mod api {
     pub fn cpu_times() -> (u64, u64) { (0, 1) }
     pub fn mem() -> (f32, f32, f32) { (0.0, 0.0, 0.0) }
     pub fn uptime_str() -> String { "1j 30m".into() }
+    pub fn send_action_confirm() {}
 }

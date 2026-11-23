@@ -8,3 +8,4 @@ pub mod settings;
 pub mod focus;
 pub mod weather;
 pub mod mood;
+pub mod github;

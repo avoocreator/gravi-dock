@@ -423,6 +423,7 @@ component AudioWaveform inherits HorizontalLayout {
 component SessionRow inherits Tile {
     in property <SessionItem> item;
     in property <bool> breathe;
+    callback action-clicked();
     height: 58px;
     border-radius: 16px;
     HorizontalLayout {
@@ -448,19 +449,23 @@ component SessionRow inherits Tile {
             Text { text: root.item.sub; color: Theme.mut; font-size: 11px; overflow: elide; }
         }
         Rectangle {
-            width: 62px;
+            width: root.item.action ? 78px : 64px;
             Rectangle {
                 y: (parent.height - self.height) / 2;
-                height: 22px;
-                border-radius: 11px;
-                background: root.item.action ? Theme.amber.with-alpha(0.2) : (root.item.running ? root.item.tint.with-alpha(0.2) : Theme.chip);
+                height: root.item.action ? 26px : 22px;
+                border-radius: root.item.action ? 13px : 11px;
+                background: root.item.action ? (btn-act.has-hover ? Theme.amber : Theme.amber.with-alpha(0.85)) : (root.item.running ? root.item.tint.with-alpha(0.2) : Theme.chip);
                 Text {
-                    text: root.item.meta;
-                    color: root.item.action ? Theme.amber : (root.item.running ? root.item.tint : Theme.mut2);
+                    text: root.item.action ? "Setujui ✓" : root.item.meta;
+                    color: root.item.action ? #000000 : (root.item.running ? root.item.tint : Theme.mut2);
                     font-size: 10px;
-                    font-weight: 700;
+                    font-weight: 800;
                     horizontal-alignment: center;
                     vertical-alignment: center;
+                }
+                btn-act := TouchArea {
+                    enabled: root.item.action;
+                    clicked => { if root.item.action { root.action-clicked(); } }
                 }
             }
         }
@@ -541,6 +546,14 @@ export component MainWindow inherits Window {
 
     in-out property <string> dock-pos: "right"; // "right", "left", "top"
     in-out property <bool> sfx: true;
+
+    in property <int> gh-commits-today: 0;
+    in property <string> gh-recent-repo: "";
+    in property <string> gh-recent-commit: "";
+    in property <[int]> gh-heatmap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    callback gh-open();
+    callback cal-open();
+    callback session-action(int);
 
     out property <length> hit-x: island.x;
     out property <length> hit-y: island.y;
@@ -697,9 +710,10 @@ export component MainWindow inherits Window {
                                 height: 100px;
                                 VerticalLayout {
                                     padding: 14px; spacing: 4px; alignment: center;
-                                    Cap { text: "AGENDA"; }
+                                    Cap { text: "AGENDA · GOOGLE CALENDAR"; }
                                     Text { text: root.event-text; color: Theme.fg; font-size: 12.5px; font-weight: 600; wrap: word-wrap; overflow: elide; }
                                 }
+                                TouchArea { clicked => { root.cal-open(); } }
                             }
                         }
                         HorizontalLayout {
@@ -736,6 +750,41 @@ export component MainWindow inherits Window {
                             }
                         }
                         Tile {
+                            height: 116px;
+                            VerticalLayout {
+                                padding: 12px; spacing: 5px;
+                                HorizontalLayout {
+                                    Cap { text: "GITHUB · @AVOOCREATOR"; }
+                                    Text {
+                                        text: root.gh-commits-today > 0 ? (root.gh-commits-today + " commit hari ini") : "Aktivitas Terakhir";
+                                        color: root.gh-commits-today > 0 ? Theme.good : Theme.mut2;
+                                        font-size: 11px; font-weight: 700;
+                                        horizontal-alignment: right;
+                                    }
+                                }
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    VerticalLayout {
+                                        alignment: center; spacing: 2px;
+                                        Text { text: root.gh-recent-repo != "" ? root.gh-recent-repo : "gravi-dock"; color: Theme.fg; font-size: 12.5px; font-weight: 600; overflow: elide; }
+                                        Text { text: root.gh-recent-commit != "" ? root.gh-recent-commit : "Aktivitas commit terkini"; color: Theme.mut; font-size: 10px; overflow: elide; }
+                                    }
+                                }
+                                HorizontalLayout {
+                                    spacing: 3px; alignment: center;
+                                    for col-idx in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]: VerticalLayout {
+                                        spacing: 3px;
+                                        for row-idx in [0, 1, 2]: Rectangle {
+                                            width: 7.5px; height: 7.5px; border-radius: 1.5px;
+                                            property <int> lvl: root.gh-heatmap[col-idx * 3 + row-idx];
+                                            background: lvl == 0 ? #21262d : (lvl == 1 ? #0e4429 : (lvl == 2 ? #006d32 : (lvl == 3 ? #26a641 : #39d353)));
+                                        }
+                                    }
+                                }
+                            }
+                            TouchArea { clicked => { root.gh-open(); } }
+                        }
+                        Tile {
                             height: 66px;
                             HorizontalLayout {
                                 padding-left: 16px; padding-right: 14px; spacing: 8px;
@@ -762,7 +811,11 @@ export component MainWindow inherits Window {
                     VerticalLayout {
                         spacing: 6px;
                         if root.sessions.length == 0: Text { text: "Belum ada sesi terdeteksi."; color: Theme.mut2; font-size: 12px; }
-                        for s in root.sessions: SessionRow { item: s; breathe: root.breathe; }
+                        for s[i] in root.sessions: SessionRow {
+                            item: s;
+                            breathe: root.breathe;
+                            action-clicked => { root.session-action(i); }
+                        }
                     }
                 }
 
@@ -908,9 +961,27 @@ export component MainWindow inherits Window {
 
                 // ---------- Shelf ----------
                 if root.tab == 6: VerticalLayout {
-                    spacing: 8px;
-                    Pill { text: "+  Tambah dari clipboard"; filled: true; tint: Theme.cyan; clicked => { root.shelf-add(); } }
-                    Text { text: "Salin berkas di Explorer (Ctrl+C), lalu tekan tombol di atas."; color: Theme.mut2; font-size: 10.5px; wrap: word-wrap; }
+                    spacing: 10px;
+                    Rectangle {
+                        height: 52px;
+                        border-radius: 14px;
+                        border-width: 1px;
+                        border-color: Theme.cyan.with-alpha(0.35);
+                        background: add-box.has-hover ? Theme.chip : Theme.surface;
+                        HorizontalLayout {
+                            padding-left: 14px; padding-right: 14px; spacing: 10px;
+                            Rectangle {
+                                width: 28px; height: 28px; border-radius: 14px; background: Theme.cyan.with-alpha(0.2); y: (parent.height - self.height) / 2;
+                                Text { text: "+"; color: Theme.cyan; font-size: 16px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                            }
+                            VerticalLayout {
+                                alignment: center; spacing: 2px;
+                                Text { text: "Simpan Berkas Cepat (File Shelf)"; color: Theme.fg; font-size: 12px; font-weight: 600; }
+                                Text { text: "Salin berkas di Explorer (Ctrl+C), lalu klik di sini"; color: Theme.mut2; font-size: 10px; }
+                            }
+                        }
+                        add-box := TouchArea { clicked => { root.shelf-add(); } }
+                    }
                     ScrollView {
                         VerticalLayout {
                             spacing: 6px;

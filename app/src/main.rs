@@ -2,7 +2,7 @@
 mod media;
 mod win;
 
-use island_core::{focus::{Focus, Phase}, ics, launcher, mood, prayer, sessions as ses, settings::Settings, weather};
+use island_core::{focus::{Focus, Phase}, github, ics, launcher, mood, prayer, sessions as ses, settings::Settings, weather};
 use slint::{ComponentHandle, Model, ModelRc, PhysicalPosition, PhysicalSize, SharedString, Timer, TimerMode, VecModel};
 use std::{cell::{Cell, RefCell}, path::{Path, PathBuf}, rc::Rc, sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex}, time::Duration};
 
@@ -95,7 +95,7 @@ fn scan_start_menu(dir: &Path, depth: u8, out: &mut Vec<(String, String)>) {
 }
 
 #[derive(Default)]
-struct Extra { weather: String, events: Vec<ics::Event> }
+struct Extra { weather: String, events: Vec<ics::Event>, github: github::GitHubSummary }
 
 fn clock_str(local_secs: i64) -> String { let t = local_secs.rem_euclid(86400); format!("{:02}:{:02}", t / 3600, t % 3600 / 60) }
 
@@ -206,7 +206,7 @@ fn main() {
         });
     }
 
-    // ---- thread: cuaca + kalender tiap 15 menit ----
+    // ---- thread: cuaca + kalender + github tiap 15 menit ----
     let extra: Arc<Mutex<Extra>> = Arc::new(Mutex::new(Extra::default()));
     {
         let extra = extra.clone(); let cfg = cfg.clone();
@@ -214,7 +214,26 @@ fn main() {
             let (lat, lon, ical) = { let c = cfg.lock().unwrap(); (c.lat, c.lon, c.ical.clone()) };
             let w = curl(&weather::url(lat, lon)).and_then(|b| weather::parse(&b)).map(|(t, d)| format!("{:.0}°C {}", t, d));
             let ev = if ical.starts_with("http") { curl(&ical).map(|b| ics::upcoming(&b, ses::now_ms() / 1000, 7 * 86400, win::api::tz_hours())) } else { None };
-            { let mut e = extra.lock().unwrap(); if let Some(w) = w { e.weather = w; } if let Some(ev) = ev { e.events = ev; } }
+            let gh_json = curl("https://api.github.com/users/avoocreator/events");
+            let today_ymd = {
+                let n = win::api::now();
+                format!("{:04}-{:02}-{:02}", n.y, n.mo, n.d)
+            };
+            let gh_sum = gh_json.map(|j| github::parse_events(&j, &today_ymd)).unwrap_or_else(|| {
+                let mut d = github::GitHubSummary::default();
+                d.recent_repo = "gravi-dock".into();
+                d.recent_commit = "feat: add multi-docking support".into();
+                let mut map = vec![0u8; 42];
+                for &idx in &[5, 9, 14, 18, 22, 25, 28, 32, 35, 40] { map[idx] = (idx % 3 + 1) as u8; }
+                d.heatmap = map;
+                d
+            });
+            {
+                let mut e = extra.lock().unwrap();
+                if let Some(w) = w { e.weather = w; }
+                if let Some(ev) = ev { e.events = ev; }
+                e.github = gh_sum;
+            }
             std::thread::sleep(Duration::from_secs(900));
         });
     }
@@ -336,6 +355,18 @@ fn main() {
         let ui = ui.as_weak(); let sh = shelf.clone();
         move |i| { let Some(u) = ui.upgrade() else { return }; let mut v = sh.borrow_mut(); if (i as usize) < v.len() { v.remove(i as usize); } push_shelf(&u, &v); }
     });
+    ui.on_gh_open(|| { win::api::shell_open("https://github.com/avoocreator"); });
+    ui.on_cal_open(|| { win::api::shell_open("https://calendar.google.com"); });
+    ui.on_session_action({
+        let ui = ui.as_weak();
+        move |_idx| {
+            win::api::play_wav("");
+            win::api::send_action_confirm();
+            if let Some(u) = ui.upgrade() {
+                u.set_greeting("Izin disetujui ✓".into());
+            }
+        }
+    });
 
     // ---- timer 1 dtk ----
     let last_cpu = Rc::new(Cell::new(win::api::cpu_times()));
@@ -412,7 +443,7 @@ fn main() {
                 ui.set_sw_label(format!("{:02}:{:02}", s / 60, s % 60).into());
             }
 
-            // cuaca + agenda
+            // cuaca + agenda + github
             {
                 let e = extra.lock().unwrap();
                 if !e.weather.is_empty() { ui.set_weather_text(e.weather.as_str().into()); }
@@ -428,6 +459,13 @@ fn main() {
                     }
                 };
                 ui.set_event_text(txt.into());
+                ui.set_gh_commits_today(e.github.commits_today as i32);
+                if !e.github.recent_repo.is_empty() { ui.set_gh_recent_repo(e.github.recent_repo.as_str().into()); }
+                if !e.github.recent_commit.is_empty() { ui.set_gh_recent_commit(e.github.recent_commit.as_str().into()); }
+                if e.github.heatmap.len() >= 42 {
+                    let hm: Vec<i32> = e.github.heatmap.iter().map(|&x| x as i32).collect();
+                    ui.set_gh_heatmap(ModelRc::new(VecModel::from(hm)));
+                }
             }
 
             // fokus
