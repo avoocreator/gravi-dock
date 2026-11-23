@@ -1,7 +1,18 @@
 import { ScrollView } from "std-widgets.slint";
 // Antigravity Island (Slint). Satu jendela transparan tetap di tepi kanan; yang beranimasi hanya ukuran "island" di dalamnya.
 
-export struct MoodView { eye-h: float, eye-dy: float, mouth: int, glyph: string, eye-color: color }
+export struct MoodView {
+    eye-h: float,
+    eye-w: float,
+    eye-dy: float,
+    eye-dx: float,
+    eye-shape: int,
+    mouth: int,
+    glyph: string,
+    glyph-type: int,
+    peek: bool,
+    eye-color: color,
+}
 
 export struct SessionItem {
     title: string,
@@ -29,58 +40,202 @@ export global Theme {
     out property <color> good: #34d399;
 }
 
-// Maskot "Gravi" (vektor) dengan 20 suasana hati lewat MoodView.
+// Maskot resmi Gravi Bot (vektor mecha) dengan telinga pelangi & 12 ekspresi halus.
 component Gravi inherits Rectangle {
     in property <length> size: 40px;
     in property <bool> blink: false;
-    in property <MoodView> mood: { eye-h: 1.0, eye-dy: 0.0, mouth: 0, glyph: "", eye-color: #5ae0ff };
+    in property <MoodView> mood: {
+        eye-h: 1.0, eye-w: 1.0, eye-dy: 0.0, eye-dx: 0.0,
+        eye-shape: 0, mouth: 0, glyph: "", glyph-type: 0, peek: false,
+        eye-color: #5ae0ff
+    };
     width: self.size;
-    height: self.size * 1.06;
-    property <length> u: self.size / 100;
-    property <length> eh: root.blink ? 2 * root.u : max(2.0, root.mood.eye-h * 11.0) * root.u;
-    property <length> ey: 14 * root.u - root.eh / 2 + root.mood.eye-dy * 3 * root.u;
+    height: self.size * 0.88;
 
+    property <length> u: self.size / 100;
+    property <length> eh: root.blink ? 2.5 * root.u : max(2.5 * root.u, root.mood.eye-h * 18.0 * root.u);
+    property <length> ew: max(4.0 * root.u, root.mood.eye-w * 9.0 * root.u);
+    property <length> m-y: 24 * root.u + root.mood.eye-dy * 5 * root.u - root.eh / 2;
+    property <length> lx: 18 * root.u + root.mood.eye-dx * 6 * root.u;
+    property <length> rx: 45 * root.u + root.mood.eye-dx * 6 * root.u;
+
+    // Telinga Kiri Luar (Mecha Hitam)
     Path {
-        width: parent.width; height: parent.height;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 100; viewbox-height: 106;
-        commands: "M 16 26 L 24 2 L 42 20 Z M 84 26 L 76 2 L 58 20 Z";
-        fill: #f0b54a;
+        x: 4 * root.u; y: 0; width: 34 * root.u; height: 36 * root.u;
+        viewbox-x: 0; viewbox-y: 0; viewbox-width: 34; viewbox-height: 36;
+        commands: "M 4 36 L 14 3 Q 18 0 22 5 L 34 36 Z";
+        fill: #14151c;
     }
+    // Telinga Kiri Dalam (Gradien Pelangi Dingin: Biru -> Cyan -> Hijau)
+    Path {
+        x: 8 * root.u; y: 5 * root.u; width: 24 * root.u; height: 28 * root.u;
+        viewbox-x: 0; viewbox-y: 0; viewbox-width: 24; viewbox-height: 28;
+        commands: "M 3 28 L 10 5 Q 13 2 16 6 L 23 28 Z";
+        fill: @linear-gradient(145deg, #1d4ed8 0%, #06b6d4 50%, #10b981 100%);
+    }
+
+    // Telinga Kanan Luar (Mecha Hitam)
+    Path {
+        x: 62 * root.u; y: 0; width: 34 * root.u; height: 36 * root.u;
+        viewbox-x: 0; viewbox-y: 0; viewbox-width: 34; viewbox-height: 36;
+        commands: "M 0 36 L 12 5 Q 16 0 20 3 L 30 36 Z";
+        fill: #14151c;
+    }
+    // Telinga Kanan Dalam (Gradien Pelangi Hangat: Merah -> Oranye -> Kuning)
+    Path {
+        x: 68 * root.u; y: 5 * root.u; width: 24 * root.u; height: 28 * root.u;
+        viewbox-x: 0; viewbox-y: 0; viewbox-width: 24; viewbox-height: 28;
+        commands: "M 1 28 L 8 6 Q 11 2 14 5 L 21 28 Z";
+        fill: @linear-gradient(215deg, #dc2626 0%, #ea580c 50%, #facc15 100%);
+    }
+
+    // Bodi Helm Utama (Putih Squircle 3D dengan Shading Lavender Halus)
     Rectangle {
-        x: 12 * root.u; y: 18 * root.u; width: 76 * root.u; height: 86 * root.u; border-radius: 38 * root.u;
-        background: @linear-gradient(180deg, #ffd978 0%, #e9a53a 100%);
+        x: 5 * root.u;
+        y: root.mood.peek ? 24 * root.u : 14 * root.u;
+        width: 90 * root.u;
+        height: 68 * root.u;
+        border-radius: 34 * root.u;
+        background: @linear-gradient(180deg, #ffffff 0%, #f2f4fb 70%, #d8dcee 100%);
+        border-width: 1.4px;
+        border-color: #d1d5e5;
+        clip: true;
+
+        // Bayangan lembut bawah helm
+        Rectangle {
+            x: 0; y: 56 * root.u; width: 100%; height: 12 * root.u;
+            background: @linear-gradient(180deg, #00000000 0%, #bcc2d655 100%);
+        }
+
+        // Visor Kaca Hitam
+        Rectangle {
+            x: 9 * root.u; y: 10 * root.u; width: 72 * root.u; height: 48 * root.u;
+            border-radius: 24 * root.u;
+            background: @linear-gradient(180deg, #151824 0%, #090b10 100%);
+            border-width: 1.2px;
+            border-color: #272c3d;
+            clip: true;
+
+            // Specular Gloss Kiri Atas Visor
+            Rectangle {
+                x: 6 * root.u; y: 5 * root.u; width: 22 * root.u; height: 10 * root.u;
+                border-radius: 5 * root.u;
+                background: @linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.04) 100%);
+            }
+
+            // === SEPASANG MATA VISOR DENGAN 12 EKSPRESI ===
+            // 0. Bentuk Kapsul Tegak (Idle, Working, Searching, Peek)
+            if root.mood.eye-shape == 0: Rectangle {
+                x: root.lx; y: root.m-y; width: root.ew; height: root.eh;
+                border-radius: root.ew / 2; background: root.mood.eye-color;
+                animate height { duration: 100ms; }
+            }
+            if root.mood.eye-shape == 0: Rectangle {
+                x: root.rx; y: root.m-y; width: root.ew; height: root.eh;
+                border-radius: root.ew / 2; background: root.mood.eye-color;
+                animate height { duration: 100ms; }
+            }
+
+            // 1. Bentuk Senyum ^^ (Happy, Success, Love, Music)
+            if root.mood.eye-shape == 1: Path {
+                x: root.lx - 2 * root.u; y: root.m-y; width: 14 * root.u; height: 12 * root.u;
+                viewbox-x: 0; viewbox-y: 0; viewbox-width: 14; viewbox-height: 12;
+                commands: "M 1 11 Q 7 1 13 11";
+                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
+            }
+            if root.mood.eye-shape == 1: Path {
+                x: root.rx - 2 * root.u; y: root.m-y; width: 14 * root.u; height: 12 * root.u;
+                viewbox-x: 0; viewbox-y: 0; viewbox-width: 14; viewbox-height: 12;
+                commands: "M 1 11 Q 7 1 13 11";
+                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
+            }
+
+            // 2. Bentuk Bulat Besar OO (Surprised / Alert)
+            if root.mood.eye-shape == 2: Rectangle {
+                x: root.lx - 2 * root.u; y: root.m-y - 1 * root.u;
+                width: 14 * root.u; height: 14 * root.u; border-radius: 7 * root.u;
+                background: root.mood.eye-color;
+            }
+            if root.mood.eye-shape == 2: Rectangle {
+                x: root.rx - 2 * root.u; y: root.m-y - 1 * root.u;
+                width: 14 * root.u; height: 14 * root.u; border-radius: 7 * root.u;
+                background: root.mood.eye-color;
+            }
+
+            // 3. Bentuk Tidur/Tenang -- (Sleepy, Sleeping, Prayer)
+            if root.mood.eye-shape == 3: Rectangle {
+                x: root.lx - 1 * root.u; y: 24 * root.u;
+                width: 12 * root.u; height: 3.2 * root.u; border-radius: 1.6 * root.u;
+                background: root.mood.eye-color;
+            }
+            if root.mood.eye-shape == 3: Rectangle {
+                x: root.rx - 1 * root.u; y: 24 * root.u;
+                width: 12 * root.u; height: 3.2 * root.u; border-radius: 1.6 * root.u;
+                background: root.mood.eye-color;
+            }
+
+            // 4. Bentuk Bingung / Confused (Asimetris: kiri kapsul, kanan strip)
+            if root.mood.eye-shape == 4: Rectangle {
+                x: root.lx; y: root.m-y; width: root.ew; height: root.eh;
+                border-radius: root.ew / 2; background: root.mood.eye-color;
+            }
+            if root.mood.eye-shape == 4: Rectangle {
+                x: root.rx; y: 24 * root.u; width: 12 * root.u; height: 3.2 * root.u;
+                border-radius: 1.6 * root.u; background: root.mood.eye-color;
+            }
+
+            // 5. Bentuk Sayu/Sedih (Sad)
+            if root.mood.eye-shape == 5: Path {
+                x: root.lx - 1 * root.u; y: root.m-y + 2 * root.u; width: 14 * root.u; height: 12 * root.u;
+                viewbox-x: 0; viewbox-y: 0; viewbox-width: 14; viewbox-height: 12;
+                commands: "M 1 2 Q 7 11 13 2";
+                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
+            }
+            if root.mood.eye-shape == 5: Path {
+                x: root.rx - 1 * root.u; y: root.m-y + 2 * root.u; width: 14 * root.u; height: 12 * root.u;
+                viewbox-x: 0; viewbox-y: 0; viewbox-width: 14; viewbox-height: 12;
+                commands: "M 1 2 Q 7 11 13 2";
+                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
+            }
+
+            // 6. Bentuk Menyipit Miring (Thinking / Focused)
+            if root.mood.eye-shape == 6: Path {
+                x: root.lx; y: root.m-y; width: 12 * root.u; height: 10 * root.u;
+                viewbox-x: 0; viewbox-y: 0; viewbox-width: 12; viewbox-height: 10;
+                commands: "M 1 2 L 11 9";
+                stroke: root.mood.eye-color; stroke-width: 3.5px; fill: transparent;
+            }
+            if root.mood.eye-shape == 6: Path {
+                x: root.rx; y: root.m-y; width: 12 * root.u; height: 10 * root.u;
+                viewbox-x: 0; viewbox-y: 0; viewbox-width: 12; viewbox-height: 10;
+                commands: "M 1 9 L 11 2";
+                stroke: root.mood.eye-color; stroke-width: 3.5px; fill: transparent;
+            }
+
+            // 7. Bentuk Miring Linglung (Error)
+            if root.mood.eye-shape == 7: Path {
+                x: root.lx; y: root.m-y; width: 12 * root.u; height: 12 * root.u;
+                viewbox-x: 0; viewbox-y: 0; viewbox-width: 12; viewbox-height: 12;
+                commands: "M 2 10 L 10 2";
+                stroke: root.mood.eye-color; stroke-width: 3.5px; fill: transparent;
+            }
+            if root.mood.eye-shape == 7: Path {
+                x: root.rx; y: root.m-y; width: 12 * root.u; height: 12 * root.u;
+                viewbox-x: 0; viewbox-y: 0; viewbox-width: 12; viewbox-height: 12;
+                commands: "M 2 2 L 10 10";
+                stroke: root.mood.eye-color; stroke-width: 3.5px; fill: transparent;
+            }
+        }
     }
-    Rectangle {
-        x: 21 * root.u; y: 42 * root.u; width: 58 * root.u; height: 32 * root.u; border-radius: 15 * root.u;
-        background: #11141b;
-        Rectangle { x: 14 * root.u; y: root.ey; width: 9 * root.u; height: root.eh; border-radius: 4 * root.u; background: root.mood.eye-color;
-            animate height { duration: 120ms; } }
-        Rectangle { x: 35 * root.u; y: root.ey; width: 9 * root.u; height: root.eh; border-radius: 4 * root.u; background: root.mood.eye-color;
-            animate height { duration: 120ms; } }
-        if root.mood.mouth == 0: Path {
-            x: 20 * root.u; y: 23 * root.u; width: 18 * root.u; height: 6 * root.u;
-            viewbox-x: 0; viewbox-y: 0; viewbox-width: 18; viewbox-height: 6;
-            commands: "M 1 1 Q 5 6 9 1 Q 13 6 17 1";
-            stroke: root.mood.eye-color; stroke-width: 1.4px; fill: transparent;
-        }
-        if root.mood.mouth == 4: Path {
-            x: 20 * root.u; y: 22 * root.u; width: 18 * root.u; height: 8 * root.u;
-            viewbox-x: 0; viewbox-y: 0; viewbox-width: 18; viewbox-height: 8;
-            commands: "M 2 1 Q 9 9 16 1";
-            stroke: root.mood.eye-color; stroke-width: 1.5px; fill: transparent;
-        }
-        if root.mood.mouth == 3: Path {
-            x: 20 * root.u; y: 24 * root.u; width: 18 * root.u; height: 6 * root.u;
-            viewbox-x: 0; viewbox-y: 0; viewbox-width: 18; viewbox-height: 6;
-            commands: "M 3 5 Q 9 0 15 5";
-            stroke: root.mood.eye-color; stroke-width: 1.4px; fill: transparent;
-        }
-        if root.mood.mouth == 1: Rectangle { x: 25 * root.u; y: 26 * root.u; width: 8 * root.u; height: 1.6 * root.u; border-radius: 1px; background: root.mood.eye-color; }
-        if root.mood.mouth == 2: Rectangle { x: 26 * root.u; y: 23 * root.u; width: 6 * root.u; height: 6 * root.u; border-radius: 3 * root.u; background: transparent; border-width: 1.4px; border-color: root.mood.eye-color; }
-    }
+
+    // Aksesoris / Glyph Melayang (Tanda Seru, Tanya, Zzz, Bintang, dll)
     if root.mood.glyph != "": Text {
-        x: root.size * 0.62; y: -root.size * 0.1; text: root.mood.glyph;
-        color: root.mood.eye-color; font-size: root.size * 0.34; font-weight: 800;
+        x: root.size * 0.76;
+        y: -root.size * 0.16;
+        text: root.mood.glyph;
+        color: root.mood.eye-color;
+        font-size: root.size * 0.36;
+        font-weight: 800;
     }
 }
 

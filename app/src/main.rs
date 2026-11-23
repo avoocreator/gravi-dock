@@ -97,7 +97,18 @@ fn clock_str(local_secs: i64) -> String { let t = local_secs.rem_euclid(86400); 
 
 fn mood_view(c: &mood::Ctx, accent: slint::Color) -> MoodView {
     let v = mood::view(mood::pick(c));
-    MoodView { eye_h: v.eye_h, eye_dy: v.eye_dy, mouth: v.mouth as i32, glyph: v.glyph.into(), eye_color: v.rgb.map(|(r, g, b)| slint::Color::from_rgb_u8(r, g, b)).unwrap_or(accent) }
+    MoodView {
+        eye_h: v.eye_h,
+        eye_w: v.eye_w,
+        eye_dy: v.eye_dy,
+        eye_dx: v.eye_dx,
+        eye_shape: v.eye_shape as i32,
+        mouth: v.mouth as i32,
+        glyph: v.glyph.into(),
+        glyph_type: v.glyph_type as i32,
+        peek: v.peek,
+        eye_color: v.rgb.map(|(r, g, b)| slint::Color::from_rgb_u8(r, g, b)).unwrap_or(accent),
+    }
 }
 
 fn shelf_file() -> PathBuf { data_dir().join("shelf.txt") }
@@ -420,6 +431,7 @@ fn main() {
                 hour: n.h, running: ui.get_running_count(), action: list.iter().any(|s| s.state == ses::State::NeedsAction), cpu, mem: m,
                 focus: fph == Phase::Focus, brk: fph == Phase::Break, music, hover: hover_now.get(),
                 prayer_left_s: l, prayer_now: last_adzan.get() >= day * 1440 + n.h * 60 + n.mi - 1, just_done: nowc - done_at.get() < 5, clicked_recently: nowc - click_at.get() < 3,
+                is_peek: ui.get_mode() == 0, is_searching: ui.get_tab() == 5, is_error: false,
             };
             ctx_cell.set(cx);
             ui.set_mood(mood_view(&cx, ui.global::<Theme>().get_cyan()));

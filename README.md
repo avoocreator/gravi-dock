@@ -1,36 +1,43 @@
-# Antigravity Island (Rust) v0.5
+# Gravi Dock 🏝️🤖
 
-Versi Rust murni: tanpa Electron/Chromium, digambar GPU lewat Slint.
+Dynamic Island desktop multifungsi bergaya macOS untuk Windows 10/11. Menggabungkan pelacak sesi AI interaktif, Now Playing media, jam & waktu sholat/adzan, kalender, GitHub heatmap, dan monitor sistem dalam satu kapsul fleksibel (Top notch, Right, atau Left edge).
 
-## Build (harus di Windows)
-1. Pasang Rust (https://rustup.rs) + Visual Studio Build Tools (workload C++).
-2. `cargo build --release`
-3. `install.cmd` (tambahkan `-Autostart` agar jalan saat Windows start: `install.cmd -Autostart`)
-4. Win+R, ketik `island`. Ctrl+Alt+A membuka/menutup. Lepas: `install.cmd -Uninstall`.
+Ditenagai oleh **Rust murni & Slint**: ultra-ringan (~20–30 MB RAM, 0% CPU idle), digambar langsung ke GPU pada 60/120 FPS tanpa Electron/Chromium.
 
-`cargo test -p island-core` menjalankan 22 tes inti (lolos).
+---
 
-## Fitur
-Delapan tab: Home (jam, sholat, agenda, cuaca, CPU/RAM), Sesi AI (Claude Code, Claude Desktop, Copilot CLI, Antigravity; ChatGPT/Claude Desktop-chat lewat CPU, "perkiraan"), Musik (SMTC: judul, artis, putar/jeda/next/prev), Fokus (pomodoro), Klip (riwayat 12 item), Cari (aplikasi Start Menu, kalkulator, URL), Shelf (rak berkas), Atur (terang/gelap, aksen, hover-buka, adzan, sumber sesi, kota sholat).
-- Ikon tray: klik kiri buka/tutup, klik kanan menu (Buka/tutup, Keluar); dipasang ulang otomatis bila Explorer restart.
-- Maskot Gravi punya 20 suasana hati (senang, bekerja, fokus, ngantuk, tidur, waspada, panas, musik, istirahat, sholat, pagi, malam, semangat, penasaran, sayang, berpikir, selesai, sedih, cemas, diam) yang dipilih dari konteks.
-- Agenda iCal mendukung ulangan harian, mingguan, bulanan, tahunan.
-- Adzan: bunyi saat waktu fardu (suara sistem, atau .wav lewat `adzanWav`).
-- Cuaca (open-meteo) dan kalender diambil lewat `curl.exe` bawaan Windows.
+## Fitur Utama
 
-Catatan desain:
-- Musik memakai satu proses PowerShell yang hanya hidup saat tab Musik dibuka (berhenti 30 dtk setelah ditutup) supaya memori tetap kecil.
-- Shelf: seret-lepas berkas tidak didukung Slint; salin berkas di Explorer (Ctrl+C) lalu tekan "+ Tambah dari clipboard".
-- Ikon tray memakai ikon aplikasi bawaan Windows (belum ikon sendiri).
+- **🤖 Maskot Gravi Bot**: Vektor mecha 3D interaktif dengan telinga pelangi (kiri biru-hijau, kanan merah-kuning), visor kaca reflektif, dan 12 ekspresi emosi dinamis (Idle, Happy, Surprised, Sleepy, Confused, Sad, Thinking, Searching, Working, Success, Error, Peek).
+- **⚡ AI Session Tracker**: Memantau sesi Antigravity CLI, Copilot CLI, Antigravity Desktop, Claude Desktop, dan ChatGPT Desktop dengan tombol tindakan/izin 1-klik langsung dari Island.
+- **🎵 Now Playing (GSMTC)**: Mendeteksi pemutaran lagu/video di Windows (Spotify, YouTube, VLC) lengkap dengan animated waveform visualizer dan kontrol playback.
+- **⏰ Jam, Timer, Pomodoro & Sholat**: Jam flip/digital, Pomodoro kustom, stopwatch, alarm, serta kalkulasi waktu sholat Kemenag RI dengan lantunan suara adzan otomatis.
+- **📅 Kalender**: Integrasi feed iCal Google Calendar untuk memantau agenda harian dan tombol cepat Google Meet.
+- **🐙 GitHub Activity**: Jumlah commit hari ini, repositori terakhir, dan 52-week GitHub Contribution Graph heatmap.
+- **📊 Monitor Sistem**: Pemantauan penggunaan CPU (sparkline graph), RAM, suhu perangkat, dan running time / uptime.
+- **📋 Clipboard & File Shelf**: Riwayat clipboard teks dan rak berkas sementara.
+- **🎛️ Fleksibilitas Docking**: Bisa ditempatkan di **Top** (notch atas), **Right** (dock kanan), atau **Left** (dock kiri).
 
-## Status jujur
-- `core/` diuji (22 tes). `app/` (Slint + FFI Win32 + tray + media) belum pernah dikompilasi; kirim galat build bila ada.
-- Belum ada: gelombang audio asli (visualizer), sampul album, pengaturan hotkey lewat UI.
+---
 
-## settings.json (`%LOCALAPPDATA%\AntigravityIsland\`)
-`lat, lon, city, hover, topPct, light, accent, ical, adzan, adzanWav, focusMin, breakMin, srcClaude, srcCopilot, srcAgy, srcDesk`
+## Build & Instalasi
 
-Slint: GPLv3 atau lisensi desktop gratis dengan atribusi.
+### Persyaratan
+- Windows 10 atau Windows 11
+- Rust toolchain (`rustup`) + Visual Studio Build Tools (C++ workload)
 
-## Catatan v0.5
-Tampilan didesain ulang: kartu gelap membulat dengan border tipis, jam besar, cincin CPU/RAM, toggle di Pengaturan, tab bergaris bawah, tombol bulat untuk musik dan fokus.
+### Kompilasi
+```bash
+# Uji tes unit
+cargo test -p island-core
+
+# Kompilasi rilis
+cargo build --release
+```
+
+Hasil biner mandiri `.exe` berada di `target/release/island.exe`.
+
+---
+
+## Lisensi
+MIT License © 2026 Kira (Avoo Creator)

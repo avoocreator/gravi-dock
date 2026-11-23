@@ -2,7 +2,7 @@
 name = "island"
 version = "0.5.0"
 edition = "2021"
-description = "Antigravity Island (Rust): dynamic island vertikal di tepi kanan layar Windows."
+description = "Gravi Dock: Multi-dock Dynamic Island & AI companion for Windows (Rust + Slint)."
 build = "build.rs"
 
 [dependencies]
