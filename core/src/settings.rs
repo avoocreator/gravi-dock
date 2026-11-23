@@ -10,13 +10,16 @@ pub struct Settings {
     pub adzan: bool, pub adzan_wav: String,
     pub focus_min: i64, pub break_min: i64,
     pub src_claude: bool, pub src_copilot: bool, pub src_agy: bool, pub src_desk: bool,
+    pub position: String,     // "right", "left", "top"
+    pub sfx: bool,            // sound effects
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Settings { lat: -6.9175, lon: 107.6191, city: "Bandung".into(), hover: false, top_pct: 0.0, light: false, accent: "#5ae0ff".into(),
             ical: String::new(), adzan: true, adzan_wav: String::new(), focus_min: 25, break_min: 5,
-            src_claude: true, src_copilot: true, src_agy: true, src_desk: true }
+            src_claude: true, src_copilot: true, src_agy: true, src_desk: true,
+            position: "right".into(), sfx: true }
     }
 }
 
@@ -35,14 +38,18 @@ impl Settings {
         for (k, t) in [("city", &mut s.city), ("accent", &mut s.accent), ("ical", &mut s.ical), ("adzanWav", &mut s.adzan_wav)] {
             if let Some(x) = v.get(k).str() { *t = x.to_string() }
         }
-        s.hover = b("hover", s.hover); s.light = b("light", s.light); s.adzan = b("adzan", s.adzan);
+        if let Some(p) = v.get("position").str() {
+            let pl = p.to_ascii_lowercase();
+            if pl == "top" || pl == "left" || pl == "right" { s.position = pl; }
+        }
+        s.hover = b("hover", s.hover); s.light = b("light", s.light); s.adzan = b("adzan", s.adzan); s.sfx = b("sfx", true);
         s.src_claude = b("srcClaude", true); s.src_copilot = b("srcCopilot", true); s.src_agy = b("srcAgy", true); s.src_desk = b("srcDesk", true);
         s
     }
     pub fn to_json(&self) -> String {
-        format!("{{\n \"lat\": {}, \"lon\": {}, \"city\": {}, \"hover\": {}, \"topPct\": {}, \"light\": {}, \"accent\": {},\n \"ical\": {}, \"adzan\": {}, \"adzanWav\": {}, \"focusMin\": {}, \"breakMin\": {},\n \"srcClaude\": {}, \"srcCopilot\": {}, \"srcAgy\": {}, \"srcDesk\": {}\n}}\n",
+        format!("{{\n \"lat\": {}, \"lon\": {}, \"city\": {}, \"hover\": {}, \"topPct\": {}, \"light\": {}, \"accent\": {},\n \"ical\": {}, \"adzan\": {}, \"adzanWav\": {}, \"focusMin\": {}, \"breakMin\": {},\n \"srcClaude\": {}, \"srcCopilot\": {}, \"srcAgy\": {}, \"srcDesk\": {},\n \"position\": {}, \"sfx\": {}\n}}\n",
             self.lat, self.lon, q(&self.city), self.hover, self.top_pct, self.light, q(&self.accent), q(&self.ical), self.adzan, q(&self.adzan_wav),
-            self.focus_min, self.break_min, self.src_claude, self.src_copilot, self.src_agy, self.src_desk)
+            self.focus_min, self.break_min, self.src_claude, self.src_copilot, self.src_agy, self.src_desk, q(&self.position), self.sfx)
     }
     pub fn enabled(&self, provider: &str) -> bool {
         match provider { "claude" => self.src_claude, "copilot" => self.src_copilot, "agy" => self.src_agy, "claudedesk" => self.src_desk, _ => true }
@@ -56,6 +63,7 @@ mod tests {
     fn roundtrip() {
         let mut s = Settings::default();
         s.city = "Jakarta \"Pusat\"".into(); s.hover = true; s.src_agy = false; s.ical = "https://x/y.ics".into();
+        s.position = "top".into(); s.sfx = false;
         assert_eq!(Settings::parse(&s.to_json()), s);
         assert_eq!(Settings::parse("rusak{"), Settings::default());
     }

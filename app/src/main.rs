@@ -34,6 +34,8 @@ fn push_settings(ui: &MainWindow, s: &Settings) {
     ui.set_adzan(s.adzan);
     ui.set_src_claude(s.src_claude); ui.set_src_copilot(s.src_copilot); ui.set_src_agy(s.src_agy); ui.set_src_desk(s.src_desk);
     ui.set_city(SharedString::from(s.city.as_str()));
+    ui.set_dock_pos(SharedString::from(s.position.as_str()));
+    ui.set_sfx(s.sfx);
 }
 
 fn pull_settings(ui: &MainWindow, s: &mut Settings) {
@@ -42,6 +44,8 @@ fn pull_settings(ui: &MainWindow, s: &mut Settings) {
     s.hover = ui.get_hover_open();
     s.adzan = ui.get_adzan();
     s.src_claude = ui.get_src_claude(); s.src_copilot = ui.get_src_copilot(); s.src_agy = ui.get_src_agy(); s.src_desk = ui.get_src_desk();
+    s.position = ui.get_dock_pos().to_string();
+    s.sfx = ui.get_sfx();
 }
 
 fn style(p: &str) -> (&'static str, slint::Color) {
@@ -139,8 +143,22 @@ fn main() {
             let (wx, wy, ww, wh) = win::api::work_area();
             let h_logic = (wh as f32 / sf - 20.0).clamp(300.0, 680.0);
             let top = (wh as f32 / sf - h_logic) * cfg.lock().unwrap().top_pct as f32;
+            let pos = cfg.lock().unwrap().position.clone();
+
+            let (px, py) = match pos.as_str() {
+                "top" => {
+                    let cx = wx + (ww - (BOX_W * sf) as i32) / 2;
+                    (cx, wy)
+                }
+                "left" => {
+                    (wx, wy + (top * sf) as i32)
+                }
+                _ => { // "right"
+                    (wx + ww - (BOX_W * sf) as i32, wy + (top * sf) as i32)
+                }
+            };
             w.set_size(PhysicalSize::new((BOX_W * sf) as u32, (h_logic * sf) as u32));
-            w.set_position(PhysicalPosition::new(wx + ww - (BOX_W * sf) as i32, wy + (top * sf) as i32));
+            w.set_position(PhysicalPosition::new(px, py));
         })
     };
     ui.show().unwrap();
@@ -220,8 +238,16 @@ fn main() {
     ui.on_clicked_close({ let ui = ui.as_weak(); move || { if let Some(u) = ui.upgrade() { back(&u); } } });
     ui.on_quit(|| { let _ = slint::quit_event_loop(); });
     ui.on_settings_changed({
-        let ui = ui.as_weak(); let cfg = cfg.clone();
-        move || { if let Some(u) = ui.upgrade() { let mut c = cfg.lock().unwrap(); pull_settings(&u, &mut c); save(&c); } }
+        let ui = ui.as_weak(); let cfg = cfg.clone(); let place = place.clone();
+        move || {
+            if let Some(u) = ui.upgrade() {
+                let mut c = cfg.lock().unwrap();
+                pull_settings(&u, &mut c);
+                save(&c);
+                drop(c);
+                place();
+            }
+        }
     });
     ui.on_cycle_city({
         let ui = ui.as_weak(); let cfg = cfg.clone();
