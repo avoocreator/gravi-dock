@@ -400,10 +400,22 @@ fn main() {
 
             // tombol: hotkey, instance kedua, tray
             let mut toggle = want_toggle.swap(false, Ordering::SeqCst);
-            if n % 5 == 0 && signal.exists() { let _ = std::fs::remove_file(&signal); toggle = true; }
+            let mut force_show = false;
+            if signal.exists() {
+                let _ = std::fs::remove_file(&signal);
+                force_show = true;
+            }
             match win::api::TRAY_EVENT.swap(0, Ordering::SeqCst) { 1 => toggle = true, 2 => { let _ = slint::quit_event_loop(); return; } _ => {} }
             let mode = c.sh.borrow().mode;
-            if toggle { c.go(if mode == 2 { 0 } else { 2 }, false); }
+            if force_show {
+                c.go(2, true);
+                win::api::topmost(c.hwnd.get());
+                win::api::focus(c.hwnd.get());
+                let mut s = c.sh.borrow_mut(); s.lost = 0; s.outside = 0;
+            } else if toggle {
+                c.go(if mode == 2 { 0 } else { 2 }, false);
+                let mut s = c.sh.borrow_mut(); s.lost = 0; s.outside = 0;
+            }
             if n % 50 == 0 { win::api::topmost(c.hwnd.get()); }
 
             // berkas yang dilepas
@@ -442,8 +454,8 @@ fn main() {
             let page = ui.global::<AppState>().get_page();
             if cfg.hover {
                 if mode == 0 && inside_n >= 3 { c.go(2, false); }
-                if mode == 2 && outside_n >= 7 && page != 8 { c.go(0, false); }
-            } else if mode == 2 && lost_n >= 4 && !inside {
+                if mode == 2 && outside_n >= 20 && page != 8 { c.go(0, false); }
+            } else if mode == 2 && lost_n >= 15 && !inside {
                 c.sh.borrow_mut().lost = 0;
                 c.go(if pending > 0 { 1 } else { 0 }, false);
             }
