@@ -257,8 +257,14 @@ impl Ctl {
 /* ---------------------------------------------------------------- main ---------------------------------------------------------------- */
 
 fn main() {
+    win::api::co_init();
     let data = island_core::hookproto::data_dir();
     let _ = std::fs::create_dir_all(&data);
+    let log_file = data.join("panic.log");
+    std::panic::set_hook(Box::new(move |info| {
+        let msg = format!("{info}\n");
+        let _ = std::fs::write(&log_file, msg);
+    }));
     if !win::api::single_instance() {
         let _ = std::fs::write(data.join("show.signal"), b"1");
         return;
@@ -285,22 +291,7 @@ fn main() {
     ctl.render();
     ui.show().expect("gagal menampilkan jendela");
     ctl.go(0, true);
-    #[cfg(feature = "dragdrop")]
-    {
-        use slint::winit_030::WinitWindowAccessor;
-        use slint::winit_030::winit::platform::windows::WindowExtWindows;
-        use slint::winit_030::winit::raw_window_handle::HasWindowHandle;
-        ui.window().with_winit_window(|w| {
-            w.set_skip_taskbar(true);
-            if let Ok(handle) = w.window_handle() {
-                if let slint::winit_030::winit::raw_window_handle::RawWindowHandle::Win32(win32) = handle.as_raw() {
-                    ctl.hwnd.set(win32.hwnd.get() as usize);
-                }
-            }
-        });
-    }
-    if ctl.hwnd.get() == 0 { ctl.hwnd.set(win::api::hwnd(TITLE)); }
-    win::api::set_noactivate(ctl.hwnd.get(), true);
+    ctl.hwnd.set(win::api::hwnd(TITLE));
     win::api::topmost(ctl.hwnd.get());
     win::api::tray();
     let want_toggle = Arc::new(AtomicBool::new(false));

@@ -83,6 +83,10 @@ mod sys {
         pub fn GetProcessTimes(h: *mut c_void, c: *mut FILETIME, e: *mut FILETIME, k: *mut FILETIME, u: *mut FILETIME) -> i32;
         pub fn CloseHandle(h: *mut c_void) -> i32;
     }
+    #[link(name = "ole32")]
+    extern "system" {
+        pub fn CoInitializeEx(pv: *mut c_void, init: u32) -> i32;
+    }
     pub fn wide(s: &str) -> Vec<u16> { s.encode_utf16().chain(Some(0)).collect() }
 }
 
@@ -91,6 +95,7 @@ pub struct Now { pub y: i64, pub mo: i64, pub d: i64, pub h: i64, pub mi: i64, p
 #[cfg(windows)]
 pub mod api {
     use super::{sys::*, Now};
+    pub fn co_init() { unsafe { CoInitializeEx(std::ptr::null_mut(), 0x2); } }
     pub fn hwnd(title: &str) -> usize { unsafe { FindWindowW(std::ptr::null(), wide(title).as_ptr()) as usize } }
     /// Aktifkan/matikan click-through (WS_EX_TRANSPARENT) + sembunyikan dari Alt+Tab (TOOLWINDOW).
     pub fn set_passthrough(h: usize, on: bool) {
@@ -104,18 +109,8 @@ pub mod api {
         }
     }
     /// Jendela tidak merebut fokus saat diklik (pil / kartu persetujuan). Matikan saat panel penuh agar bisa mengetik.
-    pub fn set_noactivate(h: usize, on: bool) {
-        if h == 0 { return; }
-        unsafe {
-            let hw = h as HWND;
-            let cur = GetWindowLongPtrW(hw, -20);
-            let mut n = (cur | 0x80) & !0x0004_0000; // TOOLWINDOW & NOT APPWINDOW (sembunyikan dari taskbar & Alt+Tab)
-            if on { n |= 0x0800_0000; } else { n &= !0x0800_0000; }
-            if n != cur {
-                SetWindowLongPtrW(hw, -20, n);
-                SetWindowPos(hw, std::ptr::null_mut(), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
-            }
-        }
+    pub fn set_noactivate(_h: usize, _on: bool) {
+        // Jangan ubah GWL_EXSTYLE di jendela Winit saat runtime karena menyebabkan Winit menutup jendela
     }
     pub fn window_rect(h: usize) -> (i32, i32, i32, i32) {
         let mut r = RECT::default();
@@ -343,6 +338,7 @@ pub mod api {
 #[cfg(not(windows))]
 pub mod api {
     use super::Now;
+    pub fn co_init() {}
     pub fn hwnd(_: &str) -> usize { 0 }
     pub fn set_passthrough(_: usize, _: bool) {}
     pub fn topmost(_: usize) {}
