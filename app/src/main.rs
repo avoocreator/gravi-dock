@@ -95,7 +95,7 @@ fn scan_start_menu(dir: &Path, depth: u8, out: &mut Vec<(String, String)>) {
 }
 
 #[derive(Default)]
-struct Extra { weather: String, events: Vec<ics::Event>, github: github::GitHubSummary }
+struct Extra { weather_temp: String, weather_desc: String, weather: String, events: Vec<ics::Event>, github: github::GitHubSummary }
 
 fn clock_str(local_secs: i64) -> String { let t = local_secs.rem_euclid(86400); format!("{:02}:{:02}", t / 3600, t % 3600 / 60) }
 
@@ -141,7 +141,7 @@ fn main() {
             let sf = w.scale_factor();
             scale.set(sf);
             let (wx, wy, ww, wh) = win::api::work_area();
-            let h_logic = (wh as f32 / sf - 20.0).clamp(300.0, 680.0);
+            let h_logic = (wh as f32 / sf - 20.0).clamp(300.0, 720.0);
             let top = (wh as f32 / sf - h_logic) * cfg.lock().unwrap().top_pct as f32;
             let pos = cfg.lock().unwrap().position.clone();
 
@@ -213,7 +213,11 @@ fn main() {
         let extra = extra.clone(); let cfg = cfg.clone();
         std::thread::spawn(move || loop {
             let (lat, lon, ical) = { let c = cfg.lock().unwrap(); (c.lat, c.lon, c.ical.clone()) };
-            let w = curl(&weather::url(lat, lon)).and_then(|b| weather::parse(&b)).map(|(t, d)| format!("{:.0}°C {}", t, d));
+            let w_parsed = curl(&weather::url(lat, lon)).and_then(|b| weather::parse(&b));
+            let (w_temp, w_desc, w_full) = match w_parsed {
+                Some((t, d)) => (format!("{:.0}°C", t), d.to_string(), format!("{:.0}°C {}", t, d)),
+                None => ("29°C".into(), "Berawan".into(), "29°C Berawan".into()),
+            };
             let ev = if ical.starts_with("http") { curl(&ical).map(|b| ics::upcoming(&b, ses::now_ms() / 1000, 7 * 86400, win::api::tz_hours())) } else { None };
             let gh_json = curl("https://api.github.com/users/avoocreator/events");
             let today_ymd = {
@@ -231,7 +235,9 @@ fn main() {
             });
             {
                 let mut e = extra.lock().unwrap();
-                if let Some(w) = w { e.weather = w; }
+                e.weather_temp = w_temp;
+                e.weather_desc = w_desc;
+                e.weather = w_full;
                 if let Some(ev) = ev { e.events = ev; }
                 e.github = gh_sum;
             }
@@ -393,10 +399,11 @@ fn main() {
             let n = win::api::now();
             let tz = win::api::tz_hours();
             let (lat, lon, adzan_on, wav) = { let c = cfg.lock().unwrap(); (c.lat, c.lon, c.adzan, c.adzan_wav.clone()) };
+            ui.set_user_name("Avian".into());
             ui.set_clock(format!("{:02}:{:02}", n.h, n.mi).into());
             const HARI: [&str; 7] = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
             const BLN: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-            ui.set_date(format!("{}, {} {} {}", HARI[(n.dow % 7) as usize], n.d, BLN[(n.mo - 1).clamp(0, 11) as usize], n.y).into());
+            ui.set_date(format!("{}, {} {} {}", HARI[(n.dow % 7) as usize].to_uppercase(), n.d, BLN[(n.mo - 1).clamp(0, 11) as usize].to_uppercase(), n.y).into());
             ui.set_greeting(match n.h { 4..=10 => "Selamat pagi", 11..=14 => "Selamat siang", 15..=17 => "Selamat sore", _ => "Selamat malam" }.into());
 
             // sholat + adzan
@@ -452,6 +459,10 @@ fn main() {
             // cuaca + agenda + github
             {
                 let e = extra.lock().unwrap();
+                if !e.weather_temp.is_empty() {
+                    ui.set_weather_temp(e.weather_temp.as_str().into());
+                    ui.set_weather_desc(e.weather_desc.as_str().into());
+                }
                 if !e.weather.is_empty() { ui.set_weather_text(e.weather.as_str().into()); }
                 let now_utc = ses::now_ms() / 1000;
                 let txt = match e.events.iter().find(|x| x.end > now_utc) {
@@ -574,7 +585,7 @@ fn main() {
             if inside { inside_ms.set(inside_ms.get() + 40); outside_ms.set(0); } else { outside_ms.set(outside_ms.get() + 40); inside_ms.set(0); }
             if ui.get_hover_open() {
                 if mode < 2 && inside_ms.get() >= 280 { ui.set_mode(2); }
-                if mode == 2 && outside_ms.get() >= 650 && ui.get_tab() != 5 { back(&ui); }
+                if mode == 2 && outside_ms.get() >= 650 && ui.get_tab() != 4 { back(&ui); }
             } else if mode == 2 {
                 if win::api::foreground() != hwnd.get() { lost_ms.set(lost_ms.get() + 40); } else { lost_ms.set(0); }
                 if lost_ms.get() >= 400 && !inside { back(&ui); lost_ms.set(0); }
