@@ -81,16 +81,16 @@ export component Icon inherits Path {
 
 // ---------- kartu ----------
 export component Card inherits Rectangle {
-    in property <brush> fill: @linear-gradient(155deg, Theme.surface 0%, Theme.surface2 100%);
+    in property <brush> fill: Theme.card-fill;
     in property <color> tint: Theme.accent;
-    in property <color> line: Theme.edge;
+    in property <color> line: Theme.dark ? #ffffff1c : Theme.border;
     background: root.fill;
     border-radius: Theme.radius-card;
     border-width: 1px;
     border-color: root.line;
     Rectangle {
         border-radius: Theme.radius-card;
-        background: @linear-gradient(160deg, root.tint.with-alpha(0.15) 0%, transparent 62%);
+        background: @linear-gradient(145deg, root.tint.with-alpha(0.18) 0%, transparent 62%);
     }
     @children
 }
@@ -187,21 +187,21 @@ export component Btn inherits Rectangle {
     in property <bool> enabled: true;
     callback clicked();
     height: 38px;
-    preferred-width: row.preferred-width + 4px;
+    preferred-width: row.preferred-width + 6px;
     border-radius: 19px;
     opacity: root.enabled ? 1.0 : 0.45;
-    background: root.kind == 1 ? Theme.grad : root.kind == 2 ? Theme.bad.with-alpha(0.16) : Theme.surface3;
+    background: root.kind == 1 ? Theme.grad : root.kind == 2 ? Theme.bad.with-alpha(0.18) : Theme.surface3;
     border-width: root.kind == 1 ? 0px : 1px;
-    border-color: root.kind == 2 ? Theme.bad.with-alpha(0.45) : Theme.border;
+    border-color: root.kind == 2 ? Theme.bad.with-alpha(0.55) : Theme.border;
     states [
-        pressed when ta.pressed && root.enabled: { opacity: 0.72; }
+        pressed when ta.pressed && root.enabled: { opacity: 0.75; }
     ]
     animate opacity { duration: 100ms; }
     row := HorizontalLayout {
         alignment: center;
         spacing: 7px;
-        padding-left: 14px;
-        padding-right: 14px;
+        padding-left: 16px;
+        padding-right: 16px;
         if root.icon != "" : VerticalLayout { alignment: center; Icon { d: root.icon; size: 16px; tint: root.kind == 1 ? Theme.on-accent : root.kind == 2 ? Theme.bad : Theme.text; } }
         Text {
             text: root.text;
@@ -223,20 +223,20 @@ export component IconBtn inherits Rectangle {
     in property <bool> solid: false;
     in property <bool> filled: true;      // lingkaran berlatar
     in property <color> tint: Theme.text;
-    in property <color> fill: Theme.surface3;
+    in property <color> fill: Theme.surface3.with-alpha(0.85);
     callback clicked();
     width: root.size;
     height: root.size;
     border-radius: root.size / 2;
     background: root.filled ? (ta.pressed ? Theme.border : root.fill) : transparent;
     border-width: root.filled ? 1px : 0px;
-    border-color: Theme.edge;
+    border-color: #ffffff20;
     animate background { duration: 120ms; }
     Icon {
         d: root.d;
         solid: root.solid;
         tint: root.tint;
-        size: root.size * 0.5;
+        size: root.size * 0.48;
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
     }
@@ -442,26 +442,26 @@ export component Ring inherits Rectangle {
     height: root.size;
     Rectangle {
         border-radius: root.size / 2;
-        border-width: 7px;
-        border-color: Theme.surface3;
+        border-width: 6px;
+        border-color: Theme.surface3.with-alpha(0.7);
     }
     Path {
         width: parent.width;
         height: parent.height;
         viewbox-width: 100;
         viewbox-height: 100;
-        commands: "M 50 5 A 45 45 0 \{root.v > 0.5 ? 1 : 0} 1 \{50 + 45 * Math.sin(root.a)} \{50 - 45 * Math.cos(root.a)}";
+        commands: "M 50 6 A 44 44 0 \{root.v > 0.5 ? 1 : 0} 1 \{50 + 44 * Math.sin(root.a)} \{50 - 44 * Math.cos(root.a)}";
         stroke: root.tint;
-        stroke-width: 7px;
+        stroke-width: 6.5px;
         stroke-line-cap: round;
         fill: transparent;
     }
     VerticalLayout {
         alignment: center;
-        spacing: 1px;
+        spacing: 2px;
         if root.icon != "" : HorizontalLayout { alignment: center; Icon { d: root.icon; size: root.size * 0.22; tint: root.tint; } }
-        Text { text: root.text; color: Theme.text; font-size: root.size * 0.24; font-weight: 700; horizontal-alignment: center; }
-        if root.sub != "" : Text { text: root.sub; color: Theme.muted; font-size: root.size * 0.14; horizontal-alignment: center; }
+        Text { text: root.text; color: Theme.text; font-size: root.size * 0.22; font-weight: 800; horizontal-alignment: center; }
+        if root.sub != "" : Text { text: root.sub; color: Theme.muted; font-size: root.size * 0.13; font-weight: 700; horizontal-alignment: center; }
     }
 }
 

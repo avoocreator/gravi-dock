@@ -1,28 +1,30 @@
 // Token desain: warna dasar mengikuti mode gelap/terang; gradien & ornamen mengikuti skema warna (accent, accent2).
 export global Theme {
     in property <bool> dark: true;
-    in property <color> accent: #4da3ff;
-    in property <color> accent2: #5ae0ff;
+    in property <color> accent: #cba6f7;
+    in property <color> accent2: #89b4fa;
 
-    out property <color> bg: dark ? #0d0e12 : #f2f3f7;
-    out property <color> surface: dark ? #181a22 : #ffffff;
-    out property <color> surface2: dark ? #20232d : #eceef6;
-    out property <color> surface3: dark ? #2b2f3b : #e0e3ee;
-    out property <color> border: dark ? #ffffff1c : #0000001a;
-    out property <color> text: dark ? #f4f6fa : #14161b;
-    out property <color> muted: dark ? #9aa1b4 : #666d7e;
-    out property <color> good: #34d399;
-    out property <color> warn: #ffb54d;
-    out property <color> bad: #ff6b6b;
-    out property <color> on-accent: #0b0d12;
-    out property <color> screen: #1f1e2c;
+    out property <color> bg: dark ? #0a0b14 : #f5f6fb;
+    out property <color> surface: dark ? #131528ee : #ffffff;
+    out property <color> surface2: dark ? #1a1d36ee : #edf0f8;
+    out property <color> surface3: dark ? #232746ee : #e2e6f4;
+    out property <color> border: dark ? #ffffff1c : #00000014;
+    out property <color> text: dark ? #f5f7fd : #11131a;
+    out property <color> muted: dark ? #8f97b0 : #646b80;
+    out property <color> good: #3dd68c;
+    out property <color> warn: #ffab3d;
+    out property <color> bad: #ff5c6c;
+    out property <color> on-accent: #0b0d14;
+    out property <color> screen: #171826;
 
-    out property <color> glow: accent.with-alpha(dark ? 0.20 : 0.16);
-    out property <color> glow2: accent2.with-alpha(dark ? 0.14 : 0.12);
-    out property <color> edge: accent.with-alpha(dark ? 0.30 : 0.28);
+    out property <color> glow: accent.with-alpha(dark ? 0.28 : 0.18);
+    out property <color> glow2: accent2.with-alpha(dark ? 0.20 : 0.14);
+    out property <color> edge: accent.with-alpha(dark ? 0.38 : 0.28);
     out property <brush> grad: @linear-gradient(90deg, accent 0%, accent2 100%);
     out property <brush> grad-v: @linear-gradient(160deg, accent 0%, accent2 100%);
+    out property <brush> card-fill: @linear-gradient(155deg, surface 0%, surface2 100%);
+    out property <brush> dock-fill: @linear-gradient(90deg, #101222f2 0%, #171a32f2 100%);
 
-    out property <length> radius-card: 24px;
+    out property <length> radius-card: 22px;
     out property <length> radius-island: 34px;
 }

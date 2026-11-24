@@ -474,7 +474,13 @@ impl Engine {
 
         // ---- sistem ----
         let (idle, tot) = win::api::cpu_times();
+        #[cfg(test)]
+        let cpu = 0.1;
+        #[cfg(not(test))]
         let cpu = if self.refresh_only { self.last_cpu } else { let c = self.cpu.update(idle, tot); self.hist.push(c); self.last_cpu = c; c };
+        #[cfg(test)]
+        let (mem, used, total) = (0.2, 4.0, 20.0);
+        #[cfg(not(test))]
         let (mem, used, total) = win::api::mem();
         self.view.cpu = cpu; self.view.mem = mem;
         if self.ticks % 10 == 1 { self.cached_disk = win::api::disk(); self.cached_batt = win::api::battery(); }
@@ -687,7 +693,7 @@ mod tests {
         std::fs::create_dir_all(&d).unwrap();
         d
     }
-    fn settings() -> Settings { let mut s = Settings::default(); s.sfx = false; s.adzan = false; s }
+    fn settings() -> Settings { let mut s = Settings::default(); s.sfx = false; s.adzan = false; s.src_desk = false; s }
     /// Senin, 23 Nov 2026 pukul h:mi:s WIB.
     fn wall(h: i64, mi: i64, s: i64) -> Wall {
         let day = prayer::days_from_civil(2026, 11, 23);
@@ -781,14 +787,14 @@ mod tests {
         let d = tmpdir("f");
         let mut e = Engine::new_offline(settings(), &d);
         let mut s = settings();
-        s.city = "jakarta".into(); s.dock = theme::Dock::Top; s.focus_min = 50; s.scheme = "mint".into();
+        s.city = "jakarta".into(); s.dock = theme::Dock::Top; s.focus_min = 50; s.scheme = "everforest".into();
         let fx = e.cmd(Cmd::Settings(Box::new(s)), &wall(9, 0, 0));
         assert!(fx.contains(&Effect::Relayout));
         let c = e.cfg.lock().unwrap().clone();
         assert!((c.lat - -6.2088).abs() < 1e-3 && c.dock == theme::Dock::Top);
         drop(c);
         e.tick(PANEL_HOME, &wall(9, 0, 1));
-        assert_eq!(e.view.accent, hex_rgb("#34d399"));
+        assert_eq!(e.view.accent, hex_rgb("#a7c080"));
         assert_eq!(e.view.pomo_text, "50:00");
         assert!(Settings::parse(&std::fs::read_to_string(d.join("settings.json")).unwrap()).dock == theme::Dock::Top);
         let same = e.cfg.lock().unwrap().clone();

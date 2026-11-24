@@ -109,7 +109,7 @@ fn pull_settings(ui: &MainWindow, base: &Settings) -> Settings {
     let a = ui.global::<AppState>();
     let mut c = base.clone();
     c.dock = Dock::from_index(a.get_s_dock()); c.theme = theme::ThemeMode::from_index(a.get_s_theme());
-    c.scheme = theme::SCHEMES.get(a.get_s_scheme().max(0) as usize).map(|x| x.id).unwrap_or("ocean").to_string();
+    c.scheme = theme::SCHEMES.get(a.get_s_scheme().max(0) as usize).map(|x| x.id).unwrap_or("catppuccin").to_string();
     c.edge_pct = a.get_s_edge() as f64; c.hover = a.get_s_hover(); c.mascot = a.get_s_mascot();
     c.renderer = if a.get_s_gpu() { "gpu".into() } else { "software".into() };
     c.sfx = a.get_s_sfx(); c.sfx_vol = (a.get_s_sfx_vol() * 100.0).round() as i64;

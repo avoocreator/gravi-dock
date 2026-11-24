@@ -442,15 +442,62 @@ export component SettingsPage inherits Rectangle {
                     Seg { items: ["Gelap", "Terang", "Otomatis"]; current: AppState.s-theme; picked(i) => { AppState.s-theme = i; AppState.settings-changed(); } }
                     Label { text: "Skema warna"; }
                     HorizontalLayout {
-                        spacing: 8px;
-                        for c[i] in AppState.scheme-colors : Rectangle {
-                            width: 34px;
-                            height: 34px;
-                            border-radius: 17px;
-                            background: @linear-gradient(135deg, c 0%, c.darker(0.4) 100%);
-                            border-width: i == AppState.s-scheme ? 3px : 0px;
-                            border-color: Theme.text;
+                        spacing: 6px;
+                        for i in 4 : Rectangle {
+                            height: 36px;
+                            border-radius: 12px;
+                            background: i == AppState.s-scheme ? Theme.surface3 : Theme.surface2;
+                            border-width: 1px;
+                            border-color: i == AppState.s-scheme ? AppState.scheme-colors[i] : Theme.border;
+                            HorizontalLayout {
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                spacing: 6px;
+                                alignment: center;
+                                Rectangle {
+                                    width: 12px; height: 12px; border-radius: 6px;
+                                    background: AppState.scheme-colors[i];
+                                }
+                                Text {
+                                    text: AppState.scheme-names[i];
+                                    color: i == AppState.s-scheme ? Theme.text : Theme.muted;
+                                    font-size: 11px;
+                                    font-weight: 700;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                }
+                            }
                             TouchArea { clicked => { AppState.s-scheme = i; AppState.settings-changed(); } }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        for j in 4 : btn := Rectangle {
+                            property <int> idx: j + 4;
+                            height: 36px;
+                            border-radius: 12px;
+                            background: btn.idx == AppState.s-scheme ? Theme.surface3 : Theme.surface2;
+                            border-width: 1px;
+                            border-color: btn.idx == AppState.s-scheme ? AppState.scheme-colors[btn.idx] : Theme.border;
+                            HorizontalLayout {
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                spacing: 6px;
+                                alignment: center;
+                                Rectangle {
+                                    width: 12px; height: 12px; border-radius: 6px;
+                                    background: AppState.scheme-colors[btn.idx];
+                                }
+                                Text {
+                                    text: AppState.scheme-names[btn.idx];
+                                    color: btn.idx == AppState.s-scheme ? Theme.text : Theme.muted;
+                                    font-size: 11px;
+                                    font-weight: 700;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                }
+                            }
+                            TouchArea { clicked => { AppState.s-scheme = btn.idx; AppState.settings-changed(); } }
                         }
                     }
                     Label { text: "Posisi island"; }

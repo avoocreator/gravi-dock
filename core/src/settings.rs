@@ -29,7 +29,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             lat: -6.9175, lon: 107.6191, city: "Bandung".into(),
-            dock: Dock::Right, edge_pct: 0.5, theme: ThemeMode::Dark, scheme: "ocean".into(), accent: String::new(),
+            dock: Dock::Right, edge_pct: 0.5, theme: ThemeMode::Dark, scheme: "catppuccin".into(), accent: String::new(),
             hover: false, mascot: true, renderer: "software".into(),
             sfx: true, sfx_vol: 60,
             adzan: true, adzan_file: String::new(), adzan_vol: 80,

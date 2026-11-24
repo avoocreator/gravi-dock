@@ -14,24 +14,28 @@ component NavItem inherits Rectangle {
     width: 44px;
     height: 44px;
     border-radius: 16px;
-    background: AppState.page == root.index ? Theme.grad-v : (ta.has-hover ? Theme.surface2 : transparent);
+    background: AppState.page == root.index ? @linear-gradient(145deg, Theme.accent.with-alpha(0.32) 0%, Theme.accent2.with-alpha(0.18) 100%) : (ta.has-hover ? Theme.surface2 : transparent);
     border-width: AppState.page == root.index ? 1px : 0px;
-    border-color: #ffffff44;
+    border-color: Theme.accent.with-alpha(0.5);
     animate background { duration: 140ms; }
     Icon {
         d: root.d;
         size: 22px;
-        tint: AppState.page == root.index ? Theme.on-accent : Theme.muted;
+        tint: AppState.page == root.index ? #ffffff : Theme.muted;
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
     }
     if AppState.page == root.index : Rectangle {
-        x: (parent.width - 6px) / 2;
-        y: parent.height - 9px;
+        x: (parent.width - 5px) / 2;
+        y: parent.height - 7px;
         width: 5px;
         height: 5px;
-        border-radius: 3px;
-        background: Theme.on-accent;
+        border-radius: 2.5px;
+        background: #ffffff;
+        Rectangle {
+            x: -2px; y: -2px; width: 9px; height: 9px; border-radius: 4.5px;
+            background: Theme.accent.with-alpha(0.4);
+        }
     }
     if root.badge > 0 : Rectangle {
         x: parent.width - 15px;
@@ -45,7 +49,7 @@ component NavItem inherits Rectangle {
     ta := TouchArea { clicked => { AppState.page = root.index; AppState.page-changed(root.index); } }
 }
 
-// kepala halaman: maskot + orbit, sapaan, tombol bulat (pengaturan di Beranda, tutup di halaman lain)
+// kepala halaman: maskot + orbit kosmik, sapaan, tombol bulat
 component PageHeader inherits Rectangle {
     height: 72px;
     HorizontalLayout {
@@ -53,9 +57,9 @@ component PageHeader inherits Rectangle {
         Rectangle {
             width: 84px;
             if AppState.mascot-on : Path {
-                x: 0px; y: 34px; width: 84px; height: 34px; viewbox-width: 84; viewbox-height: 34;
+                x: 0px; y: 32px; width: 84px; height: 36px; viewbox-width: 84; viewbox-height: 36;
                 commands: "M 4 14 C 4 2 70 2 80 12 C 84 20 40 32 6 22";
-                stroke: Theme.accent.with-alpha(0.7);
+                stroke: Theme.accent.with-alpha(0.8);
                 stroke-width: 2.5px;
                 fill: transparent;
             }
@@ -65,14 +69,14 @@ component PageHeader inherits Rectangle {
             alignment: center;
             horizontal-stretch: 1;
             Text { text: AppState.greeting; color: Theme.text; font-size: 22px; font-weight: 800; overflow: elide; }
-            Text { text: AppState.date-long; color: Theme.accent; font-size: 13px; overflow: elide; }
+            Text { text: AppState.date-long; color: Theme.accent; font-size: 13px; font-weight: 600; overflow: elide; }
         }
         VerticalLayout {
             alignment: start;
             padding-top: 4px;
             IconBtn {
                 d: AppState.page == 0 ? Icons.gear : Icons.close;
-                size: 40px;
+                size: 38px;
                 clicked => { if (AppState.page == 0) { AppState.page = 8; AppState.page-changed(8); } else { AppState.collapse(); } }
             }
         }
@@ -146,29 +150,50 @@ export component MainWindow inherits Window {
                 height: parent.height;
                 TouchArea { clicked => { AppState.toggle-island(); } mouse-cursor: pointer; }
                 HorizontalLayout {
-                    padding-left: 10px;
+                    padding-left: 8px;
                     padding-right: 14px;
                     spacing: 10px;
                     alignment: center;
-                    if AppState.mascot-on : Mascot {
-                        face: AppState.face;
-                        size: 50px;
+                    if AppState.mascot-on : Rectangle {
+                        width: 50px;
+                        height: 38px;
                         y: (parent.height - self.height) / 2;
-                        clicked => { AppState.toggle-island(); }
+                        Path {
+                            x: -1px; y: 15px; width: 52px; height: 20px; viewbox-width: 52; viewbox-height: 20;
+                            commands: "M 2 8 C 2 1 44 1 50 7 C 53 12 26 19 4 14";
+                            stroke: Theme.accent.with-alpha(0.85);
+                            stroke-width: 1.8px;
+                            fill: transparent;
+                        }
+                        Mascot {
+                            face: AppState.face;
+                            size: 46px;
+                            x: 2px;
+                            y: (parent.height - self.height) / 2;
+                            clicked => { AppState.toggle-island(); }
+                        }
                     }
-                    if AppState.ai-running > 0 : VerticalLayout { alignment: center; Rectangle { width: 10px; height: 10px; border-radius: 5px; background: Theme.good; } }
-                    Text { text: AppState.clock; color: #f4f6fa; font-size: 20px; font-weight: 800; vertical-alignment: center; }
-                    Text { text: AppState.ai-running > 0 ? "AI ×" + AppState.ai-running : AppState.pill-line; color: #9aa1b4; font-size: 14px; font-weight: 600; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
+                    VerticalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            border-radius: 4px;
+                            background: Theme.good;
+                        }
+                    }
+                    Text { text: AppState.clock; color: #f4f6fa; font-size: 18px; font-weight: 800; vertical-alignment: center; }
+                    Text { text: AppState.ai-running > 0 ? "AI ×" + AppState.ai-running : AppState.pill-line; color: #9aa1b4; font-size: 13px; font-weight: 700; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
                     if AppState.ai-running > 1 : Rectangle {
-                        width: 62px;
+                        width: 58px;
                         clip: true;
                         HorizontalLayout {
                             spacing: 0px;
                             for s in AppState.sessions : Rectangle {
-                                width: s.running ? 30px : 0px;
+                                width: s.running ? 28px : 0px;
                                 Rectangle {
-                                    x: 0px; y: (parent.height - 26px) / 2; width: 26px; height: 26px; border-radius: 13px;
-                                    background: s.tint.with-alpha(0.3);
+                                    x: 0px; y: (parent.height - 24px) / 2; width: 24px; height: 24px; border-radius: 12px;
+                                    background: s.tint.with-alpha(0.35);
                                     border-width: 1px; border-color: s.tint;
                                     Text { text: s.mark; color: #ffffff; font-size: 9px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
                                 }
@@ -176,8 +201,7 @@ export component MainWindow inherits Window {
                         }
                     }
                     if AppState.badge > 0 : VerticalLayout { alignment: center; Badge { text: AppState.badge + "!"; tint: Theme.bad; } }
-                    VerticalLayout { alignment: center; Rectangle { width: 1px; height: 28px; background: #ffffff22; } }
-                    VerticalLayout { alignment: center; Icon { d: Icons.chev-down; size: 20px; tint: #9aa1b4; } }
+                    VerticalLayout { alignment: center; Icon { d: Icons.chev-down; size: 16px; tint: #8d95a5; } }
                 }
             }
 
@@ -189,24 +213,34 @@ export component MainWindow inherits Window {
                     padding: 14px;
                     spacing: 10px;
                     HorizontalLayout {
-                        spacing: 10px;
+                        spacing: 12px;
                         height: 58px;
-                        if AppState.mascot-on : Mascot { face: AppState.face; size: 64px; interactive: false; }
+                        Rectangle {
+                            width: 68px;
+                            if AppState.mascot-on : Path {
+                                x: 0px; y: 26px; width: 68px; height: 28px; viewbox-width: 68; viewbox-height: 28;
+                                commands: "M 3 11 C 3 1 56 1 64 10 C 67 16 32 26 5 18";
+                                stroke: Theme.accent.with-alpha(0.8);
+                                stroke-width: 2px;
+                                fill: transparent;
+                            }
+                            if AppState.mascot-on : Mascot { face: AppState.face; size: 64px; interactive: false; }
+                        }
                         VerticalLayout {
                             alignment: center;
                             horizontal-stretch: 1;
                             Text { text: "Butuh persetujuan"; color: Theme.text; font-size: 20px; font-weight: 800; }
-                            Text { text: AppState.approvals.length > 1 ? AppState.approvals.length + " permintaan menunggu" : "1 permintaan menunggu"; color: Theme.accent; font-size: 13px; }
+                            Text { text: AppState.approvals.length > 1 ? AppState.approvals.length + " permintaan menunggu" : "1 permintaan menunggu"; color: Theme.accent; font-size: 13px; font-weight: 600; }
                         }
-                        VerticalLayout { alignment: center; IconBtn { d: Icons.close; size: 38px; clicked => { AppState.collapse(); } } }
+                        VerticalLayout { alignment: center; IconBtn { d: Icons.close; size: 36px; clicked => { AppState.collapse(); } } }
                     }
                     if AppState.approvals.length > 0 : Rectangle {
                         vertical-stretch: 1;
                         border-radius: 22px;
                         background: @linear-gradient(155deg, Theme.surface 0%, Theme.surface2 100%);
                         border-width: 1px;
-                        border-color: Theme.warn.with-alpha(0.55);
-                        Rectangle { border-radius: 22px; background: @linear-gradient(160deg, Theme.warn.with-alpha(0.12) 0%, transparent 60%); }
+                        border-color: Theme.accent.with-alpha(0.4);
+                        Rectangle { border-radius: 22px; background: @linear-gradient(160deg, Theme.accent.with-alpha(0.12) 0%, transparent 60%); }
                         VerticalLayout {
                             padding: 14px;
                             spacing: 8px;
@@ -215,7 +249,7 @@ export component MainWindow inherits Window {
                                 VerticalLayout {
                                     alignment: center;
                                     Rectangle {
-                                        width: 44px; height: 44px; border-radius: 22px;
+                                        width: 42px; height: 42px; border-radius: 21px;
                                         background: AppState.approvals[0].tint.with-alpha(0.28);
                                         Text { text: AppState.approvals[0].mark; color: AppState.approvals[0].tint; font-size: 14px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
                                     }
@@ -223,7 +257,7 @@ export component MainWindow inherits Window {
                                 VerticalLayout {
                                     alignment: center;
                                     horizontal-stretch: 1;
-                                    Text { text: AppState.approvals[0].tool; color: Theme.text; font-size: 17px; font-weight: 800; overflow: elide; }
+                                    Text { text: AppState.approvals[0].tool; color: Theme.text; font-size: 16px; font-weight: 800; overflow: elide; }
                                     Text { text: AppState.approvals[0].summary; color: Theme.muted; font-size: 12px; overflow: elide; }
                                 }
                             }
@@ -252,7 +286,7 @@ export component MainWindow inherits Window {
                 height: parent.height;
                 VerticalLayout {
                     padding: 14px;
-                    padding-bottom: 20px;
+                    padding-bottom: 18px;
                     spacing: 10px;
                     PageHeader { }
                     Rectangle {
@@ -269,11 +303,11 @@ export component MainWindow inherits Window {
                         if AppState.page == 8 : SettingsPage { }
                     }
                     Rectangle {
-                        height: 60px;
-                        border-radius: 30px;
-                        background: @linear-gradient(90deg, Theme.surface 0%, Theme.surface2 100%);
+                        height: 62px;
+                        border-radius: 31px;
+                        background: Theme.dock-fill;
                         border-width: 1px;
-                        border-color: Theme.edge;
+                        border-color: #ffffff18;
                         HorizontalLayout {
                             padding: 8px;
                             alignment: space-around;
@@ -290,23 +324,23 @@ export component MainWindow inherits Window {
                     }
                 }
                 if AppState.toast != "" : Rectangle {
-                    y: parent.height - 136px;
+                    y: parent.height - 138px;
                     x: (parent.width - self.width) / 2;
-                    width: Math.min(parent.width - 28px, toast-text.preferred-width + 76px);
-                    height: 52px;
-                    border-radius: 18px;
-                    background: @linear-gradient(90deg, Theme.surface2 0%, Theme.surface 100%);
+                    width: Math.min(parent.width - 32px, toast-text.preferred-width + 88px);
+                    height: 56px;
+                    border-radius: 20px;
+                    background: @linear-gradient(90deg, #13152bee 0%, #171932ee 100%);
                     border-width: 1px;
-                    border-color: AppState.toast-kind == 2 ? Theme.bad : AppState.toast-kind == 1 ? Theme.accent : Theme.good;
+                    border-color: AppState.toast-kind == 2 ? Theme.bad.with-alpha(0.6) : AppState.toast-kind == 1 ? Theme.accent.with-alpha(0.6) : Theme.good.with-alpha(0.6);
                     HorizontalLayout {
-                        padding-left: 12px;
+                        padding-left: 14px;
                         padding-right: 14px;
                         spacing: 12px;
                         VerticalLayout {
                             alignment: center;
                             Rectangle {
-                                width: 32px; height: 32px; border-radius: 16px;
-                                background: (AppState.toast-kind == 2 ? Theme.bad : AppState.toast-kind == 1 ? Theme.accent : Theme.good).with-alpha(0.22);
+                                width: 34px; height: 34px; border-radius: 17px;
+                                background: (AppState.toast-kind == 2 ? Theme.bad : AppState.toast-kind == 1 ? Theme.accent : Theme.good).with-alpha(0.24);
                                 Icon {
                                     d: AppState.toast-kind == 2 ? Icons.warn : AppState.toast-kind == 1 ? Icons.info : Icons.ok;
                                     size: 18px;
@@ -316,7 +350,28 @@ export component MainWindow inherits Window {
                                 }
                             }
                         }
-                        toast-text := Text { text: AppState.toast; color: Theme.text; font-size: 13px; font-weight: 700; vertical-alignment: center; overflow: elide; }
+                        VerticalLayout {
+                            alignment: center;
+                            horizontal-stretch: 1;
+                            spacing: 1px;
+                            Text {
+                                text: AppState.toast-kind == 2 ? "Terjadi Kesalahan" : AppState.toast-kind == 1 ? "Informasi" : "Berhasil!";
+                                color: Theme.text;
+                                font-size: 13px;
+                                font-weight: 800;
+                            }
+                            toast-text := Text { text: AppState.toast; color: Theme.muted; font-size: 11px; font-weight: 600; overflow: elide; }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            IconBtn {
+                                d: Icons.close;
+                                size: 28px;
+                                filled: false;
+                                tint: Theme.muted;
+                                clicked => { AppState.toast = ""; }
+                            }
+                        }
                     }
                 }
             }

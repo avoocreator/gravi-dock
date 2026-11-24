@@ -29,12 +29,14 @@ impl ThemeMode {
 pub struct Scheme { pub id: &'static str, pub label: &'static str, pub accent: &'static str, pub accent2: &'static str }
 
 pub const SCHEMES: &[Scheme] = &[
-    Scheme { id: "ocean", label: "Samudra", accent: "#4da3ff", accent2: "#5ae0ff" },
-    Scheme { id: "mint", label: "Mint", accent: "#34d399", accent2: "#a3e635" },
-    Scheme { id: "sunset", label: "Senja", accent: "#ff8a4c", accent2: "#ffc94d" },
-    Scheme { id: "grape", label: "Anggur", accent: "#a78bfa", accent2: "#f472b6" },
-    Scheme { id: "rose", label: "Mawar", accent: "#fb7185", accent2: "#fda4af" },
-    Scheme { id: "mono", label: "Mono", accent: "#c7ccd6", accent2: "#8b93a3" },
+    Scheme { id: "catppuccin", label: "Catppuccin", accent: "#cba6f7", accent2: "#f5c2e7" },
+    Scheme { id: "dracula", label: "Dracula", accent: "#bd93f9", accent2: "#ff79c6" },
+    Scheme { id: "tokyo-night", label: "Tokyo Night", accent: "#7aa2f7", accent2: "#bb9af7" },
+    Scheme { id: "everforest", label: "Everforest", accent: "#a7c080", accent2: "#83c092" },
+    Scheme { id: "nord", label: "Nord", accent: "#88c0d0", accent2: "#81a1c1" },
+    Scheme { id: "rose-pine", label: "Rose Pine", accent: "#ebbcba", accent2: "#c4a7e7" },
+    Scheme { id: "one-dark", label: "One Dark", accent: "#61afef", accent2: "#c678dd" },
+    Scheme { id: "cyberpunk", label: "Cyberpunk", accent: "#00f0ff", accent2: "#ff007f" },
 ];
 
 pub fn scheme(id: &str) -> &'static Scheme { SCHEMES.iter().find(|s| s.id == id).unwrap_or(&SCHEMES[0]) }
@@ -128,6 +130,6 @@ mod tests {
         assert_eq!(parse_hex("#4da3ff"), Some((0x4d, 0xa3, 0xff)));
         assert_eq!(parse_hex("zzz"), None);
         assert!(ThemeMode::Auto.is_dark(true) && !ThemeMode::Light.is_dark(true));
-        assert_eq!(scheme("nope").id, "ocean");
+        assert_eq!(scheme("nope").id, "catppuccin");
     }
 }
