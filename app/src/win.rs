@@ -1,5 +1,5 @@
 //! FFI Win32 minimal (tanpa crate tambahan). Di non-Windows semua fungsi berupa stub agar `cargo check` tetap jalan.
-#![allow(non_snake_case, clippy::upper_case_acronyms)]
+#![allow(non_snake_case, clippy::upper_case_acronyms, dead_code)]
 
 #[cfg(windows)]
 mod sys {
@@ -84,13 +84,23 @@ pub struct Now { pub y: i64, pub mo: i64, pub d: i64, pub h: i64, pub mi: i64, p
 pub mod api {
     use super::{sys::*, Now};
     pub fn hwnd(title: &str) -> usize { unsafe { FindWindowW(std::ptr::null(), wide(title).as_ptr()) as usize } }
+    pub fn set_overlay_window(h: usize) {
+        if h == 0 { return; }
+        unsafe {
+            let hw = h as HWND;
+            let cur = GetWindowLongPtrW(hw, -20);
+            let n = (cur | 0x80 | 0x80000 | 0x08000000) & !0x40000;
+            if n != cur { SetWindowLongPtrW(hw, -20, n); }
+            SetWindowPos(hw, -1isize as HWND, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0020 | 0x0010 | 0x0040);
+        }
+    }
     /// Aktifkan/matikan click-through (WS_EX_TRANSPARENT) + sembunyikan dari Alt+Tab (TOOLWINDOW).
     pub fn set_passthrough(h: usize, on: bool) {
         if h == 0 { return; }
         unsafe {
             let hw = h as HWND;
             let cur = GetWindowLongPtrW(hw, -20);
-            let mut n = cur | 0x80 | 0x80000; // TOOLWINDOW | LAYERED
+            let mut n = (cur | 0x80 | 0x80000 | 0x08000000) & !0x40000;
             if on { n |= 0x20 } else { n &= !0x20 }
             if n != cur { SetWindowLongPtrW(hw, -20, n); }
         }
@@ -139,11 +149,80 @@ pub mod api {
         (ft(i), ft(k) + ft(u)) // kernel sudah termasuk idle
     }
     pub fn shell_open(target: &str) { unsafe { ShellExecuteW(std::ptr::null_mut(), wide("open").as_ptr(), wide(target).as_ptr(), std::ptr::null(), std::ptr::null(), 1); } }
-    pub fn play_wav(path: &str) {
-        unsafe { if path.is_empty() { PlaySoundW(wide("SystemExclamation").as_ptr(), std::ptr::null_mut(), 0x10000 | 1); } else { PlaySoundW(wide(path).as_ptr(), std::ptr::null_mut(), 0x20000 | 1); } }
+
+    fn make_wav(samples: &[i16], rate: u32) -> Vec<u8> {
+        let mut out = Vec::with_capacity(44 + samples.len() * 2);
+        let data_len = (samples.len() * 2) as u32;
+        let file_len = 36 + data_len;
+        out.extend_from_slice(b"RIFF");
+        out.extend_from_slice(&file_len.to_le_bytes());
+        out.extend_from_slice(b"WAVEfmt ");
+        out.extend_from_slice(&16u32.to_le_bytes());
+        out.extend_from_slice(&1u16.to_le_bytes());
+        out.extend_from_slice(&1u16.to_le_bytes());
+        out.extend_from_slice(&rate.to_le_bytes());
+        out.extend_from_slice(&(rate * 2).to_le_bytes());
+        out.extend_from_slice(&2u16.to_le_bytes());
+        out.extend_from_slice(&16u16.to_le_bytes());
+        out.extend_from_slice(b"data");
+        out.extend_from_slice(&data_len.to_le_bytes());
+        for &s in samples {
+            out.extend_from_slice(&s.to_le_bytes());
+        }
+        out
     }
+
+    fn gen_pop_wav() -> Vec<u8> {
+        const RATE: u32 = 44100;
+        let n = (RATE as f32 * 0.045) as usize;
+        let mut samples = Vec::with_capacity(n);
+        let mut phase: f32 = 0.0;
+        for i in 0..n {
+            let t = i as f32 / RATE as f32;
+            let freq = 750.0 + 850.0 * (1.0 - t / 0.045);
+            phase += 2.0 * std::f32::consts::PI * freq / RATE as f32;
+            let env = (1.0 - t / 0.045).powi(2);
+            let s = (phase.sin() * env * 9500.0) as i16;
+            samples.push(s);
+        }
+        make_wav(&samples, RATE)
+    }
+
+    fn gen_chime_wav() -> Vec<u8> {
+        const RATE: u32 = 44100;
+        let n = (RATE as f32 * 0.16) as usize;
+        let mut samples = Vec::with_capacity(n);
+        for i in 0..n {
+            let t = i as f32 / RATE as f32;
+            let env = (1.0 - t / 0.16).powi(2);
+            let s1 = (2.0 * std::f32::consts::PI * 659.25 * t).sin() * env * 7000.0;
+            let s2 = (2.0 * std::f32::consts::PI * 880.0 * t).sin() * env * 5000.0;
+            samples.push((s1 + s2) as i16);
+        }
+        make_wav(&samples, RATE)
+    }
+
+    static POP_WAV: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+    static CHIME_WAV: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+
+    /// Suara pop gelembung lembut & lucu ala Coucou saat klik tab / tombol
     pub fn play_click() {
-        unsafe { PlaySoundW(wide("SystemAsterisk").as_ptr(), std::ptr::null_mut(), 0x10000 | 1); }
+        let b = POP_WAV.get_or_init(gen_pop_wav);
+        unsafe { PlaySoundW(b.as_ptr() as *const u16, std::ptr::null_mut(), 0x0004 | 0x0001); }
+    }
+
+    /// Suara marimba chime manis saat aksi persetujuan AI / selesai
+    pub fn play_action_sfx() {
+        let b = CHIME_WAV.get_or_init(gen_chime_wav);
+        unsafe { PlaySoundW(b.as_ptr() as *const u16, std::ptr::null_mut(), 0x0004 | 0x0001); }
+    }
+
+    pub fn play_wav(path: &str) {
+        if path.is_empty() {
+            play_action_sfx();
+        } else {
+            unsafe { PlaySoundW(wide(path).as_ptr(), std::ptr::null_mut(), 0x20000 | 1); }
+        }
     }
     pub fn uptime_str() -> String {
         let s = unsafe { GetTickCount64() / 1000 };
@@ -298,6 +377,7 @@ pub mod api {
 pub mod api {
     use super::Now;
     pub fn hwnd(_: &str) -> usize { 0 }
+    pub fn set_overlay_window(_: usize) {}
     pub fn set_passthrough(_: usize, _: bool) {}
     pub fn topmost(_: usize) {}
     pub fn cursor() -> (i32, i32) { (0, 0) }
@@ -314,6 +394,7 @@ pub mod api {
     pub fn shell_open(_: &str) {}
     pub fn play_wav(_: &str) {}
     pub fn play_click() {}
+    pub fn play_action_sfx() {}
     pub fn clip_seq() -> u32 { 0 }
     pub fn clip_get() -> Option<String> { None }
     pub fn clip_set(_: &str) {}

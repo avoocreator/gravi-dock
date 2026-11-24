@@ -51,12 +51,12 @@ fn pull_settings(ui: &MainWindow, s: &mut Settings) {
 fn style(p: &str) -> (&'static str, slint::Color) {
     let c = |r: u8, g: u8, b: u8| slint::Color::from_rgb_u8(r, g, b);
     match p {
-        "agy" => ("A›", c(0x6f, 0x9b, 0xff)),
-        "claude" => ("CC", c(0xf0, 0x8a, 0x5d)),
-        "claudedesk" => ("Cd", c(0xe8, 0xa8, 0x7c)),
-        "copilot" => ("Cp", c(0x4f, 0xb3, 0xff)),
-        "chatgpt" => ("GP", c(0x2f, 0xd2, 0x9a)),
-        _ => ("AG", c(0x9b, 0x8c, 0xff)),
+        "agy" => ("agy", c(0x6f, 0x9b, 0xff)),
+        "claude" => ("claude", c(0xf0, 0x8a, 0x5d)),
+        "claudedesk" => ("claudedesk", c(0xe8, 0xa8, 0x7c)),
+        "copilot" => ("copilot", c(0x4f, 0xb3, 0xff)),
+        "chatgpt" => ("chatgpt", c(0x2f, 0xd2, 0x9a)),
+        _ => ("agy", c(0x9b, 0x8c, 0xff)),
     }
 }
 
@@ -165,6 +165,7 @@ fn main() {
     place();
     win::api::tray();
     let hwnd = Rc::new(Cell::new(win::api::hwnd(TITLE)));
+    win::api::set_overlay_window(hwnd.get());
     win::api::set_passthrough(hwnd.get(), true);
     win::api::topmost(hwnd.get());
 
@@ -360,7 +361,7 @@ fn main() {
     ui.on_session_action({
         let ui = ui.as_weak();
         move |_idx| {
-            win::api::play_wav("");
+            win::api::play_action_sfx();
             win::api::send_action_confirm();
             if let Some(u) = ui.upgrade() {
                 u.set_greeting("Izin disetujui ✓".into());
@@ -381,13 +382,10 @@ fn main() {
     let last_clip = Rc::new(Cell::new(win::api::clip_seq()));
     let last_adzan = Rc::new(Cell::new(-1i64));
     let cpu_hist = Rc::new(RefCell::new(Vec::<f32>::new()));
-    // heuristik CPU untuk ChatGPT / Claude Desktop (tanpa berkas sesi): [chatgpt, claude]
-    let cpu_prev: Rc<RefCell<(i64, Vec<u64>)>> = Rc::new(RefCell::new((ses::now_ms(), win::api::proc_cpu(&["chatgpt.exe", "claude.exe"]))));
-    let busy: Rc<RefCell<[(u8, u8, bool); 2]>> = Rc::new(RefCell::new([(0, 0, false); 2])); // (sibuk, tenang, aktif)
     let t1 = Timer::default();
     {
         let ui = ui.as_weak(); let cfg = cfg.clone(); let shared = shared.clone(); let extra = extra.clone();
-        let focus = focus.clone(); let clips = clips.clone(); let cpu_prev = cpu_prev.clone(); let busy = busy.clone();
+        let focus = focus.clone(); let clips = clips.clone();
         let (media, media_idle, ctx_cell, hover_now, done_at, click_at, last_adzan) = (media.clone(), media_idle.clone(), ctx_cell.clone(), hover_now.clone(), done_at.clone(), click_at.clone(), last_adzan.clone());
         let (sw_running, sw_secs, cpu_hist) = (sw_running.clone(), sw_secs.clone(), cpu_hist.clone());
         t1.start(TimerMode::Repeated, Duration::from_secs(1), move || {
@@ -502,33 +500,11 @@ fn main() {
                 }
             }
 
-            // ChatGPT / Claude Desktop: dianggap berjalan bila CPU > 8% satu inti (2 sampel naik, 3 sampel turun)
-            let mut guess: Vec<SessionItem> = vec![];
-            {
-                let nowm = ses::now_ms();
-                let cur = win::api::proc_cpu(&["chatgpt.exe", "claude.exe"]);
-                let mut p = cpu_prev.borrow_mut();
-                let el = ((nowm - p.0).max(1) as f64) / 1000.0;
-                let mut b = busy.borrow_mut();
-                for i in 0..2 {
-                    let frac = cur[i].saturating_sub(p.1[i]) as f64 / 1e7 / el;
-                    if frac > 0.08 { b[i].0 = b[i].0.saturating_add(1); b[i].1 = 0; } else { b[i].1 = b[i].1.saturating_add(1); b[i].0 = 0; }
-                    if b[i].0 >= 2 { b[i].2 = true } else if b[i].1 >= 3 { b[i].2 = false }
-                    if b[i].2 {
-                        let (prov, name) = if i == 0 { ("chatgpt", "ChatGPT Desktop") } else { ("claudedesk", "Claude Desktop") };
-                        let (mark, tint) = style(prov);
-                        guess.push(SessionItem { title: format!("{} (perkiraan)", name).into(), sub: "aktif memproses".into(), meta: "berjalan".into(), mark: mark.into(), tint, running: true, action: false });
-                    }
-                }
-                *p = (nowm, cur);
-            }
-
             // sesi
             let list = shared.lock().unwrap();
-            let mut items: Vec<SessionItem> = guess.clone();
-            items.extend(list.iter().map(to_item));
+            let items: Vec<SessionItem> = list.iter().map(to_item).collect();
             let live: Vec<SessionItem> = items.iter().filter(|s| s.running || s.action).take(3).cloned().collect();
-            ui.set_running_count((list.iter().filter(|s| s.state == ses::State::Running).count() + guess.len()) as i32);
+            ui.set_running_count(list.iter().filter(|s| s.state == ses::State::Running).count() as i32);
             let had_live = ui.get_live().row_count() > 0;
             ui.set_sessions(ModelRc::new(VecModel::from(items)));
             ui.set_live(ModelRc::new(VecModel::from(live.clone())));
@@ -575,7 +551,13 @@ fn main() {
             let mut toggle = want_toggle.swap(false, Ordering::SeqCst);
             if tick.get() % 10 == 0 && signal.exists() { let _ = std::fs::remove_file(&signal); toggle = true; }
             if tick.get() % 250 == 0 { place(); win::api::topmost(hwnd.get()); }
-            if hwnd.get() == 0 { hwnd.set(win::api::hwnd(TITLE)); }
+            if hwnd.get() == 0 {
+                let h = win::api::hwnd(TITLE);
+                if h != 0 {
+                    hwnd.set(h);
+                    win::api::set_overlay_window(h);
+                }
+            }
             match win::api::TRAY_EVENT.swap(0, Ordering::SeqCst) { 1 => toggle = true, 2 => { let _ = slint::quit_event_loop(); } _ => {} }
             if toggle { if ui.get_mode() == 2 { back(&ui); } else { ui.set_mode(2); win::api::focus(hwnd.get()); } }
 
@@ -587,7 +569,7 @@ fn main() {
             let inside = lx >= hx && lx <= hx + hw && ly >= hy && ly <= hy + hh;
             if !inside != pass.get() { pass.set(!inside); win::api::set_passthrough(hwnd.get(), !inside); }
 
-            if inside != hover_now.get() { hover_now.set(inside); let mut c = ctx_cell.get(); c.hover = inside; ctx_cell.set(c); ui.set_mood(mood_view(&c, ui.global::<Theme>().get_cyan())); }
+            if inside != hover_now.get() { hover_now.set(inside); let mut c = ctx_cell.get(); c.hover = inside; ctx_cell.set(c); ui.set_mood(mood_view(&c, ui.global::<Theme>().get_cyan())); ui.set_is_hovered(inside); }
             let mode = ui.get_mode();
             if inside { inside_ms.set(inside_ms.get() + 40); outside_ms.set(0); } else { outside_ms.set(outside_ms.get() + 40); inside_ms.set(0); }
             if ui.get_hover_open() {

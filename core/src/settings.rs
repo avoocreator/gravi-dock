@@ -19,7 +19,7 @@ impl Default for Settings {
         Settings { lat: -6.9175, lon: 107.6191, city: "Bandung".into(), hover: false, top_pct: 0.0, light: false, accent: "#5ae0ff".into(),
             ical: String::new(), adzan: true, adzan_wav: String::new(), focus_min: 25, break_min: 5,
             src_claude: true, src_copilot: true, src_agy: true, src_desk: true,
-            position: "right".into(), sfx: true }
+            position: "top".into(), sfx: true }
     }
 }
 
