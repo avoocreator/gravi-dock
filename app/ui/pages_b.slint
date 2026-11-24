@@ -1,0 +1,586 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { AppState } from "state.slint";
+import { Icon, Icons, Card, Label, Muted, SectionTitle, Btn, IconBtn, Toggle, Seg, Stepper, SliderLite, Field, Ring, Spark, Badge, Heading, Sparkle } from "widgets.slint";
+
+// ===================== KALENDER =====================
+export component CalendarPage inherits Rectangle {
+    ScrollView {
+        VerticalLayout {
+            spacing: 12px;
+            padding-bottom: 6px;
+            Card {
+                height: 206px;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    HorizontalLayout {
+                        spacing: 12px;
+                        height: 48px;
+                        Rectangle {
+                            width: 48px; height: 48px; border-radius: 16px;
+                            background: Theme.accent.with-alpha(0.22);
+                            border-width: 1px; border-color: Theme.edge;
+                            Icon { d: Icons.calendar; size: 24px; tint: Theme.accent; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+                        }
+                        Text { text: AppState.cal-month; color: Theme.text; font-size: 22px; font-weight: 800; vertical-alignment: center; horizontal-stretch: 1; }
+                        VerticalLayout { alignment: center; Badge { text: AppState.cal-connected ? "Google" : "iCal"; tint: AppState.cal-connected ? Theme.good : Theme.muted; } }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        for d in AppState.cal-week : Rectangle {
+                            height: 32px;
+                            border-radius: 12px;
+                            background: Theme.surface3.with-alpha(0.7);
+                            Text { text: d.label; color: d.today ? Theme.accent : Theme.muted; font-size: 12px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        for d in AppState.cal-week : Rectangle {
+                            height: 64px;
+                            border-radius: 16px;
+                            background: d.today ? Theme.grad-v : @linear-gradient(160deg, Theme.surface2 0%, Theme.surface 100%);
+                            border-width: 1px;
+                            border-color: d.today ? transparent : Theme.border;
+                            Text { text: d.num; color: d.today ? Theme.on-accent : Theme.text; font-size: 20px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                            Rectangle { y: parent.height - 12px; x: (parent.width - 6px) / 2; width: 6px; height: 6px; border-radius: 3px; background: d.dot || d.today ? (d.today ? #ffffff : Theme.accent) : transparent; }
+                        }
+                    }
+                }
+            }
+            Heading { text: "Acara"; icon: Icons.info; }
+            if AppState.cal-events.length == 0 : Card {
+                height: 80px;
+                HorizontalLayout {
+                    padding: 16px;
+                    spacing: 14px;
+                    VerticalLayout { alignment: center; Icon { d: Icons.calendar; size: 30px; tint: Theme.accent; } }
+                    Text { text: "Tidak ada acara dalam 7 hari ke depan"; color: Theme.muted; font-size: 14px; vertical-alignment: center; horizontal-stretch: 1; wrap: word-wrap; }
+                    VerticalLayout { alignment: start; Sparkle { size: 14px; tint: Theme.accent.with-alpha(0.7); } }
+                }
+            }
+            for ev in AppState.cal-events : Card {
+                height: 62px;
+                tint: ev.tint;
+                HorizontalLayout {
+                    padding: 12px;
+                    spacing: 12px;
+                    Rectangle { width: 5px; border-radius: 3px; background: ev.tint; }
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        Label { text: ev.title; strong: true; }
+                        Muted { text: ev.sub; }
+                    }
+                    Text { text: ev.time; color: Theme.muted; font-size: 12px; vertical-alignment: center; }
+                }
+            }
+            Card {
+                height: 92px;
+                tint: Theme.accent2;
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 14px;
+                    VerticalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 56px; height: 56px; border-radius: 14px;
+                            background: #ffffff;
+                            Rectangle { y: 0px; height: 16px; background: #4285f4; border-radius: 14px; }
+                            Rectangle { y: 10px; height: 8px; background: #4285f4; }
+                            Text { y: 14px; text: "31"; color: #1a73e8; font-size: 24px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        Text { text: AppState.cal-connected ? "Google Calendar terhubung" : "Hubungkan Google Calendar"; color: Theme.text; font-size: 15px; font-weight: 800; overflow: elide; }
+                        Muted { text: AppState.cal-status == "" ? (AppState.cal-connected ? "Acara disinkronkan" : "Isi Client ID di Pengaturan dulu") : AppState.cal-status; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        if !AppState.cal-connected : Btn { text: "Hubungkan"; kind: 1; icon: Icons.link; clicked => { AppState.cal-connect(); } }
+                        if AppState.cal-connected : Btn { text: "Putuskan"; kind: 2; clicked => { AppState.cal-disconnect(); } }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ===================== GITHUB =====================
+export component GithubPage inherits Rectangle {
+    property <int> range: 0;                                  // 0 = 1 tahun, 1 = 6 bulan, 2 = 3 bulan
+    property <int> weeks: root.range == 0 ? 53 : root.range == 1 ? 26 : 13;
+    property <length> stride: Math.min((root.width - 52px) / root.weeks, 22px);
+    ScrollView {
+        VerticalLayout {
+            spacing: 12px;
+            padding-bottom: 6px;
+            Card {
+                height: 62px;
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 10px;
+                    Text { text: AppState.gh-user == "" ? "GitHub" : "@" + AppState.gh-user; color: Theme.text; font-size: 22px; font-weight: 800; vertical-alignment: center; }
+                    VerticalLayout { alignment: center; Icon { d: Icons.external; size: 18px; tint: Theme.muted; } }
+                    Rectangle { horizontal-stretch: 1; }
+                    VerticalLayout { alignment: center; IconBtn { d: Icons.reset; size: 40px; clicked => { AppState.gh-refresh(); } } }
+                }
+                TouchArea { width: 200px; clicked => { AppState.open-url("https://github.com/" + AppState.gh-user); } }
+            }
+            if AppState.gh-user == "" : Card {
+                height: 70px;
+                VerticalLayout {
+                    padding: 14px;
+                    alignment: center;
+                    spacing: 4px;
+                    Label { text: "Isi username GitHub di Pengaturan"; strong: true; }
+                    Muted { text: "Token (opsional) menambah repo privat"; }
+                }
+            }
+            Card {
+                height: 7 * root.stride + 128px;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        height: 30px;
+                        VerticalLayout { alignment: center; Icon { d: Icons.bars; size: 20px; tint: Theme.accent; } }
+                        Text { text: "Kontribusi Kamu"; color: Theme.text; font-size: 15px; font-weight: 800; vertical-alignment: center; horizontal-stretch: 1; overflow: elide; }
+                        Rectangle {
+                            width: 190px;
+                            height: 30px;
+                            border-radius: 15px;
+                            background: Theme.surface3.with-alpha(0.7);
+                            HorizontalLayout {
+                                padding: 2px;
+                                for t[i] in ["1 tahun", "6 bulan", "3 bulan"] : Rectangle {
+                                    border-radius: 13px;
+                                    background: i == root.range ? Theme.grad : transparent;
+                                    Text { text: t; color: i == root.range ? Theme.on-accent : Theme.muted; font-size: 11px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                                    TouchArea { clicked => { root.range = i; } }
+                                }
+                            }
+                        }
+                    }
+                    Rectangle {
+                        height: 7 * root.stride;
+                        clip: true;
+                        for lv[i] in AppState.gh-cells : Rectangle {
+                            property <int> cell-col: Math.floor(i / 7) - (53 - root.weeks);
+                            visible: self.cell-col >= 0 && lv >= 0;
+                            x: self.cell-col * root.stride;
+                            y: Math.mod(i, 7) * root.stride;
+                            width: root.stride - 3px;
+                            height: root.stride - 3px;
+                            border-radius: Math.max(2px, (root.stride - 3px) / 3.5);
+                            background: lv <= 0 ? Theme.surface3 : lv == 1 ? Theme.accent.with-alpha(0.38) : lv == 2 ? Theme.accent.with-alpha(0.62) : lv == 3 ? Theme.accent : Theme.accent2;
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 14px;
+                        Muted { text: AppState.gh-total == "" ? AppState.gh-status : AppState.gh-total; vertical-alignment: center; }
+                        if AppState.gh-streak != "" : Text { text: AppState.gh-streak; color: Theme.warn; font-size: 12px; font-weight: 800; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        Rectangle {
+                            width: 110px;
+                            Text { text: "Lihat detail  →"; color: Theme.accent; font-size: 12px; font-weight: 700; horizontal-alignment: right; vertical-alignment: center; }
+                            TouchArea { clicked => { AppState.open-url("https://github.com/" + AppState.gh-user); } }
+                        }
+                    }
+                }
+            }
+            HorizontalLayout {
+                spacing: 10px;
+                Heading { text: "Commit Hari Ini"; icon: Icons.history; horizontal-stretch: 1; }
+                VerticalLayout { alignment: center; Badge { text: "● " + AppState.gh-today; tint: Theme.good; } }
+            }
+            if AppState.commits.length == 0 : Muted { text: "Belum ada commit hari ini"; }
+            for c in AppState.commits : Card {
+                height: 62px;
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    VerticalLayout { alignment: center; Icon { d: Icons.github; size: 22px; tint: Theme.accent; } }
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        Label { text: c.message == "" ? "(commit tanpa pesan)" : c.message; font-size: 14px; }
+                        Muted { text: c.repo + "  •  " + c.meta; }
+                    }
+                    VerticalLayout { alignment: center; Icon { d: Icons.chev-right; size: 18px; tint: Theme.muted; } }
+                }
+            }
+            Heading { text: "Repo Terbaru"; icon: Icons.cube; }
+            for r in AppState.repos : Card {
+                height: 52px;
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    VerticalLayout { alignment: center; Icon { d: Icons.github; size: 20px; tint: Theme.accent; } }
+                    Label { text: r.name; horizontal-stretch: 1; font-size: 14px; vertical-alignment: center; }
+                    Muted { text: r.meta; vertical-alignment: center; }
+                    VerticalLayout { alignment: center; Icon { d: Icons.chev-right; size: 18px; tint: Theme.muted; } }
+                }
+                TouchArea { clicked => { AppState.open-url(r.url); } mouse-cursor: pointer; }
+            }
+        }
+    }
+}
+
+// ===================== SISTEM =====================
+export component SystemPage inherits Rectangle {
+    ScrollView {
+        VerticalLayout {
+            spacing: 10px;
+            padding-bottom: 6px;
+            Card {
+                height: 150px;
+                tint: Theme.accent;
+                Spark { x: parent.width * 0.38; y: 46px; width: parent.width * 0.58; height: parent.height - 64px; line: AppState.cpu-line; area: AppState.cpu-area; tint: Theme.accent; }
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 6px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        VerticalLayout { alignment: center; Icon { d: Icons.system; size: 26px; tint: Theme.accent; } }
+                        Text { text: "CPU"; color: Theme.text; font-size: 16px; font-weight: 800; vertical-alignment: center; horizontal-stretch: 1; }
+                        VerticalLayout { alignment: center; Badge { text: "● Real-time"; tint: Theme.good; } }
+                    }
+                    Text { text: AppState.cpu-text; color: Theme.text; font-size: 44px; font-weight: 800; vertical-stretch: 1; vertical-alignment: center; }
+                }
+            }
+            HorizontalLayout {
+                spacing: 10px;
+                Card {
+                    height: 138px;
+                    tint: Theme.warn;
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 6px;
+                        HorizontalLayout { spacing: 8px; Icon { d: Icons.ram; size: 24px; tint: Theme.warn; } Label { text: "RAM"; strong: true; font-size: 15px; vertical-alignment: center; } }
+                        Text { text: Math.round(AppState.mem * 100) + "%"; color: Theme.text; font-size: 34px; font-weight: 800; }
+                        Rectangle { height: 8px; border-radius: 4px; background: Theme.surface3; Rectangle { width: parent.width * AppState.mem; height: 8px; border-radius: 4px; background: @linear-gradient(90deg, Theme.warn 0%, #ffd27a 100%); } }
+                        Muted { text: AppState.mem-text; }
+                    }
+                }
+                Card {
+                    height: 138px;
+                    tint: Theme.accent2;
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 6px;
+                        HorizontalLayout { spacing: 8px; Icon { d: Icons.disk; size: 24px; tint: Theme.accent2; } Label { text: "Disk"; strong: true; font-size: 15px; vertical-alignment: center; } }
+                        Text { text: Math.round(AppState.disk * 100) + "%"; color: Theme.text; font-size: 34px; font-weight: 800; }
+                        Rectangle { height: 8px; border-radius: 4px; background: Theme.surface3; Rectangle { width: parent.width * AppState.disk; height: 8px; border-radius: 4px; background: Theme.grad; } }
+                        Muted { text: AppState.disk-text; }
+                    }
+                }
+            }
+            HorizontalLayout {
+                spacing: 10px;
+                Card {
+                    height: 100px;
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 6px;
+                        HorizontalLayout { spacing: 8px; Icon { d: Icons.temp; size: 22px; tint: Theme.accent; } Label { text: "Suhu"; strong: true; font-size: 15px; vertical-alignment: center; } }
+                        Text { text: AppState.temp-text; color: Theme.text; font-size: 28px; font-weight: 800; }
+                    }
+                }
+                Card {
+                    height: 100px;
+                    tint: Theme.accent2;
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 6px;
+                        HorizontalLayout { spacing: 8px; Icon { d: Icons.clock; size: 22px; tint: Theme.accent2; } Label { text: "Waktu Nyala"; strong: true; font-size: 15px; vertical-alignment: center; } }
+                        Text { text: AppState.uptime-text; color: Theme.text; font-size: 28px; font-weight: 800; overflow: elide; }
+                    }
+                }
+            }
+            if AppState.has-battery : Card {
+                height: 104px;
+                tint: Theme.good;
+                HorizontalLayout {
+                    padding: 16px;
+                    spacing: 14px;
+                    VerticalLayout { alignment: center; Icon { d: Icons.battery; size: 44px; tint: Theme.good; } }
+                    VerticalLayout {
+                        alignment: center;
+                        Label { text: "Baterai"; strong: true; font-size: 15px; }
+                        Text { text: Math.round(AppState.battery * 100) + "%"; color: Theme.text; font-size: 32px; font-weight: 800; }
+                        Muted { text: AppState.charging ? "Mengisi daya" : "Memakai baterai"; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        Rectangle { height: 12px; border-radius: 6px; background: Theme.surface3; Rectangle { width: parent.width * AppState.battery; height: 12px; border-radius: 6px; background: @linear-gradient(90deg, Theme.good 0%, #86efac 100%); } }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ===================== KLIP & SHELF =====================
+export component ClipPage inherits Rectangle {
+    property <int> tab: 0;
+    VerticalLayout {
+        spacing: 12px;
+        Seg { items: ["Klip", "Shelf"]; icons: [Icons.tray, Icons.layers]; current: root.tab; picked(i) => { root.tab = i; } }
+
+        if root.tab == 0 : VerticalLayout {
+            spacing: 10px;
+            HorizontalLayout {
+                height: 38px;
+                spacing: 8px;
+                VerticalLayout { alignment: center; Icon { d: Icons.history; size: 22px; tint: Theme.accent; } }
+                Text { text: AppState.clips.length + " Item Terakhir"; color: Theme.text; font-size: 15px; font-weight: 800; vertical-alignment: center; horizontal-stretch: 1; }
+                Btn { text: "Bersihkan"; icon: Icons.trash; clicked => { AppState.clip-clear(); } }
+            }
+            ScrollView {
+                vertical-stretch: 1;
+                VerticalLayout {
+                    spacing: 8px;
+                    if AppState.clips.length == 0 : Muted { text: "Salin sesuatu, riwayatnya muncul di sini"; }
+                    for c[i] in AppState.clips : Card {
+                        height: 64px;
+                        fill: c.pinned ? @linear-gradient(155deg, Theme.accent.with-alpha(0.22) 0%, Theme.surface2 100%) : @linear-gradient(155deg, Theme.surface 0%, Theme.surface2 100%);
+                        HorizontalLayout {
+                            padding: 10px;
+                            spacing: 8px;
+                            VerticalLayout {
+                                alignment: center;
+                                Rectangle { width: 42px; height: 42px; border-radius: 14px; background: Theme.accent.with-alpha(0.22); Icon { d: Icons.doc; size: 22px; tint: Theme.accent; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; } }
+                            }
+                            Text { text: c.text; color: Theme.text; font-size: 13px; horizontal-stretch: 1; overflow: elide; vertical-alignment: center; }
+                            VerticalLayout { alignment: center; IconBtn { d: Icons.copy; size: 36px; clicked => { AppState.clip-copy(i); } } }
+                            VerticalLayout { alignment: center; IconBtn { d: Icons.pin; size: 36px; tint: c.pinned ? Theme.accent : Theme.text; clicked => { AppState.clip-pin(i); } } }
+                            VerticalLayout { alignment: center; IconBtn { d: Icons.trash; size: 36px; tint: Theme.bad; fill: Theme.bad.with-alpha(0.16); clicked => { AppState.clip-del(i); } } }
+                        }
+                    }
+                }
+            }
+            Card {
+                height: 62px;
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 12px;
+                    VerticalLayout { alignment: center; Icon { d: Icons.bulb; size: 24px; tint: Theme.accent; } }
+                    Text { text: "Klip akan tersimpan otomatis untuk akses cepat kapan saja."; color: Theme.muted; font-size: 12px; wrap: word-wrap; vertical-alignment: center; horizontal-stretch: 1; }
+                }
+            }
+        }
+
+        if root.tab == 1 : VerticalLayout {
+            spacing: 10px;
+            Rectangle {
+                height: 90px;
+                border-radius: 22px;
+                border-width: 1.5px;
+                border-color: Theme.accent.with-alpha(0.55);
+                background: Theme.accent.with-alpha(0.08);
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 4px;
+                    HorizontalLayout { alignment: center; Icon { d: Icons.layers; size: 26px; tint: Theme.accent; } }
+                    Label { text: "Seret berkas ke sini"; strong: true; horizontal-alignment: center; }
+                    Muted { text: "atau salin di Explorer lalu tekan tombol di bawah"; horizontal-alignment: center; }
+                }
+            }
+            Btn { text: "Tambah dari clipboard"; kind: 1; icon: Icons.plus; clicked => { AppState.shelf-add(); } }
+            ScrollView {
+                vertical-stretch: 1;
+                VerticalLayout {
+                    spacing: 8px;
+                    for f[i] in AppState.shelf : Card {
+                        height: 60px;
+                        HorizontalLayout {
+                            padding: 10px;
+                            spacing: 8px;
+                            VerticalLayout {
+                                alignment: center;
+                                Rectangle { width: 40px; height: 40px; border-radius: 13px; background: Theme.accent.with-alpha(0.22); Icon { d: Icons.folder; size: 22px; tint: Theme.accent; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; } }
+                            }
+                            Label { text: f.name; horizontal-stretch: 1; vertical-alignment: center; }
+                            VerticalLayout { alignment: center; IconBtn { d: Icons.external; size: 34px; clicked => { AppState.shelf-open(i); } } }
+                            VerticalLayout { alignment: center; IconBtn { d: Icons.copy; size: 34px; clicked => { AppState.shelf-copy(i); } } }
+                            VerticalLayout { alignment: center; IconBtn { d: Icons.trash; size: 34px; tint: Theme.bad; fill: Theme.bad.with-alpha(0.16); clicked => { AppState.shelf-del(i); } } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ===================== PENGATURAN =====================
+component Row inherits HorizontalLayout {
+    in property <string> text;
+    spacing: 10px;
+    height: 36px;
+    Label { text: root.text; vertical-alignment: center; horizontal-stretch: 1; }
+    @children
+}
+
+export component SettingsPage inherits Rectangle {
+    ScrollView {
+        VerticalLayout {
+            spacing: 10px;
+            padding-bottom: 10px;
+
+            SectionTitle { text: "TAMPILAN"; }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+                    Label { text: "Tema"; }
+                    Seg { items: ["Gelap", "Terang", "Otomatis"]; current: AppState.s-theme; picked(i) => { AppState.s-theme = i; AppState.settings-changed(); } }
+                    Label { text: "Skema warna"; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        for c[i] in AppState.scheme-colors : Rectangle {
+                            width: 34px;
+                            height: 34px;
+                            border-radius: 17px;
+                            background: @linear-gradient(135deg, c 0%, c.darker(0.4) 100%);
+                            border-width: i == AppState.s-scheme ? 3px : 0px;
+                            border-color: Theme.text;
+                            TouchArea { clicked => { AppState.s-scheme = i; AppState.settings-changed(); } }
+                        }
+                    }
+                    Label { text: "Posisi island"; }
+                    Seg { items: ["Kiri", "Kanan", "Atas"]; current: AppState.s-dock; picked(i) => { AppState.s-dock = i; AppState.settings-changed(); } }
+                    Label { text: AppState.s-dock == 2 ? "Geser horizontal" : "Geser vertikal"; }
+                    SliderLite { value: AppState.s-edge; changed(v) => { AppState.s-edge = v; AppState.settings-changed(); } }
+                    Row { text: "Buka saat kursor di atas island"; Toggle { on: AppState.s-hover; toggled(v) => { AppState.s-hover = v; AppState.settings-changed(); } } }
+                    Row { text: "Tampilkan maskot Gravi"; Toggle { on: AppState.s-mascot; toggled(v) => { AppState.s-mascot = v; AppState.settings-changed(); } } }
+                    Row { text: "Render GPU (butuh restart, lebih boros memori)"; Toggle { on: AppState.s-gpu; toggled(v) => { AppState.s-gpu = v; AppState.settings-changed(); } } }
+                }
+            }
+
+            SectionTitle { text: "SUARA"; }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+                    Row { text: "Efek suara"; Toggle { on: AppState.s-sfx; toggled(v) => { AppState.s-sfx = v; AppState.settings-changed(); } } }
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Label { text: "Volume"; y: 2px; }
+                        SliderLite { horizontal-stretch: 1; value: AppState.s-sfx-vol; changed(v) => { AppState.s-sfx-vol = v; AppState.settings-changed(); } }
+                        Btn { text: "Coba"; clicked => { AppState.sfx-test(); } }
+                    }
+                    Label { text: "Berkas adzan (.wav) — kosong = nada placeholder"; }
+                    Field { text <=> AppState.s-adzan-file; placeholder: "C:\\Suara\\adzan.wav"; accepted(t) => { AppState.settings-changed(); } edited(t) => { AppState.settings-changed(); } }
+                }
+            }
+
+            SectionTitle { text: "LOKASI & CUACA"; }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 6px;
+                    Label { text: "Kota (untuk waktu sholat & cuaca)"; }
+                    Field { text <=> AppState.s-city; placeholder: "Bandung"; accepted(t) => { AppState.settings-changed(); } }
+                    Muted { text: "Pilih kota Indonesia yang ada di daftar, mis. Jakarta, Surabaya, Makassar"; wrap: word-wrap; }
+                }
+            }
+
+            SectionTitle { text: "SUMBER SESI AI"; }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 4px;
+                    Row { text: "Claude Code (CLI)"; Toggle { on: AppState.s-src-claude; toggled(v) => { AppState.s-src-claude = v; AppState.settings-changed(); } } }
+                    Row { text: "Copilot CLI"; Toggle { on: AppState.s-src-copilot; toggled(v) => { AppState.s-src-copilot = v; AppState.settings-changed(); } } }
+                    Row { text: "Antigravity (CLI)"; Toggle { on: AppState.s-src-agy; toggled(v) => { AppState.s-src-agy = v; AppState.settings-changed(); } } }
+                    Row { text: "Aplikasi desktop (Claude / ChatGPT / Antigravity)"; Toggle { on: AppState.s-src-desk; toggled(v) => { AppState.s-src-desk = v; AppState.settings-changed(); } } }
+                }
+            }
+
+            SectionTitle { text: "TOMBOL SETUJUI DI CLI"; }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+                    Muted { text: "Pasang hook agar permintaan izin Claude Code / Copilot CLI muncul di island dan bisa disetujui dari sini."; wrap: word-wrap; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Label { text: "Claude Code"; horizontal-stretch: 1; y: 6px; }
+                        Badge { text: AppState.hook-claude ? "terpasang" : "belum"; tint: AppState.hook-claude ? Theme.good : Theme.muted; y: 6px; }
+                        Btn { text: AppState.hook-claude ? "Lepas" : "Pasang"; kind: AppState.hook-claude ? 2 : 1; clicked => { if (AppState.hook-claude) { AppState.hooks-remove("claude"); } else { AppState.hooks-install("claude"); } } }
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Label { text: "Copilot CLI"; horizontal-stretch: 1; y: 6px; }
+                        Badge { text: AppState.hook-copilot ? "terpasang" : "belum"; tint: AppState.hook-copilot ? Theme.good : Theme.muted; y: 6px; }
+                        Btn { text: AppState.hook-copilot ? "Lepas" : "Pasang"; kind: AppState.hook-copilot ? 2 : 1; clicked => { if (AppState.hook-copilot) { AppState.hooks-remove("copilot"); } else { AppState.hooks-install("copilot"); } } }
+                    }
+                    Muted { text: AppState.settings-note; wrap: word-wrap; }
+                }
+            }
+
+            SectionTitle { text: "GITHUB"; }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 6px;
+                    Label { text: "Username"; }
+                    Field { text <=> AppState.s-gh-user; placeholder: "avoocreator"; accepted(t) => { AppState.settings-changed(); AppState.gh-refresh(); } }
+                    Label { text: "Token (opsional, scope read:user + repo)"; }
+                    Field { text <=> AppState.s-gh-token; placeholder: "ghp_…"; secret: true; accepted(t) => { AppState.settings-changed(); AppState.gh-refresh(); } }
+                }
+            }
+
+            SectionTitle { text: "KALENDER"; }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 6px;
+                    Label { text: "Google OAuth Client ID"; }
+                    Field { text <=> AppState.s-gcal-id; placeholder: "xxxx.apps.googleusercontent.com"; accepted(t) => { AppState.settings-changed(); } }
+                    Label { text: "Client secret"; }
+                    Field { text <=> AppState.s-gcal-secret; placeholder: "GOCSPX-…"; secret: true; accepted(t) => { AppState.settings-changed(); } }
+                    Label { text: "atau URL iCal rahasia"; }
+                    Field { text <=> AppState.s-ical; placeholder: "https://calendar.google.com/…/basic.ics"; accepted(t) => { AppState.settings-changed(); } }
+                }
+            }
+
+            SectionTitle { text: "MASKOT" ; }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 6px;
+                    Muted { text: "Ketuk ekspresi untuk melihat pratinjau"; }
+                    HorizontalLayout {
+                        spacing: 4px;
+                        for n[i] in ["Idle", "Happy", "Wow", "Sleepy", "Bingung", "Sedih"] : Rectangle {
+                            height: 28px;
+                            border-radius: 8px;
+                            background: Theme.surface3;
+                            Text { text: n; color: Theme.text; font-size: 10px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                            TouchArea { clicked => { AppState.preview-face(i); } }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 4px;
+                        for n[i] in ["Mikir", "Cari", "Kerja", "Sukses", "Error", "Intip"] : Rectangle {
+                            height: 28px;
+                            border-radius: 8px;
+                            background: Theme.surface3;
+                            Text { text: n; color: Theme.text; font-size: 10px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                            TouchArea { clicked => { AppState.preview-face(i + 6); } }
+                        }
+                    }
+                }
+            }
+
+            Btn { text: "Keluar dari Gravi Island"; kind: 2; clicked => { AppState.quit(); } }
+        }
+    }
+}

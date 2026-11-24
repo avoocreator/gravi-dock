@@ -1,0 +1,514 @@
+import { Theme } from "theme.slint";
+
+// ---------- ikon vektor (viewBox 24x24) ----------
+export global Icons {
+    out property <string> home: "M3 11 L12 3 L21 11 M5 10 V20 H19 V10";
+    out property <string> ai: "M12 3 L14 9 L20 12 L14 15 L12 21 L10 15 L4 12 L10 9 Z";
+    out property <string> music: "M9 18 V6 L19 4 V16 M9 18 A3 3 0 1 0 3 18 A3 3 0 1 0 9 18 M19 16 A3 3 0 1 0 13 16 A3 3 0 1 0 19 16";
+    out property <string> clock: "M12 3 A9 9 0 1 0 12 21 A9 9 0 1 0 12 3 M12 7 V12 L15 14";
+    out property <string> calendar: "M4 6 H20 V20 H4 Z M4 10 H20 M8 3 V7 M16 3 V7";
+    out property <string> github: "M6 3 V15 M6 21 A3 3 0 1 0 6 15 A3 3 0 1 0 6 21 M21 6 A3 3 0 1 0 15 6 A3 3 0 1 0 21 6 M18 9 C18 14 6 12 6 15";
+    out property <string> system: "M5 5 H19 V19 H5 Z M9 9 H15 V15 H9 Z M9 2 V5 M15 2 V5 M9 19 V22 M15 19 V22 M2 9 H5 M2 15 H5 M19 9 H22 M19 15 H22";
+    out property <string> tray: "M9 3 H15 V6 H9 Z M7 5 H5 V21 H19 V5 H17 M9 11 H15 M9 15 H15";
+    out property <string> settings: "M4 7 H20 M4 12 H20 M4 17 H20 M9 5 V9 M15 10 V14 M8 15 V19";
+    out property <string> play: "M8 5 L19 12 L8 19 Z";
+    out property <string> pause: "M7 5 H10 V19 H7 Z M14 5 H17 V19 H14 Z";
+    out property <string> next: "M6 5 L16 12 L6 19 Z M18 5 V19";
+    out property <string> prev: "M18 5 L8 12 L18 19 Z M6 5 V19";
+    out property <string> close: "M6 6 L18 18 M18 6 L6 18";
+    out property <string> check: "M5 12 L10 17 L19 7";
+    out property <string> plus: "M12 5 V19 M5 12 H19";
+    out property <string> trash: "M5 7 H19 M9 7 V4 H15 V7 M7 7 V20 H17 V7";
+    out property <string> copy: "M9 9 H20 V20 H9 Z M5 15 V4 H16";
+    out property <string> reset: "M4 12 A8 8 0 1 0 7 6 M4 4 V9 H9";
+    out property <string> bolt: "M13 2 L5 13 H11 L10 22 L19 10 H13 Z";
+    out property <string> search: "M16 16 L21 21 M3 10 A7 7 0 1 0 17 10 A7 7 0 1 0 3 10";
+    out property <string> folder: "M3 6 H10 L12 8 H21 V19 H3 Z";
+    out property <string> bell: "M6 16 V11 A6 6 0 0 1 18 11 V16 L20 18 H4 Z M10 21 H14";
+    out property <string> moon: "M20 14 A8 8 0 1 1 10 4 A6 6 0 0 0 20 14 Z";
+    out property <string> layers: "M12 3 L21 8 L12 13 L3 8 Z M3 12 L12 17 L21 12 M3 16 L12 21 L21 16";
+    out property <string> temp: "M10 4 A2 2 0 0 1 14 4 V14 A4 4 0 1 1 10 14 Z";
+    out property <string> disk: "M3 14 H21 V19 H3 Z M5 14 L7 6 H17 L19 14";
+    out property <string> ram: "M3 8 H21 V16 H3 Z M7 11 V13 M11 11 V13 M15 11 V13 M7 16 V19 M12 16 V19 M17 16 V19";
+    out property <string> battery: "M4 7 H18 V17 H4 Z M18 10 H20 V14 H18";
+    out property <string> flame: "M12 3 C13 8 18 9 18 15 A6 6 0 0 1 6 15 C6 12 8 11 9 9 C10 11 11 11 12 3 Z";
+    out property <string> target: "M12 3 A9 9 0 1 0 12 21 A9 9 0 1 0 12 3 M12 8 A4 4 0 1 0 12 16 A4 4 0 1 0 12 8";
+    out property <string> coffee: "M5 8 H17 V15 A4 4 0 0 1 13 19 H9 A4 4 0 0 1 5 15 Z M17 10 H19 A2 2 0 0 1 19 14 H17";
+    out property <string> chair: "M7 11 V6 A2 2 0 0 1 9 4 H15 A2 2 0 0 1 17 6 V11 M5 11 H19 V16 H5 Z M7 16 V20 M17 16 V20";
+    out property <string> link: "M10 14 L14 10 M8 12 L6 14 A3 3 0 0 0 10 18 L12 16 M16 12 L18 10 A3 3 0 0 0 14 6 L12 8";
+    out property <string> info: "M12 3 A9 9 0 1 0 12 21 A9 9 0 1 0 12 3 M12 11 V16 M12 8 V8.2";
+    out property <string> warn: "M12 3 L22 20 H2 Z M12 10 V14 M12 17 V17.2";
+    out property <string> ok: "M12 3 A9 9 0 1 0 12 21 A9 9 0 1 0 12 3 M8 12 L11 15 L16 9";
+    out property <string> chev-down: "M6 9 L12 15 L18 9";
+    out property <string> chev-up: "M6 15 L12 9 L18 15";
+    out property <string> chev-left: "M15 6 L9 12 L15 18";
+    out property <string> chev-right: "M9 6 L15 12 L9 18";
+    out property <string> arrow-right: "M5 12 H19 M13 6 L19 12 L13 18";
+    out property <string> image: "M4 5 H20 V19 H4 Z M4 16 L9 11 L14 16 L17 13 L20 16 M15 9 V9.2";
+    out property <string> doc: "M6 3 H14 L19 8 V21 H6 Z M14 3 V8 H19 M9 13 H16 M9 17 H16";
+    out property <string> bulb: "M9 18 H15 M10 21 H14 M12 3 A6 6 0 0 0 8 13.5 V15 H16 V13.5 A6 6 0 0 0 12 3 Z";
+    out property <string> gear: "M12 9 A3 3 0 1 0 12 15 A3 3 0 1 0 12 9 M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M5 5 L7 7 M17 17 L19 19 M19 5 L17 7 M7 17 L5 19";
+    out property <string> tomato: "M12 8 C6 8 4 12 4 15 C4 19 8 21 12 21 C16 21 20 19 20 15 C20 12 18 8 12 8 Z M12 8 V4 M9 6 L12 8 L15 6";
+    out property <string> stop: "M6 6 H18 V18 H6 Z";
+    out property <string> history: "M4 12 A8 8 0 1 0 7 6 M4 4 V9 H9 M12 8 V12 L15 14";
+    out property <string> cube: "M12 3 L20 7.5 V16.5 L12 21 L4 16.5 V7.5 Z M4 7.5 L12 12 L20 7.5 M12 12 V21";
+    out property <string> bars: "M6 20 V12 M12 20 V6 M18 20 V10";
+    out property <string> star: "M12 3 L15 9 L20 10 L16 14 L17 20 L12 17 L7 20 L8 14 L4 10 L9 9 Z";
+    out property <string> pin: "M9 4 H15 L14 10 L17 13 H7 L10 10 Z M12 13 V21";
+    out property <string> place: "M12 21 C6 14 5 11 5 9 A7 7 0 0 1 19 9 C19 11 18 14 12 21 Z M12 7 A2 2 0 1 0 12 11 A2 2 0 1 0 12 7";
+    out property <string> cloud: "M7 18 A4 4 0 0 1 7 10 A5 5 0 0 1 17 9 A4.5 4.5 0 0 1 17 18 Z";
+    out property <string> minus: "M5 12 H19";
+    out property <string> terminal: "M4 6 H20 V18 H4 Z M7 10 L10 12 L7 14 M12 15 H16";
+    out property <string> external: "M14 4 H20 V10 M20 4 L11 13 M18 14 V20 H4 V6 H10";
+}
+
+export component Icon inherits Path {
+    in property <string> d;
+    in property <color> tint: Theme.text;
+    in property <bool> solid: false;
+    in property <length> size: 20px;
+    width: root.size;
+    height: root.size;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    commands: root.d;
+    stroke: root.solid ? transparent : root.tint;
+    fill: root.solid ? root.tint : transparent;
+    stroke-width: 1.8px;
+    stroke-line-cap: round;
+    stroke-line-join: round;
+}
+
+// ---------- kartu ----------
+export component Card inherits Rectangle {
+    in property <brush> fill: @linear-gradient(155deg, Theme.surface 0%, Theme.surface2 100%);
+    in property <color> tint: Theme.accent;
+    in property <color> line: Theme.edge;
+    background: root.fill;
+    border-radius: Theme.radius-card;
+    border-width: 1px;
+    border-color: root.line;
+    Rectangle {
+        border-radius: Theme.radius-card;
+        background: @linear-gradient(160deg, root.tint.with-alpha(0.15) 0%, transparent 62%);
+    }
+    @children
+}
+
+// bintang empat sudut (ornamen)
+export component Sparkle inherits Path {
+    in property <color> tint: Theme.accent2;
+    in property <length> size: 14px;
+    width: root.size;
+    height: root.size;
+    viewbox-width: 16;
+    viewbox-height: 16;
+    commands: "M 8 0 Q 8 8 16 8 Q 8 8 8 16 Q 8 8 0 8 Q 8 8 8 0 Z";
+    fill: root.tint;
+}
+
+// latar ornamen: gelembung gradien + bintang + siluet maskot raksasa; semua mengikuti skema warna
+export component Ornaments inherits Rectangle {
+    in property <bool> ghost: true;
+    clip: true;
+    Path {
+        width: parent.width; height: parent.height; viewbox-width: 440; viewbox-height: 660;
+        commands: "M 440 0 L 440 190 C 380 170 300 110 330 0 Z";
+        fill: @linear-gradient(200deg, Theme.glow 0%, transparent 100%);
+    }
+    Path {
+        width: parent.width; height: parent.height; viewbox-width: 440; viewbox-height: 660;
+        commands: "M 0 660 L 0 540 C 90 520 190 590 250 660 Z";
+        fill: @linear-gradient(20deg, Theme.glow 0%, transparent 100%);
+    }
+    Path {
+        width: parent.width; height: parent.height; viewbox-width: 440; viewbox-height: 660;
+        commands: "M 440 660 L 440 500 C 380 520 330 580 320 660 Z";
+        fill: @linear-gradient(340deg, Theme.glow2 0%, transparent 100%);
+    }
+    if root.ghost : Path {
+        x: parent.width - 215px; y: 14px; width: 210px; height: 158px; viewbox-width: 200; viewbox-height: 150;
+        commands: "M 6 108 C 6 52 48 22 100 22 C 152 22 194 52 194 108 C 194 133 168 148 100 148 C 32 148 6 133 6 108 Z M 40 40 L 36 0 L 78 26 Z";
+        fill: Theme.accent.with-alpha(Theme.dark ? 0.10 : 0.08);
+    }
+    if root.ghost : Rectangle { x: parent.width - 160px; y: 84px; width: 15px; height: 34px; border-radius: 8px; background: Theme.accent.with-alpha(0.14); }
+    if root.ghost : Rectangle { x: parent.width - 108px; y: 84px; width: 15px; height: 34px; border-radius: 8px; background: Theme.accent.with-alpha(0.14); }
+    Sparkle { x: parent.width * 0.62; y: 26px; size: 22px; tint: Theme.accent.with-alpha(0.65); }
+    Sparkle { x: 14px; y: 92px; size: 9px; tint: Theme.accent2.with-alpha(0.6); }
+    Sparkle { x: parent.width - 60px; y: parent.height - 190px; size: 12px; tint: Theme.accent.with-alpha(0.55); }
+    Sparkle { x: parent.width * 0.18; y: parent.height - 160px; size: 8px; tint: Theme.accent2.with-alpha(0.5); }
+}
+
+// gelombang suara kecil (agen sedang bekerja)
+export component Wave inherits Rectangle {
+    in property <color> tint: Theme.accent;
+    property <int> ph: 0;
+    width: 44px;
+    height: 26px;
+    Timer { interval: 200ms; running: true; triggered => { root.ph = Math.mod(root.ph + 1, 8); } }
+    for i in 7 : Rectangle {
+        x: i * 6.5px;
+        width: 3px;
+        height: (5 + Math.mod(i * 3 + root.ph * 2, 7) * 3) * 1px;
+        y: (parent.height - self.height) / 2;
+        border-radius: 2px;
+        background: root.tint;
+        animate height { duration: 200ms; easing: ease-in-out; }
+    }
+}
+
+export component Label inherits Text {
+    in property <bool> strong: false;
+    color: Theme.text;
+    font-size: 13px;
+    font-weight: root.strong ? 700 : 500;
+    overflow: elide;
+}
+
+export component Muted inherits Text {
+    color: Theme.muted;
+    font-size: 11px;
+    font-weight: 500;
+    overflow: elide;
+}
+
+export component SectionTitle inherits Text {
+    color: Theme.accent;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+}
+
+// ---------- tombol ----------
+export component Btn inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <int> kind: 0;        // 0 netral, 1 aksen (gradien), 2 bahaya
+    in property <bool> enabled: true;
+    callback clicked();
+    height: 38px;
+    preferred-width: row.preferred-width + 4px;
+    border-radius: 19px;
+    opacity: root.enabled ? 1.0 : 0.45;
+    background: root.kind == 1 ? Theme.grad : root.kind == 2 ? Theme.bad.with-alpha(0.16) : Theme.surface3;
+    border-width: root.kind == 1 ? 0px : 1px;
+    border-color: root.kind == 2 ? Theme.bad.with-alpha(0.45) : Theme.border;
+    states [
+        pressed when ta.pressed && root.enabled: { opacity: 0.72; }
+    ]
+    animate opacity { duration: 100ms; }
+    row := HorizontalLayout {
+        alignment: center;
+        spacing: 7px;
+        padding-left: 14px;
+        padding-right: 14px;
+        if root.icon != "" : VerticalLayout { alignment: center; Icon { d: root.icon; size: 16px; tint: root.kind == 1 ? Theme.on-accent : root.kind == 2 ? Theme.bad : Theme.text; } }
+        Text {
+            text: root.text;
+            color: root.kind == 1 ? Theme.on-accent : root.kind == 2 ? Theme.bad : Theme.text;
+            font-size: 13px;
+            font-weight: 800;
+            vertical-alignment: center;
+        }
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component IconBtn inherits Rectangle {
+    in property <string> d;
+    in property <length> size: 36px;
+    in property <bool> solid: false;
+    in property <bool> filled: true;      // lingkaran berlatar
+    in property <color> tint: Theme.text;
+    in property <color> fill: Theme.surface3;
+    callback clicked();
+    width: root.size;
+    height: root.size;
+    border-radius: root.size / 2;
+    background: root.filled ? (ta.pressed ? Theme.border : root.fill) : transparent;
+    border-width: root.filled ? 1px : 0px;
+    border-color: Theme.edge;
+    animate background { duration: 120ms; }
+    Icon {
+        d: root.d;
+        solid: root.solid;
+        tint: root.tint;
+        size: root.size * 0.5;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+    ta := TouchArea { clicked => { root.clicked(); } }
+}
+
+// ---------- kontrol ----------
+export component Toggle inherits Rectangle {
+    in-out property <bool> on: false;
+    callback toggled(bool);
+    width: 52px;
+    height: 30px;
+    border-radius: 15px;
+    background: root.on ? Theme.grad : @linear-gradient(90deg, Theme.surface3 0%, Theme.surface3 100%);
+    border-width: 1px;
+    border-color: root.on ? transparent : Theme.border;
+    Rectangle {
+        width: 24px;
+        height: 24px;
+        border-radius: 12px;
+        y: 3px;
+        x: root.on ? 25px : 3px;
+        background: #ffffff;
+        animate x { duration: 160ms; easing: ease-out; }
+    }
+    TouchArea {
+        clicked => {
+            root.on = !root.on;
+            root.toggled(root.on);
+        }
+    }
+}
+
+// kontrol segmen: kapsul kaca, segmen aktif berisi gradien; ikon opsional
+export component Seg inherits Rectangle {
+    in property <[string]> items;
+    in property <[string]> icons;
+    in-out property <int> current: 0;
+    callback picked(int);
+    height: 46px;
+    background: @linear-gradient(90deg, Theme.surface 0%, Theme.surface2 100%);
+    border-radius: 23px;
+    border-width: 1px;
+    border-color: Theme.edge;
+    HorizontalLayout {
+        padding: 4px;
+        spacing: 2px;
+        for it[i] in root.items : Rectangle {
+            border-radius: 19px;
+            background: i == root.current ? Theme.grad : transparent;
+            HorizontalLayout {
+                alignment: center;
+                spacing: 6px;
+                if root.icons.length > i : VerticalLayout { alignment: center; Icon { d: root.icons[i]; size: 16px; tint: i == root.current ? Theme.on-accent : Theme.muted; } }
+                Text {
+                    text: it;
+                    color: i == root.current ? Theme.on-accent : Theme.muted;
+                    font-size: 12px;
+                    font-weight: 800;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+            TouchArea {
+                clicked => {
+                    root.current = i;
+                    root.picked(i);
+                }
+            }
+        }
+    }
+}
+
+// - 25 + (bulat)
+export component Stepper inherits Rectangle {
+    in-out property <int> value: 0;
+    in property <int> min: 0;
+    in property <int> max: 100;
+    in property <int> step: 1;
+    in property <string> suffix: "";
+    callback changed(int);
+    height: 38px;
+    preferred-width: 150px;
+    background: Theme.surface2;
+    border-radius: 19px;
+    HorizontalLayout {
+        padding: 3px;
+        Rectangle {
+            width: 32px;
+            border-radius: 16px;
+            background: Theme.surface3;
+            Icon { d: Icons.minus; size: 14px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+            TouchArea { clicked => { root.value = Math.max(root.min, root.value - root.step); root.changed(root.value); } }
+        }
+        Text {
+            text: root.value + root.suffix;
+            color: Theme.text;
+            font-size: 15px;
+            font-weight: 800;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        Rectangle {
+            width: 32px;
+            border-radius: 16px;
+            background: Theme.surface3;
+            Icon { d: Icons.plus; size: 14px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+            TouchArea { clicked => { root.value = Math.min(root.max, root.value + root.step); root.changed(root.value); } }
+        }
+    }
+}
+
+export component SliderLite inherits Rectangle {
+    in-out property <float> value: 0.5;      // 0..1
+    callback changed(float);
+    height: 26px;
+    Rectangle {
+        y: (parent.height - 8px) / 2;
+        height: 8px;
+        border-radius: 4px;
+        background: Theme.surface3;
+    }
+    Rectangle {
+        y: (parent.height - 8px) / 2;
+        width: root.value * parent.width;
+        height: 8px;
+        border-radius: 4px;
+        background: Theme.grad;
+    }
+    Rectangle {
+        x: root.value * (parent.width - 20px);
+        y: (parent.height - 20px) / 2;
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: #ffffff;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+    TouchArea {
+        pointer-event(e) => {
+            if (e.button == PointerEventButton.left && e.kind == PointerEventKind.down) {
+                root.value = Math.clamp(self.mouse-x / self.width, 0, 1);
+                root.changed(root.value);
+            }
+        }
+        moved => {
+            root.value = Math.clamp(self.mouse-x / self.width, 0, 1);
+            root.changed(root.value);
+        }
+    }
+}
+
+export component Field inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <bool> secret: false;
+    callback accepted(string);
+    callback edited(string);
+    height: 40px;
+    background: Theme.surface2;
+    border-radius: 20px;
+    border-width: 1px;
+    border-color: ti.has-focus ? Theme.accent : Theme.edge;
+    Text {
+        x: 14px;
+        y: 0;
+        height: parent.height;
+        text: root.placeholder;
+        color: Theme.muted;
+        font-size: 13px;
+        vertical-alignment: center;
+        visible: root.text == "";
+    }
+    ti := TextInput {
+        x: 14px;
+        y: 0;
+        width: parent.width - 28px;
+        height: parent.height;
+        text <=> root.text;
+        color: Theme.text;
+        font-size: 13px;
+        vertical-alignment: center;
+        single-line: true;
+        input-type: root.secret ? InputType.password : InputType.text;
+        accepted => { root.accepted(self.text); }
+        edited => { root.edited(self.text); }
+    }
+}
+
+// ---------- visual data ----------
+export component Ring inherits Rectangle {
+    in property <float> value: 0.0;           // 0..1
+    in property <length> size: 64px;
+    in property <color> tint: Theme.accent;
+    in property <string> text;
+    in property <string> sub;
+    in property <string> icon;
+    property <float> v: Math.clamp(root.value, 0.001, 0.999);
+    property <angle> a: 360deg * root.v;
+    width: root.size;
+    height: root.size;
+    Rectangle {
+        border-radius: root.size / 2;
+        border-width: 7px;
+        border-color: Theme.surface3;
+    }
+    Path {
+        width: parent.width;
+        height: parent.height;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        commands: "M 50 5 A 45 45 0 \{root.v > 0.5 ? 1 : 0} 1 \{50 + 45 * Math.sin(root.a)} \{50 - 45 * Math.cos(root.a)}";
+        stroke: root.tint;
+        stroke-width: 7px;
+        stroke-line-cap: round;
+        fill: transparent;
+    }
+    VerticalLayout {
+        alignment: center;
+        spacing: 1px;
+        if root.icon != "" : HorizontalLayout { alignment: center; Icon { d: root.icon; size: root.size * 0.22; tint: root.tint; } }
+        Text { text: root.text; color: Theme.text; font-size: root.size * 0.24; font-weight: 700; horizontal-alignment: center; }
+        if root.sub != "" : Text { text: root.sub; color: Theme.muted; font-size: root.size * 0.14; horizontal-alignment: center; }
+    }
+}
+
+export component Spark inherits Rectangle {
+    in property <string> line;
+    in property <string> area;
+    in property <color> tint: Theme.accent;
+    Path {
+        width: parent.width;
+        height: parent.height;
+        viewbox-width: 120;
+        viewbox-height: 40;
+        commands: root.area;
+        fill: @linear-gradient(180deg, root.tint.with-alpha(0.35) 0%, root.tint.with-alpha(0.0) 100%);
+    }
+    Path {
+        width: parent.width;
+        height: parent.height;
+        viewbox-width: 120;
+        viewbox-height: 40;
+        commands: root.line;
+        stroke: root.tint;
+        stroke-width: 2px;
+        stroke-line-join: round;
+        stroke-line-cap: round;
+        fill: transparent;
+    }
+}
+
+export component Badge inherits Rectangle {
+    in property <string> text;
+    in property <color> tint: Theme.accent;
+    height: 20px;
+    preferred-width: t.preferred-width + 14px;
+    border-radius: 10px;
+    background: root.tint.with-alpha(0.2);
+    t := Text { text: root.text; color: root.tint; font-size: 10px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+}
+
+// judul bagian dengan garis tipis (seperti di referensi)
+export component Heading inherits HorizontalLayout {
+    in property <string> text;
+    in property <string> icon;
+    spacing: 10px;
+    height: 24px;
+    if root.icon != "" : VerticalLayout { alignment: center; Icon { d: root.icon; size: 18px; tint: Theme.accent; } }
+    Text { text: root.text; color: Theme.text; font-size: 15px; font-weight: 800; vertical-alignment: center; }
+    VerticalLayout { alignment: center; horizontal-stretch: 1; Rectangle { height: 1px; background: Theme.edge; } }
+}
+

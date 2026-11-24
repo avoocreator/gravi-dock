@@ -1,9 +1,9 @@
 [workspace]
-members = ["core", "app"]
+members = ["core", "hook", "app"]
 resolver = "2"
 
 [profile.release]
-opt-level = "s"      # kecil & cepat cukup
+opt-level = "s"      # kecil dan cukup cepat
 lto = true
 codegen-units = 1
 panic = "abort"

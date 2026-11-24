@@ -1,0 +1,28 @@
+// Token desain: warna dasar mengikuti mode gelap/terang; gradien & ornamen mengikuti skema warna (accent, accent2).
+export global Theme {
+    in property <bool> dark: true;
+    in property <color> accent: #4da3ff;
+    in property <color> accent2: #5ae0ff;
+
+    out property <color> bg: dark ? #0d0e12 : #f2f3f7;
+    out property <color> surface: dark ? #181a22 : #ffffff;
+    out property <color> surface2: dark ? #20232d : #eceef6;
+    out property <color> surface3: dark ? #2b2f3b : #e0e3ee;
+    out property <color> border: dark ? #ffffff1c : #0000001a;
+    out property <color> text: dark ? #f4f6fa : #14161b;
+    out property <color> muted: dark ? #9aa1b4 : #666d7e;
+    out property <color> good: #34d399;
+    out property <color> warn: #ffb54d;
+    out property <color> bad: #ff6b6b;
+    out property <color> on-accent: #0b0d12;
+    out property <color> screen: #1f1e2c;
+
+    out property <color> glow: accent.with-alpha(dark ? 0.20 : 0.16);
+    out property <color> glow2: accent2.with-alpha(dark ? 0.14 : 0.12);
+    out property <color> edge: accent.with-alpha(dark ? 0.30 : 0.28);
+    out property <brush> grad: @linear-gradient(90deg, accent 0%, accent2 100%);
+    out property <brush> grad-v: @linear-gradient(160deg, accent 0%, accent2 100%);
+
+    out property <length> radius-card: 24px;
+    out property <length> radius-island: 34px;
+}

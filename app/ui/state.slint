@@ -1,0 +1,204 @@
+// Seluruh data dan aksi antara UI <-> Rust ada di global AppState supaya komponen tidak perlu meneruskan properti.
+
+export struct FaceParams {
+    eye-h: float, eye-w: float, r-h: float, r-w: float,
+    arc: float, ring: float, lid-out: float, lid-in: float,
+    look-x: float, look-y: float, peek: float,
+    glyph: string, glyph-color: color,
+}
+
+export struct SessionItem { id: string, title: string, sub: string, meta: string, mark: string, tint: color, running: bool, action: bool }
+export struct ApprovalItem { id: string, tool: string, summary: string, cwd: string, mark: string, tint: color, src: string }
+export struct EventItem { title: string, time: string, sub: string, tint: color, all-day: bool }
+export struct AlarmItem { id: int, time: string, label: string, repeat: string, on: bool }
+export struct LapItem { n: string, lap: string, total: string }
+export struct CommitRow { repo: string, message: string, meta: string }
+export struct RepoRow { name: string, meta: string, url: string }
+export struct ClipItem { text: string, pinned: bool }
+export struct ShelfItem { name: string, path: string }
+export struct DayCell { label: string, num: string, today: bool, dot: bool }
+export struct PrayerRow { name: string, time: string, next: bool, past: bool }
+export struct SearchHit { title: string, sub: string, kind: string }
+
+export global AppState {
+    // ---------- tata letak pulau (diatur Rust; dianimasikan UI) ----------
+    in property <int> mode: 0;                 // 0 = pil, 1 = peringatan (persetujuan), 2 = penuh
+    in property <int> dock: 1;                 // 0 kiri, 1 kanan, 2 atas
+    in property <bool> vertical: true;
+    in property <bool> snap: false;            // true = lompat tanpa animasi
+    in property <length> isl-x: 0px;
+    in property <length> isl-y: 0px;
+    in property <length> isl-w: 72px;
+    in property <length> isl-h: 150px;
+    in-out property <int> page: 0;             // 0 beranda, 1 AI, 2 musik, 3 jam, 4 kalender, 5 github, 6 sistem, 7 klip+shelf, 8 pengaturan
+
+    // ---------- umum ----------
+    in property <string> clock: "--:--";
+    in property <string> clock-sec: "00";
+    in property <string> date-long: "";
+    in property <string> greeting: "Halo";
+    in property <FaceParams> face;
+    in property <int> badge: 0;                // jumlah persetujuan tertunda
+    in property <int> ai-running: 0;
+    in property <string> toast: "";
+    in property <int> toast-kind: 0;           // 0 sukses, 1 info, 2 error
+    in property <bool> mascot-on: true;
+
+    // ---------- beranda ----------
+    in property <string> weather: "";
+    in property <string> weather-temp: "";
+    in property <string> weather-desc: "";
+    in property <string> weather-city: "";
+    in property <string> next-prayer: "";
+    in property <string> next-prayer-time: "";
+    in property <string> next-prayer-left: "";
+    in property <[PrayerRow]> prayers;
+    in property <[EventItem]> agenda;
+    in property <[SearchHit]> hits;
+    in property <string> pill-line: "";        // teks status kecil di pil (mis. "2 sesi", lagu, pomodoro)
+
+    // ---------- sesi AI ----------
+    in property <[SessionItem]> sessions;
+    in property <[ApprovalItem]> approvals;
+
+    // ---------- musik ----------
+    in property <bool> m-active: false;
+    in property <bool> m-playing: false;
+    in property <string> m-title: "";
+    in property <string> m-artist: "";
+    in property <string> m-source: "";
+    in property <float> m-pos: 0.0;
+    in property <string> m-pos-text: "";
+    in property <string> m-pos-l: "0:00";
+    in property <string> m-pos-r: "0:00";
+
+    // ---------- jam ----------
+    in-out property <int> clock-tab: 0;        // 0 pomodoro, 1 timer, 2 stopwatch, 3 alarm, 4 adzan
+    in property <string> pomo-text: "25:00";
+    in property <string> pomo-phase: "Siap fokus";
+    in property <float> pomo-progress: 1.0;
+    in property <bool> pomo-running: false;
+    in property <string> pomo-rounds: "";
+    in property <string> timer-text: "05:00";
+    in property <float> timer-progress: 1.0;
+    in property <int> timer-state: 0;          // 0 diam, 1 jalan, 2 jeda, 3 selesai
+    in property <string> sw-text: "00:00.00";
+    in property <bool> sw-running: false;
+    in property <[LapItem]> laps;
+    in property <[AlarmItem]> alarms;
+    in property <string> alarm-next: "";
+    in property <string> adzan-note: "";
+
+    // ---------- kalender ----------
+    in property <string> cal-month: "";
+    in property <[DayCell]> cal-week;
+    in property <[EventItem]> cal-events;
+    in property <string> cal-status: "";
+    in property <bool> cal-connected: false;
+
+    // ---------- github ----------
+    in property <string> gh-user: "";
+    in property <string> gh-status: "";
+    in property <string> gh-total: "";
+    in property <string> gh-streak: "";
+    in property <string> gh-today: "";
+    in property <[int]> gh-cells;              // 26 pekan x 7, nilai 0..4 atau -1
+    in property <[CommitRow]> commits;
+    in property <[RepoRow]> repos;
+
+    // ---------- sistem ----------
+    in property <float> cpu: 0.0;
+    in property <float> mem: 0.0;
+    in property <float> disk: 0.0;
+    in property <float> battery: 1.0;
+    in property <bool> has-battery: false;
+    in property <bool> charging: false;
+    in property <string> cpu-text: "";
+    in property <string> mem-text: "";
+    in property <string> disk-text: "";
+    in property <string> temp-text: "—";
+    in property <string> uptime-text: "";
+    in property <string> cpu-line: "";         // path SVG sparkline
+    in property <string> cpu-area: "";
+
+    // ---------- klip & shelf ----------
+    in property <[ClipItem]> clips;
+    in property <[ShelfItem]> shelf;
+
+    // ---------- pengaturan (dua arah) ----------
+    in-out property <int> s-dock: 1;
+    in-out property <int> s-theme: 0;
+    in-out property <int> s-scheme: 0;
+    in-out property <float> s-edge: 0.5;
+    in-out property <bool> s-hover: false;
+    in-out property <bool> s-mascot: true;
+    in-out property <bool> s-gpu: false;
+    in-out property <bool> s-sfx: true;
+    in-out property <float> s-sfx-vol: 0.6;
+    in-out property <bool> s-adzan: true;
+    in-out property <float> s-adzan-vol: 0.8;
+    in-out property <string> s-adzan-file: "";
+    in-out property <int> s-focus-min: 25;
+    in-out property <int> s-break-min: 5;
+    in-out property <int> s-long-min: 15;
+    in-out property <int> s-rounds: 4;
+    in-out property <bool> s-auto-next: true;
+    in-out property <string> s-city: "";
+    in-out property <bool> s-src-claude: true;
+    in-out property <bool> s-src-copilot: true;
+    in-out property <bool> s-src-agy: true;
+    in-out property <bool> s-src-desk: true;
+    in-out property <string> s-gh-user: "";
+    in-out property <string> s-gh-token: "";
+    in-out property <string> s-gcal-id: "";
+    in-out property <string> s-gcal-secret: "";
+    in-out property <string> s-ical: "";
+    in property <bool> hook-claude: false;
+    in property <bool> hook-copilot: false;
+    in property <string> settings-note: "";
+    in property <[string]> scheme-names;
+    in property <[color]> scheme-colors;
+    in property <[string]> dock-names: ["Kiri", "Kanan", "Atas"];
+
+    // ---------- aksi UI -> Rust ----------
+    callback toggle-island();
+    callback collapse();
+    callback hover(bool);
+    callback mascot-clicked();
+    callback page-changed(int);
+    callback approve(string, int);             // id, 1 setujui / 0 tolak / 2 serahkan ke terminal
+    callback media-cmd(string);
+    callback pomo-toggle();
+    callback pomo-skip();
+    callback pomo-reset();
+    callback timer-toggle();
+    callback timer-reset();
+    callback timer-add(int);
+    callback sw-toggle();
+    callback sw-lap();
+    callback sw-reset();
+    callback alarm-add(int, int, int, string);
+    callback alarm-toggle(int);
+    callback alarm-del(int);
+    callback adzan-test();
+    callback cal-connect();
+    callback cal-disconnect();
+    callback gh-refresh();
+    callback open-url(string);
+    callback clip-copy(int);
+    callback clip-pin(int);
+    callback clip-del(int);
+    callback clip-clear();
+    callback shelf-add();
+    callback shelf-open(int);
+    callback shelf-del(int);
+    callback shelf-copy(int);
+    callback search(string);
+    callback search-run(int);
+    callback settings-changed();
+    callback hooks-install(string);
+    callback hooks-remove(string);
+    callback preview-face(int);
+    callback sfx-test();
+    callback quit();
+}

@@ -1,17 +1,27 @@
 [package]
-name = "gravi-dock"
-version = "0.5.0"
+name = "gravi-island"
+version = "1.0.0"
 edition = "2021"
-description = "Gravi Dock: Multi-dock Dynamic Island & AI companion for Windows (Rust + Slint)."
+description = "Gravi Island: dynamic island ringan untuk Windows (Rust + Slint) dengan maskot, sesi AI, musik, jam, kalender, GitHub, dan monitor sistem."
 build = "build.rs"
 
 [[bin]]
-name = "gravi-dock"
+name = "gravi-island"
 path = "src/main.rs"
+
+[features]
+default = ["dragdrop"]
+# Seret-lepas berkas ke Shelf (memakai API winit milik Slint, masih berlabel "unstable").
+# Bila build gagal karena fitur ini, jalankan: cargo build --release --no-default-features
+dragdrop = ["slint/unstable-winit-030"]
 
 [dependencies]
 island-core = { path = "../core" }
-slint = { version = "1.8", default-features = false, features = ["std", "backend-winit", "renderer-femtovg", "compat-1-2"] }
+# Renderer software = paling hemat memori (target < 50 MB). femtovg (GPU) tersedia lewat pengaturan "Render GPU".
+slint = { version = "1.8", default-features = false, features = ["std", "backend-winit", "renderer-software", "renderer-femtovg", "compat-1-2"] }
 
 [build-dependencies]
 slint-build = "1.8"
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"

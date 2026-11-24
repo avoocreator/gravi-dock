@@ -1,0 +1,676 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { AppState } from "state.slint";
+import { Icon, Icons, Card, Label, Muted, SectionTitle, Btn, IconBtn, Toggle, Seg, Stepper, SliderLite, Ring, Badge, Field, Wave, Sparkle, Heading } from "widgets.slint";
+
+// baris pengaturan dengan ikon (Pomodoro)
+component SetRow inherits Rectangle {
+    in property <string> icon;
+    in property <string> text;
+    in property <string> sub;
+    height: 46px;
+    HorizontalLayout {
+        padding-left: 6px;
+        padding-right: 6px;
+        spacing: 12px;
+        VerticalLayout { alignment: center; Icon { d: root.icon; size: 20px; tint: Theme.accent; } }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Label { text: root.text; }
+            if root.sub != "" : Muted { text: root.sub; }
+        }
+        VerticalLayout { alignment: center; @children }
+    }
+}
+
+// ===================== BERANDA =====================
+export component HomePage inherits Rectangle {
+    property <string> q;
+    VerticalLayout {
+        spacing: 10px;
+        // ---- kolom pencarian ----
+        Rectangle {
+            height: 46px;
+            border-radius: 23px;
+            background: @linear-gradient(90deg, Theme.surface 0%, Theme.surface2 100%);
+            border-width: 1px;
+            border-color: Theme.edge;
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 6px;
+                spacing: 10px;
+                VerticalLayout { alignment: center; Icon { d: Icons.search; size: 20px; tint: Theme.accent; } }
+                Rectangle {
+                    horizontal-stretch: 1;
+                    ti := TextInput {
+                        width: parent.width;
+                        height: parent.height;
+                        text <=> root.q;
+                        color: Theme.text;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                        single-line: true;
+                        edited => { AppState.search(self.text); }
+                        accepted => { AppState.search-run(0); }
+                    }
+                    Text { height: parent.height; text: "Cari aplikasi, hitung (2+3*4), atau buka URL…"; color: Theme.muted; font-size: 13px; vertical-alignment: center; overflow: elide; width: parent.width; visible: root.q == "" && !ti.has-focus; }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 17px;
+                        background: Theme.accent.with-alpha(0.22);
+                        Icon { d: Icons.arrow-right; size: 18px; tint: Theme.accent; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+                        TouchArea { clicked => { AppState.search-run(0); root.q = ""; AppState.search(""); } }
+                    }
+                }
+            }
+        }
+        if AppState.hits.length > 0 : Card {
+            VerticalLayout {
+                padding: 8px;
+                spacing: 2px;
+                for h[i] in AppState.hits : Rectangle {
+                    height: 42px;
+                    border-radius: 14px;
+                    background: ta.has-hover ? Theme.surface3 : transparent;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 10px;
+                        VerticalLayout { alignment: center; Icon { d: h.kind == "app" ? Icons.folder : h.kind == "calc" ? Icons.plus : Icons.external; tint: Theme.accent; size: 18px; } }
+                        Label { text: h.title; horizontal-stretch: 1; vertical-alignment: center; }
+                        Muted { text: h.sub; vertical-alignment: center; }
+                    }
+                    ta := TouchArea { clicked => { AppState.search-run(i); root.q = ""; AppState.search(""); } }
+                }
+            }
+        }
+        if AppState.hits.length == 0 : VerticalLayout {
+            spacing: 10px;
+            // ---- jam + cuaca ----
+            HorizontalLayout {
+                spacing: 10px;
+                Card {
+                    horizontal-stretch: 11;
+                    height: 108px;
+                    HorizontalLayout {
+                        padding: 14px;
+                        spacing: 12px;
+                        VerticalLayout {
+                            alignment: start;
+                            Rectangle {
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 20px;
+                                background: Theme.accent.with-alpha(0.28);
+                                Icon { d: Icons.clock; size: 22px; tint: Theme.accent; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+                            }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 4px;
+                            horizontal-stretch: 1;
+                            HorizontalLayout {
+                                alignment: start;
+                                spacing: 5px;
+                                Text { text: AppState.clock; color: Theme.text; font-size: 36px; font-weight: 800; vertical-alignment: bottom; }
+                                Text { text: AppState.clock-sec; color: Theme.muted; font-size: 15px; font-weight: 700; vertical-alignment: bottom; }
+                            }
+                            Rectangle { height: 1px; background: Theme.edge; }
+                            Muted { text: AppState.date-long; }
+                        }
+                    }
+                }
+                Card {
+                    horizontal-stretch: 10;
+                    height: 108px;
+                    HorizontalLayout {
+                        padding: 14px;
+                        spacing: 10px;
+                        VerticalLayout {
+                            alignment: start;
+                            Icon { d: Icons.temp; size: 26px; tint: Theme.accent; }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 2px;
+                            horizontal-stretch: 1;
+                            Text { text: AppState.weather-temp == "" ? "—" : AppState.weather-temp; color: Theme.text; font-size: 26px; font-weight: 800; overflow: elide; }
+                            Text { text: AppState.weather-desc; color: Theme.text; font-size: 13px; font-weight: 800; overflow: elide; }
+                            HorizontalLayout {
+                                spacing: 4px;
+                                VerticalLayout { alignment: center; Icon { d: Icons.place; size: 13px; tint: Theme.accent; } }
+                                Muted { text: AppState.weather-city; }
+                            }
+                        }
+                        VerticalLayout { alignment: start; Icon { d: Icons.cloud; size: 34px; tint: Theme.accent2; } }
+                    }
+                }
+            }
+            // ---- waktu sholat ----
+            Card {
+                height: 74px;
+                Path {
+                    x: parent.width - 120px; y: parent.height - 52px; width: 104px; height: 52px; viewbox-width: 104; viewbox-height: 52;
+                    commands: "M 6 52 V 36 A 24 24 0 0 1 54 36 V 52 M 30 12 V 6 M 80 52 V 18 L 84 12 L 88 18 V 52 M 70 52 V 30 M 98 52 V 30";
+                    stroke: Theme.accent.with-alpha(0.35);
+                    stroke-width: 2px;
+                    fill: Theme.accent.with-alpha(0.12);
+                }
+                HorizontalLayout {
+                    padding: 14px;
+                    spacing: 14px;
+                    VerticalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 44px;
+                            height: 44px;
+                            border-radius: 22px;
+                            background: Theme.good.with-alpha(0.16);
+                            Rectangle { width: 22px; height: 22px; border-radius: 11px; background: Theme.good; x: 11px; y: 11px; }
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Text { text: AppState.next-prayer == "" ? "Waktu sholat" : AppState.next-prayer + "   " + AppState.next-prayer-time; color: Theme.text; font-size: 19px; font-weight: 800; overflow: elide; }
+                        Muted { text: AppState.next-prayer-left; }
+                    }
+                }
+            }
+            // ---- CPU / RAM / BAT ----
+            HorizontalLayout {
+                spacing: 10px;
+                for ring-data[i] in [
+                    { v: AppState.cpu, t: "CPU", c: Theme.accent, ic: Icons.system },
+                    { v: AppState.mem, t: "RAM", c: Theme.accent2, ic: Icons.ram },
+                    { v: AppState.has-battery ? AppState.battery : AppState.disk, t: AppState.has-battery ? "BAT" : "DISK", c: Theme.good, ic: AppState.has-battery ? Icons.battery : Icons.disk },
+                ] : Card {
+                    height: 104px;
+                    Ring {
+                        size: 82px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        value: ring-data.v;
+                        tint: ring-data.c;
+                        icon: ring-data.ic;
+                        text: Math.round(ring-data.v * 100) + "%";
+                        sub: ring-data.t;
+                    }
+                }
+            }
+            // ---- agenda ----
+            Card {
+                vertical-stretch: 1;
+                clip: true;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 8px;
+                    Heading { text: "Agenda"; icon: Icons.calendar; }
+                    if AppState.agenda.length == 0 : VerticalLayout {
+                        vertical-stretch: 1;
+                        alignment: center;
+                        spacing: 6px;
+                        HorizontalLayout { alignment: center; Icon { d: Icons.calendar; size: 34px; tint: Theme.muted; } }
+                        Text { text: "Tidak ada agenda dalam waktu dekat"; color: Theme.muted; font-size: 13px; horizontal-alignment: center; }
+                    }
+                    for ev in AppState.agenda : HorizontalLayout {
+                        spacing: 8px;
+                        height: 22px;
+                        Rectangle { width: 6px; height: 6px; y: 8px; border-radius: 3px; background: ev.tint; }
+                        Label { text: ev.title; horizontal-stretch: 1; }
+                        Muted { text: ev.time; }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ===================== SESI AI =====================
+export component AiPage inherits Rectangle {
+    ScrollView {
+        VerticalLayout {
+            spacing: 10px;
+            padding-bottom: 6px;
+            // ---- butuh persetujuan ----
+            for a in AppState.approvals : Card {
+                tint: Theme.warn;
+                line: Theme.warn.with-alpha(0.5);
+                height: 168px;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 8px;
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Rectangle {
+                            width: 38px; height: 38px; border-radius: 19px;
+                            background: a.tint.with-alpha(0.25);
+                            Text { text: a.mark; color: a.tint; font-size: 12px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            horizontal-stretch: 1;
+                            Label { text: a.tool; strong: true; }
+                            Text { text: a.summary; color: Theme.muted; font-size: 12px; overflow: elide; }
+                        }
+                    }
+                    Rectangle { height: 1px; background: Theme.edge; }
+                    Muted { text: "Akses ke:"; }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        VerticalLayout { alignment: center; Icon { d: Icons.folder; size: 16px; tint: Theme.muted; } }
+                        Text { text: a.cwd; color: Theme.text; font-size: 12px; overflow: elide; vertical-alignment: center; horizontal-stretch: 1; }
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Btn { text: "Setujui"; kind: 1; clicked => { AppState.approve(a.id, 1); } }
+                        Btn { text: "Tolak"; kind: 2; clicked => { AppState.approve(a.id, 0); } }
+                        Rectangle { horizontal-stretch: 1; }
+                        Btn { text: "Terminal"; icon: Icons.terminal; clicked => { AppState.approve(a.id, 2); } }
+                    }
+                }
+            }
+            // ---- AI sedang berjalan ----
+            if AppState.ai-running > 0 : Card {
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 0px;
+                    Rectangle {
+                        height: 44px;
+                        VerticalLayout {
+                            Text { text: "AI sedang berjalan"; color: Theme.text; font-size: 16px; font-weight: 800; }
+                            Muted { text: "Menjalankan " + AppState.ai-running + " agen"; }
+                        }
+                    }
+                    for s in AppState.sessions : Rectangle {
+                        height: s.running ? 60px : 0px;
+                        clip: true;
+                        Rectangle {
+                            y: 8px;
+                            height: 52px;
+                            border-radius: 16px;
+                            background: Theme.surface2.with-alpha(0.7);
+                            border-width: 1px;
+                            border-color: Theme.edge;
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                spacing: 12px;
+                                VerticalLayout {
+                                    alignment: center;
+                                    Rectangle {
+                                        width: 32px; height: 32px; border-radius: 16px;
+                                        background: s.tint.with-alpha(0.25);
+                                        Text { text: s.mark; color: s.tint; font-size: 11px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                                    }
+                                }
+                                VerticalLayout {
+                                    alignment: center;
+                                    horizontal-stretch: 1;
+                                    Label { text: s.title; strong: true; }
+                                    Muted { text: s.sub; }
+                                }
+                                VerticalLayout { alignment: center; Wave { tint: s.tint; } }
+                            }
+                        }
+                    }
+                }
+            }
+            // ---- daftar sesi ----
+            HorizontalLayout {
+                spacing: 10px;
+                height: 22px;
+                Text { text: "SESI (" + AppState.sessions.length + ")"; color: Theme.accent; font-size: 14px; font-weight: 800; vertical-alignment: center; }
+                VerticalLayout { alignment: center; horizontal-stretch: 1; Rectangle { height: 1px; background: Theme.edge; } }
+            }
+            if AppState.sessions.length == 0 : Muted { text: "Belum ada sesi AI terdeteksi"; }
+            for s in AppState.sessions : Card {
+                height: 64px;
+                tint: s.tint;
+                line: s.action ? Theme.warn : Theme.edge;
+                Rectangle { x: 0px; y: 8px; width: 4px; height: parent.height - 16px; border-radius: 2px; background: s.tint; }
+                HorizontalLayout {
+                    padding-left: 16px;
+                    padding-right: 14px;
+                    spacing: 12px;
+                    VerticalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 44px; height: 44px; border-radius: 14px;
+                            background: @linear-gradient(160deg, s.tint 0%, s.tint.darker(0.45) 100%);
+                            Text { text: s.mark; color: #ffffff; font-size: 15px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        Label { text: s.title; strong: true; font-size: 14px; }
+                        if s.sub != "" : Text { text: s.sub; color: Theme.accent; font-size: 12px; overflow: elide; }
+                    }
+                    if s.running : VerticalLayout { alignment: center; Rectangle { width: 12px; height: 12px; border-radius: 6px; background: Theme.good; } }
+                    if s.meta != "" : VerticalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 34px; height: 34px; border-radius: 17px;
+                            background: Theme.surface3;
+                            Text { text: s.meta; color: Theme.text; font-size: 12px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                    }
+                    VerticalLayout { alignment: center; Icon { d: Icons.chev-right; size: 18px; tint: Theme.muted; } }
+                }
+            }
+        }
+    }
+}
+
+// ===================== MUSIK =====================
+export component MusicPage inherits Rectangle {
+    VerticalLayout {
+        spacing: 12px;
+        alignment: center;
+        Rectangle {
+            height: 230px;
+            // cincin orbit
+            Path {
+                x: (parent.width - 330px) / 2; y: 40px; width: 330px; height: 150px; viewbox-width: 330; viewbox-height: 150;
+                commands: "M 10 110 C 20 40 280 10 320 40 C 345 70 120 140 10 110 Z";
+                stroke: Theme.accent.with-alpha(0.55);
+                stroke-width: 3px;
+                fill: transparent;
+            }
+            Rectangle {
+                width: 170px;
+                height: 170px;
+                x: (parent.width - self.width) / 2;
+                y: 30px;
+                border-radius: 42px;
+                background: @linear-gradient(145deg, Theme.accent 0%, Theme.accent2 100%);
+                border-width: 1.5px;
+                border-color: #ffffff55;
+                Rectangle { border-radius: 42px; background: @linear-gradient(200deg, #ffffff44 0%, transparent 55%); }
+                Icon { d: Icons.music; tint: #ffffffee; size: 84px; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
+            }
+            Sparkle { x: 40px; y: 70px; size: 20px; tint: Theme.accent.with-alpha(0.8); }
+            Sparkle { x: parent.width - 70px; y: 110px; size: 22px; tint: Theme.accent2.with-alpha(0.8); }
+        }
+        VerticalLayout {
+            spacing: 4px;
+            Text { text: AppState.m-active ? AppState.m-title : "Tidak ada yang diputar"; color: Theme.text; font-size: 22px; font-weight: 800; horizontal-alignment: center; overflow: elide; }
+            Text { text: AppState.m-active ? AppState.m-artist : "Pilih sebuah audio untuk mulai mendengarkan"; color: Theme.accent; font-size: 14px; horizontal-alignment: center; overflow: elide; }
+            if AppState.m-source != "" : Muted { text: AppState.m-source; horizontal-alignment: center; }
+        }
+        VerticalLayout {
+            spacing: 6px;
+            Rectangle {
+                height: 18px;
+                Rectangle { y: 5px; height: 8px; border-radius: 4px; background: Theme.surface3; }
+                Rectangle { y: 5px; width: Math.max(8px, parent.width * AppState.m-pos); height: 8px; border-radius: 4px; background: Theme.grad; }
+                Rectangle { x: Math.max(0px, (parent.width - 18px) * AppState.m-pos); y: 0px; width: 18px; height: 18px; border-radius: 9px; background: #ffffff; border-width: 2px; border-color: Theme.accent; }
+            }
+            HorizontalLayout {
+                Muted { text: AppState.m-pos-l; horizontal-stretch: 1; }
+                Muted { text: AppState.m-pos-r; horizontal-alignment: right; }
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            spacing: 22px;
+            height: 80px;
+            VerticalLayout { alignment: center; IconBtn { d: Icons.prev; solid: true; size: 58px; clicked => { AppState.media-cmd("prev"); } } }
+            IconBtn { d: AppState.m-playing ? Icons.pause : Icons.play; solid: true; size: 78px; fill: Theme.accent; tint: Theme.on-accent; clicked => { AppState.media-cmd("play_pause"); } }
+            VerticalLayout { alignment: center; IconBtn { d: Icons.next; solid: true; size: 58px; clicked => { AppState.media-cmd("next"); } } }
+        }
+    }
+}
+
+// ===================== JAM =====================
+export component ClockPage inherits Rectangle {
+    property <[bool]> dsel: [false, false, false, false, false, false, false];
+    property <int> new-h: 7;
+    property <int> new-m: 0;
+    property <string> new-label: "";
+
+    VerticalLayout {
+        spacing: 10px;
+        Seg {
+            items: ["Pomodoro", "Timer", "Stopwatch", "Alarm", "Adzan"];
+            icons: [Icons.tomato, Icons.clock, Icons.bolt, Icons.bell, Icons.moon];
+            current: AppState.clock-tab;
+            picked(i) => { AppState.clock-tab = i; }
+        }
+
+        // ---- Pomodoro ----
+        if AppState.clock-tab == 0 : ScrollView {
+            VerticalLayout {
+                spacing: 10px;
+                padding-bottom: 8px;
+                Rectangle {
+                    height: 236px;
+                    Path {
+                        x: (parent.width - 360px) / 2; y: 34px; width: 360px; height: 150px; viewbox-width: 360; viewbox-height: 150;
+                        commands: "M 10 100 C 20 20 300 0 350 40 C 370 70 120 150 10 100 Z";
+                        stroke: Theme.accent.with-alpha(0.45);
+                        stroke-width: 3px;
+                        fill: transparent;
+                    }
+                    Ring {
+                        size: 200px;
+                        x: (parent.width - self.width) / 2;
+                        y: 0px;
+                        value: AppState.pomo-progress;
+                        tint: Theme.accent;
+                        icon: Icons.tomato;
+                        text: AppState.pomo-text;
+                        sub: AppState.pomo-phase;
+                    }
+                    IconBtn { d: Icons.reset; size: 40px; x: (parent.width - 66px) / 2 - 70px; y: 180px; clicked => { AppState.pomo-reset(); } }
+                    IconBtn { d: AppState.pomo-running ? Icons.pause : Icons.play; solid: true; size: 66px; x: (parent.width - self.width) / 2; y: 168px; fill: Theme.accent; tint: Theme.on-accent; clicked => { AppState.pomo-toggle(); } }
+                    IconBtn { d: Icons.next; solid: true; size: 40px; x: (parent.width + 66px) / 2 + 30px; y: 180px; clicked => { AppState.pomo-skip(); } }
+                    Sparkle { x: 30px; y: 40px; size: 20px; tint: Theme.accent.with-alpha(0.8); }
+                    Sparkle { x: parent.width - 52px; y: 120px; size: 24px; tint: Theme.accent2.with-alpha(0.8); }
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    Rectangle {
+                        height: 34px;
+                        width: rl.preferred-width + 54px;
+                        border-radius: 17px;
+                        background: Theme.surface2;
+                        border-width: 1px;
+                        border-color: Theme.edge;
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 8px;
+                            VerticalLayout { alignment: center; Icon { d: Icons.reset; size: 16px; tint: Theme.accent; } }
+                            rl := Text { text: AppState.pomo-rounds; color: Theme.text; font-size: 13px; font-weight: 700; vertical-alignment: center; }
+                        }
+                    }
+                }
+                Card {
+                    height: 5 * 48px + 20px;
+                    VerticalLayout {
+                        padding: 10px;
+                        spacing: 0px;
+                        SetRow { icon: Icons.target; text: "Fokus (menit)"; Stepper { width: 130px; value: AppState.s-focus-min; min: 1; max: 180; changed(v) => { AppState.s-focus-min = v; AppState.settings-changed(); } } }
+                        SetRow { icon: Icons.coffee; text: "Istirahat (menit)"; Stepper { width: 130px; value: AppState.s-break-min; min: 1; max: 60; changed(v) => { AppState.s-break-min = v; AppState.settings-changed(); } } }
+                        SetRow { icon: Icons.chair; text: "Istirahat panjang"; Stepper { width: 130px; value: AppState.s-long-min; min: 1; max: 120; changed(v) => { AppState.s-long-min = v; AppState.settings-changed(); } } }
+                        SetRow { icon: Icons.reset; text: "Putaran sebelum istirahat panjang"; Stepper { width: 130px; value: AppState.s-rounds; min: 1; max: 12; changed(v) => { AppState.s-rounds = v; AppState.settings-changed(); } } }
+                        SetRow { icon: Icons.bolt; text: "Lanjut otomatis"; sub: "Langsung ke fase berikutnya"; Toggle { on: AppState.s-auto-next; toggled(v) => { AppState.s-auto-next = v; AppState.settings-changed(); } } }
+                    }
+                }
+            }
+        }
+
+        // ---- Timer ----
+        if AppState.clock-tab == 1 : VerticalLayout {
+            spacing: 14px;
+            Rectangle {
+                height: 220px;
+                Ring { size: 200px; x: (parent.width - self.width) / 2; y: 10px; value: AppState.timer-progress; tint: AppState.timer-state == 3 ? Theme.bad : Theme.accent2; icon: Icons.clock; text: AppState.timer-text; sub: AppState.timer-state == 3 ? "Selesai!" : ""; }
+            }
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+                Btn { text: "−1 mnt"; clicked => { AppState.timer-add(-60); } }
+                Btn { text: "+1 mnt"; clicked => { AppState.timer-add(60); } }
+                Btn { text: "+5 mnt"; clicked => { AppState.timer-add(300); } }
+                Btn { text: "+10 mnt"; clicked => { AppState.timer-add(600); } }
+            }
+            HorizontalLayout {
+                alignment: center;
+                spacing: 12px;
+                Btn { text: AppState.timer-state == 1 ? "Jeda" : "Mulai"; kind: 1; icon: AppState.timer-state == 1 ? Icons.pause : Icons.play; clicked => { AppState.timer-toggle(); } }
+                Btn { text: "Reset"; icon: Icons.reset; clicked => { AppState.timer-reset(); } }
+            }
+        }
+
+        // ---- Stopwatch ----
+        if AppState.clock-tab == 2 : VerticalLayout {
+            spacing: 12px;
+            Card {
+                height: 130px;
+                Text { text: AppState.sw-text; color: Theme.text; font-size: 54px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+            }
+            HorizontalLayout {
+                alignment: center;
+                spacing: 12px;
+                Btn { text: AppState.sw-running ? "Jeda" : "Mulai"; kind: 1; icon: AppState.sw-running ? Icons.pause : Icons.play; clicked => { AppState.sw-toggle(); } }
+                Btn { text: "Lap"; enabled: AppState.sw-running; clicked => { AppState.sw-lap(); } }
+                Btn { text: "Reset"; icon: Icons.reset; clicked => { AppState.sw-reset(); } }
+            }
+            ScrollView {
+                vertical-stretch: 1;
+                VerticalLayout {
+                    spacing: 4px;
+                    for l in AppState.laps : HorizontalLayout {
+                        height: 28px;
+                        Muted { text: l.n; width: 44px; vertical-alignment: center; }
+                        Label { text: l.lap; horizontal-stretch: 1; vertical-alignment: center; }
+                        Muted { text: l.total; vertical-alignment: center; }
+                    }
+                }
+            }
+        }
+
+        // ---- Alarm ----
+        if AppState.clock-tab == 3 : VerticalLayout {
+            spacing: 8px;
+            Muted { text: AppState.alarm-next == "" ? "Belum ada alarm aktif" : AppState.alarm-next; }
+            ScrollView {
+                vertical-stretch: 1;
+                VerticalLayout {
+                    spacing: 8px;
+                    for al in AppState.alarms : Card {
+                        height: 66px;
+                        HorizontalLayout {
+                            padding: 12px;
+                            spacing: 10px;
+                            Text { text: al.time; color: al.on ? Theme.text : Theme.muted; font-size: 28px; font-weight: 800; vertical-alignment: center; }
+                            VerticalLayout {
+                                alignment: center;
+                                horizontal-stretch: 1;
+                                Label { text: al.label == "" ? "Alarm" : al.label; }
+                                Muted { text: al.repeat; }
+                            }
+                            VerticalLayout { alignment: center; Toggle { on: al.on; toggled(v) => { AppState.alarm-toggle(al.id); } } }
+                            VerticalLayout { alignment: center; IconBtn { d: Icons.trash; size: 34px; filled: false; tint: Theme.muted; clicked => { AppState.alarm-del(al.id); } } }
+                        }
+                    }
+                }
+            }
+            Card {
+                height: 168px;
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Stepper { width: 130px; value <=> root.new-h; min: 0; max: 23; }
+                        Text { text: ":"; color: Theme.text; font-size: 20px; font-weight: 800; vertical-alignment: center; }
+                        Stepper { width: 130px; value <=> root.new-m; min: 0; max: 59; step: 5; }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                    HorizontalLayout {
+                        spacing: 4px;
+                        for d[i] in ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"] : Rectangle {
+                            height: 30px;
+                            border-radius: 15px;
+                            background: root.dsel[i] ? Theme.grad : Theme.surface3;
+                            Text { text: d; color: root.dsel[i] ? Theme.on-accent : Theme.muted; font-size: 11px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                            TouchArea { clicked => { root.dsel[i] = !root.dsel[i]; } }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: 38px;
+                            background: Theme.surface2;
+                            border-radius: 19px;
+                            ti := TextInput { x: 14px; width: parent.width - 28px; height: parent.height; text <=> root.new-label; color: Theme.text; font-size: 13px; vertical-alignment: center; single-line: true; }
+                            Text { x: 14px; height: parent.height; text: "Label (opsional)"; color: Theme.muted; font-size: 13px; vertical-alignment: center; visible: root.new-label == "" && !ti.has-focus; }
+                        }
+                        Btn {
+                            text: "Tambah";
+                            kind: 1;
+                            icon: Icons.plus;
+                            clicked => {
+                                AppState.alarm-add(root.new-h, root.new-m,
+                                    (root.dsel[0] ? 1 : 0) + (root.dsel[1] ? 2 : 0) + (root.dsel[2] ? 4 : 0) + (root.dsel[3] ? 8 : 0) + (root.dsel[4] ? 16 : 0) + (root.dsel[5] ? 32 : 0) + (root.dsel[6] ? 64 : 0),
+                                    root.new-label);
+                                root.new-label = "";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---- Adzan ----
+        if AppState.clock-tab == 4 : VerticalLayout {
+            spacing: 10px;
+            Card {
+                height: 80px;
+                VerticalLayout {
+                    padding: 14px;
+                    alignment: center;
+                    Text { text: AppState.next-prayer == "" ? "—" : "Berikutnya: " + AppState.next-prayer + " " + AppState.next-prayer-time; color: Theme.text; font-size: 18px; font-weight: 800; }
+                    Muted { text: AppState.next-prayer-left + (AppState.weather-city == "" ? "" : "  ·  " + AppState.weather-city); }
+                }
+            }
+            Card {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 4px;
+                    for p in AppState.prayers : Rectangle {
+                        height: 32px;
+                        border-radius: 12px;
+                        background: p.next ? Theme.accent.with-alpha(0.18) : transparent;
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            Text { text: p.name; color: p.next ? Theme.accent : p.past ? Theme.muted : Theme.text; font-size: 15px; font-weight: p.next ? 800 : 500; vertical-alignment: center; }
+                            Rectangle { horizontal-stretch: 1; }
+                            Text { text: p.time; color: p.next ? Theme.accent : p.past ? Theme.muted : Theme.text; font-size: 15px; font-weight: p.next ? 800 : 600; vertical-alignment: center; }
+                        }
+                    }
+                }
+            }
+            HorizontalLayout {
+                Label { text: "Bunyikan adzan saat waktu sholat"; horizontal-stretch: 1; vertical-alignment: center; }
+                Toggle { on: AppState.s-adzan; toggled(v) => { AppState.s-adzan = v; AppState.settings-changed(); } }
+            }
+            HorizontalLayout {
+                spacing: 10px;
+                Label { text: "Volume"; vertical-alignment: center; }
+                SliderLite { horizontal-stretch: 1; value: AppState.s-adzan-vol; changed(v) => { AppState.s-adzan-vol = v; AppState.settings-changed(); } }
+                Btn { text: "Coba"; icon: Icons.play; clicked => { AppState.adzan-test(); } }
+            }
+            Muted { text: AppState.adzan-note; wrap: word-wrap; }
+        }
+    }
+}

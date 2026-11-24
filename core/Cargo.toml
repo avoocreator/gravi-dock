@@ -1,7 +1,7 @@
 [package]
 name = "island-core"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-description = "Logika murni Antigravity Island (tanpa dependensi): JSON, waktu sholat, pemindai sesi AI, pencarian peluncur."
+description = "Logika murni Gravi Island (tanpa dependensi): JSON, waktu sholat, sesi AI, jam, GitHub, Google Calendar, protokol hook."
 
 [dependencies]

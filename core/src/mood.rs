@@ -1,248 +1,133 @@
-//! Suasana hati & 12 ekspresi maskot Gravi Bot (vektor).
-//! Murni logika; UI hanya menggambar `MoodView`.
+//! Ekspresi maskot Gravi. 12 wajah (sesuai lembar referensi) + aksesori melayang (glyph) yang dipilih dari konteks.
+//! Murni logika: UI hanya menganimasikan angka-angka di `FaceView` (transisi mulus antar wajah).
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Mood {
-    Idle, Happy, Working, Focused, Sleepy, Sleeping, Alert, Worried, Hot, Music,
-    Break, Prayer, Morning, Night, Excited, Curious, Love, Thinking, Done, Sad,
+pub enum Face { Idle, Happy, Surprised, Sleepy, Confused, Sad, Thinking, Searching, Working, Success, Error, Peek }
+
+pub const ALL: [Face; 12] = [
+    Face::Idle, Face::Happy, Face::Surprised, Face::Sleepy, Face::Confused, Face::Sad,
+    Face::Thinking, Face::Searching, Face::Working, Face::Success, Face::Error, Face::Peek,
+];
+
+impl Face {
+    pub fn name(self) -> &'static str {
+        match self {
+            Face::Idle => "Idle", Face::Happy => "Happy", Face::Surprised => "Surprised", Face::Sleepy => "Sleepy", Face::Confused => "Confused",
+            Face::Sad => "Sad", Face::Thinking => "Thinking", Face::Searching => "Searching", Face::Working => "Working", Face::Success => "Success",
+            Face::Error => "Error", Face::Peek => "Peek",
+        }
+    }
+    pub fn index(self) -> i32 { ALL.iter().position(|f| *f == self).unwrap_or(0) as i32 }
+    pub fn from_index(i: i32) -> Face { ALL.get(i.max(0) as usize).copied().unwrap_or(Face::Idle) }
 }
 
-/// 12 ekspresi resmi Gravi Bot sesuai referensi visual.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Expression {
-    Idle, Happy, Surprised, Sleepy, Confused, Sad,
-    Thinking, Searching, Working, Success, Error, Peek,
-}
-
-/// Cara menggambar di Slint:
-/// - eye_h: skala tinggi mata (0.1..1.5)
-/// - eye_w: skala lebar mata (0.5..1.5)
-/// - eye_dy: pergeseran vertikal mata (-1.0..1.0)
-/// - eye_dx: pergeseran horizontal mata (-1.0..1.0, misal melirik)
-/// - eye_shape: 0=Kapsul tegak, 1=Senyum ^^, 2=Bulat OO (Surprised), 3=Tidur --,
-///              4=Bingung (asimetris), 5=Sayu/sedih, 6=Menyipit miring (Thinking), 7=Miring linglung (Error)
-/// - mouth: 0 senyum halus, 1 datar, 2 terbuka O, 3 sedih, 4 senyum lebar
-/// - glyph: teks pendukung atau ikon
-/// - glyph_type: 0=none, 1=seru '!', 2=tanya '?', 3=zzz 'Z', 4=bintang '✦', 5=spiral '@', 6=bubble '..', 7=radar ')', 8=spark '\\//', 9=musik '♪'
-/// - peek: true jika hanya separuh kepala atas yang muncul mengintip
-/// - rgb: override warna mata bila ada
+/// Parameter gambar. Semua angka dianimasikan di UI.
+/// Mata: pil (tinggi `eye_h`, lebar `eye_w`), busur ^ (`arc`), cincin (`ring`), kelopak miring (`lid_out`/`lid_in`).
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct MoodView {
-    pub eye_h: f32,
-    pub eye_w: f32,
-    pub eye_dy: f32,
-    pub eye_dx: f32,
-    pub eye_shape: u8,
-    pub mouth: u8,
-    pub glyph: &'static str,
-    pub glyph_type: u8,
-    pub peek: bool,
-    pub rgb: Option<(u8, u8, u8)>,
+pub struct FaceView {
+    pub eye_h: f32, pub eye_w: f32,   // mata kiri; 1.0 = ukuran normal
+    pub r_h: f32, pub r_w: f32,       // mata kanan
+    pub arc: f32, pub ring: f32,      // 0..1 opasitas lapisan busur/cincin
+    pub lid_out: f32, pub lid_in: f32, // 0..1 bagian mata yang tertutup kelopak (sisi luar / dalam)
+    pub look_x: f32, pub look_y: f32, // -1..1 arah pandang
+    pub peek: f32,                    // 0..1 seberapa jauh maskot "mengintip" dari tepi bawah
+    pub glyph: &'static str,          // aksesori melayang ("" = tak ada)
+    pub glyph_rgb: (u8, u8, u8),
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Ctx {
-    pub hour: i64, pub running: i32, pub action: bool, pub cpu: f32, pub mem: f32,
-    pub focus: bool, pub brk: bool, pub music: bool, pub hover: bool,
-    pub prayer_left_s: i64, pub prayer_now: bool, pub just_done: bool, pub clicked_recently: bool,
-    pub is_peek: bool, pub is_searching: bool, pub is_error: bool,
-}
+const BLUE: (u8, u8, u8) = (0x4d, 0x7c, 0xff);
+const ORANGE: (u8, u8, u8) = (0xff, 0x9a, 0x3d);
+const YELLOW: (u8, u8, u8) = (0xff, 0xc9, 0x4d);
+const PURPLE: (u8, u8, u8) = (0xa7, 0x8b, 0xfa);
+const GRAY: (u8, u8, u8) = (0x8b, 0x93, 0xa3);
 
-pub fn pick(c: &Ctx) -> Mood {
-    use Mood::*;
-    if c.is_error { return Worried; }
-    if c.action { return Alert; }
-    if c.prayer_now { return Prayer; }
-    if c.just_done { return Done; }
-    if c.clicked_recently { return Love; }
-    if c.is_searching || c.hover { return Curious; }
-    if c.mem > 0.92 || c.cpu > 0.95 { return Hot; }
-    if c.mem > 0.85 { return Worried; }
-    if c.focus { return Focused; }
-    if c.brk { return Break; }
-    if c.running >= 3 { return Excited; }
-    if c.running > 0 { return if c.cpu > 0.6 { Thinking } else { Working }; }
-    if c.music { return Music; }
-    if c.prayer_left_s > 0 && c.prayer_left_s < 600 { return Prayer; }
-    match c.hour { 0..=3 => Sleeping, 4..=5 => Sleepy, 6..=9 => Morning, 22..=23 => Night, 10..=11 | 13..=17 => Happy, 12 => Happy, _ => Idle }
-}
+const BASE: FaceView = FaceView { eye_h: 1.0, eye_w: 1.0, r_h: 1.0, r_w: 1.0, arc: 0.0, ring: 0.0, lid_out: 0.0, lid_in: 0.0, look_x: 0.0, look_y: 0.0, peek: 0.0, glyph: "", glyph_rgb: GRAY };
 
-/// Menghasilkan MoodView untuk 12 ekspresi resmi Gravi Bot.
-pub fn expression_view(e: Expression) -> MoodView {
-    use Expression::*;
-    match e {
-        Idle => MoodView {
-            eye_h: 1.0, eye_w: 1.0, eye_dy: 0.0, eye_dx: 0.0,
-            eye_shape: 0, mouth: 0, glyph: "", glyph_type: 0, peek: false, rgb: None,
-        },
-        Happy => MoodView {
-            eye_h: 0.65, eye_w: 1.05, eye_dy: 0.0, eye_dx: 0.0,
-            eye_shape: 1, mouth: 4, glyph: "", glyph_type: 0, peek: false, rgb: None,
-        },
-        Surprised => MoodView {
-            eye_h: 1.15, eye_w: 1.15, eye_dy: -0.1, eye_dx: 0.0,
-            eye_shape: 2, mouth: 2, glyph: "!", glyph_type: 1, peek: false,
-            rgb: Some((0x5a, 0xe0, 0xff)),
-        },
-        Sleepy => MoodView {
-            eye_h: 0.28, eye_w: 1.15, eye_dy: 0.12, eye_dx: 0.0,
-            eye_shape: 3, mouth: 1, glyph: "Z", glyph_type: 3, peek: false,
-            rgb: Some((0xa7, 0x8b, 0xfa)),
-        },
-        Confused => MoodView {
-            eye_h: 0.9, eye_w: 1.0, eye_dy: 0.0, eye_dx: 0.0,
-            eye_shape: 4, mouth: 1, glyph: "?", glyph_type: 2, peek: false,
-            rgb: Some((0x60, 0xa5, 0xfa)),
-        },
-        Sad => MoodView {
-            eye_h: 0.8, eye_w: 1.0, eye_dy: 0.15, eye_dx: 0.0,
-            eye_shape: 5, mouth: 3, glyph: "", glyph_type: 0, peek: false,
-            rgb: Some((0x93, 0xc5, 0xfd)),
-        },
-        Thinking => MoodView {
-            eye_h: 0.8, eye_w: 1.0, eye_dy: -0.15, eye_dx: 0.0,
-            eye_shape: 6, mouth: 1, glyph: "..", glyph_type: 6, peek: false,
-            rgb: None,
-        },
-        Searching => MoodView {
-            eye_h: 1.0, eye_w: 1.0, eye_dy: 0.0, eye_dx: 0.35,
-            eye_shape: 0, mouth: 0, glyph: "))", glyph_type: 7, peek: false,
-            rgb: Some((0x38, 0xbd, 0xf8)),
-        },
-        Working => MoodView {
-            eye_h: 0.95, eye_w: 1.0, eye_dy: 0.05, eye_dx: 0.0,
-            eye_shape: 0, mouth: 1, glyph: "\\//", glyph_type: 8, peek: false,
-            rgb: Some((0x38, 0xbd, 0xf8)),
-        },
-        Success => MoodView {
-            eye_h: 0.7, eye_w: 1.1, eye_dy: 0.0, eye_dx: 0.0,
-            eye_shape: 1, mouth: 4, glyph: "✦", glyph_type: 4, peek: false,
-            rgb: Some((0xfb, 0xbf, 0x24)),
-        },
-        Error => MoodView {
-            eye_h: 0.85, eye_w: 1.0, eye_dy: 0.0, eye_dx: 0.0,
-            eye_shape: 7, mouth: 3, glyph: "@", glyph_type: 5, peek: false,
-            rgb: Some((0xf8, 0x71, 0x71)),
-        },
-        Peek => MoodView {
-            eye_h: 0.9, eye_w: 1.0, eye_dy: -0.1, eye_dx: 0.0,
-            eye_shape: 0, mouth: 0, glyph: "✦", glyph_type: 4, peek: true,
-            rgb: None,
-        },
+pub fn view(f: Face) -> FaceView {
+    match f {
+        Face::Idle => BASE,
+        Face::Happy => FaceView { eye_h: 0.0, r_h: 0.0, arc: 1.0, glyph: "✦", glyph_rgb: ORANGE, ..BASE },
+        Face::Surprised => FaceView { eye_h: 0.0, r_h: 0.0, ring: 1.0, glyph: "!!", glyph_rgb: BLUE, ..BASE },
+        Face::Sleepy => FaceView { eye_h: 0.1, r_h: 0.1, eye_w: 1.25, r_w: 1.25, look_y: 0.2, glyph: "zZ", glyph_rgb: PURPLE, ..BASE },
+        Face::Confused => FaceView { eye_h: 1.0, r_h: 0.16, r_w: 1.35, look_x: 0.1, glyph: "?", glyph_rgb: BLUE, ..BASE },
+        Face::Sad => FaceView { eye_h: 0.8, r_h: 0.8, lid_out: 0.55, lid_in: 0.0, look_y: 0.25, ..BASE },
+        Face::Thinking => FaceView { eye_h: 0.8, r_h: 0.8, lid_out: 0.0, lid_in: 0.5, look_x: 0.15, look_y: -0.2, glyph: "…", glyph_rgb: GRAY, ..BASE },
+        Face::Searching => FaceView { eye_h: 0.85, r_h: 0.85, eye_w: 0.9, r_w: 0.9, look_x: -0.8, glyph: ")))", glyph_rgb: GRAY, ..BASE },
+        Face::Working => FaceView { eye_h: 0.95, r_h: 0.95, look_y: 0.1, glyph: "//", glyph_rgb: BLUE, ..BASE },
+        Face::Success => FaceView { eye_h: 0.0, r_h: 0.0, arc: 1.0, glyph: "✦", glyph_rgb: YELLOW, ..BASE },
+        Face::Error => FaceView { eye_h: 0.9, r_h: 0.45, r_w: 1.15, lid_out: 0.0, lid_in: 0.0, look_x: 0.1, glyph: "@", glyph_rgb: GRAY, ..BASE },
+        Face::Peek => FaceView { peek: 1.0, ..BASE },
     }
 }
 
-pub fn view(m: Mood) -> MoodView {
-    use Mood::*;
-    let v = match m {
-        Idle => expression_view(Expression::Idle),
-        Happy => expression_view(Expression::Happy),
-        Working => expression_view(Expression::Working),
-        Focused => {
-            let mut x = expression_view(Expression::Thinking);
-            x.rgb = Some((0x34, 0xd3, 0x99));
-            x
-        },
-        Sleepy => expression_view(Expression::Sleepy),
-        Sleeping => {
-            let mut x = expression_view(Expression::Sleepy);
-            x.eye_h = 0.18;
-            x.glyph = "zZ";
-            x
-        },
-        Alert => expression_view(Expression::Surprised),
-        Worried => expression_view(Expression::Error),
-        Hot => {
-            let mut x = expression_view(Expression::Error);
-            x.rgb = Some((0xff, 0x6b, 0x6b));
-            x.glyph = "~";
-            x
-        },
-        Music => {
-            let mut x = expression_view(Expression::Happy);
-            x.glyph = "♪";
-            x.glyph_type = 9;
-            x
-        },
-        Break => {
-            let mut x = expression_view(Expression::Happy);
-            x.glyph = "☕";
-            x
-        },
-        Prayer => {
-            let mut x = expression_view(Expression::Idle);
-            x.eye_h = 0.4;
-            x.eye_dy = 0.2;
-            x.eye_shape = 3;
-            x.glyph = "☾";
-            x.rgb = Some((0x34, 0xd3, 0x99));
-            x
-        },
-        Morning => {
-            let mut x = expression_view(Expression::Happy);
-            x.glyph = "☀";
-            x
-        },
-        Night => {
-            let mut x = expression_view(Expression::Sleepy);
-            x.glyph = "★";
-            x
-        },
-        Excited => {
-            let mut x = expression_view(Expression::Success);
-            x.eye_h = 1.15;
-            x
-        },
-        Curious => expression_view(Expression::Searching),
-        Love => {
-            let mut x = expression_view(Expression::Happy);
-            x.glyph = "♥";
-            x.rgb = Some((0xff, 0x6b, 0x9a));
-            x
-        },
-        Thinking => expression_view(Expression::Thinking),
-        Done => expression_view(Expression::Success),
-        Sad => expression_view(Expression::Sad),
-    };
-    v
+/// Konteks untuk memilih wajah.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Ctx {
+    pub hour: i64,
+    pub ai_running: i32,      // jumlah sesi AI yang sedang berjalan
+    pub ai_action: bool,      // ada sesi yang menunggu persetujuan
+    pub cpu: f32, pub mem: f32,
+    pub battery_low: bool,
+    pub focus: bool, pub on_break: bool,
+    pub music: bool,
+    pub searching: bool,      // sedang mengetik di kotak cari / memuat data
+    pub offline: bool,
+    pub prayer_now: bool, pub prayer_soon: bool,
+    pub just_done: bool,      // sesuatu baru saja selesai (sesi AI, timer, pomodoro)
+    pub clicked: bool,        // maskot baru diklik
+    pub alarm_ringing: bool,
+    pub idle_long: bool,      // lama tak ada interaksi
 }
 
-pub const ALL: [Mood; 20] = [
-    Mood::Idle, Mood::Happy, Mood::Working, Mood::Focused, Mood::Sleepy, Mood::Sleeping, Mood::Alert, Mood::Worried, Mood::Hot, Mood::Music,
-    Mood::Break, Mood::Prayer, Mood::Morning, Mood::Night, Mood::Excited, Mood::Curious, Mood::Love, Mood::Thinking, Mood::Done, Mood::Sad,
-];
-
-pub const ALL_EXPRESSIONS: [Expression; 12] = [
-    Expression::Idle, Expression::Happy, Expression::Surprised, Expression::Sleepy,
-    Expression::Confused, Expression::Sad, Expression::Thinking, Expression::Searching,
-    Expression::Working, Expression::Success, Expression::Error, Expression::Peek,
-];
+/// Pilih wajah + aksesori. Urutan menunjukkan prioritas.
+pub fn pick(c: &Ctx) -> FaceView {
+    let with = |f: Face, glyph: &'static str, rgb: (u8, u8, u8)| FaceView { glyph, glyph_rgb: rgb, ..view(f) };
+    if c.ai_action || c.alarm_ringing { return with(Face::Surprised, "!!", BLUE); }
+    if c.cpu > 0.95 || c.mem > 0.93 { return view(Face::Error); }
+    if c.just_done { return view(Face::Success); }
+    if c.clicked { return view(Face::Happy); }
+    if c.prayer_now { return with(Face::Happy, "☾", YELLOW); }
+    if c.battery_low { return view(Face::Sad); }
+    if c.searching { return view(Face::Searching); }
+    if c.offline { return view(Face::Confused); }
+    if c.ai_running > 0 { return if c.cpu > 0.6 { view(Face::Thinking) } else { view(Face::Working) }; }
+    if c.focus { return with(Face::Working, "◔", BLUE); }
+    if c.on_break { return with(Face::Happy, "☕", ORANGE); }
+    if c.music { return with(Face::Happy, "♪", ORANGE); }
+    if c.prayer_soon { return with(Face::Idle, "☾", YELLOW); }
+    if c.idle_long && (6..22).contains(&c.hour) { return view(Face::Peek); }
+    match c.hour { 0..=4 => view(Face::Sleepy), 22..=23 => with(Face::Sleepy, "", GRAY), _ => view(Face::Idle) }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
+    fn twelve_faces_all_valid() {
+        assert_eq!(ALL.len(), 12);
+        for (i, f) in ALL.iter().enumerate() {
+            let v = view(*f);
+            assert_eq!(f.index() as usize, i);
+            assert_eq!(Face::from_index(i as i32), *f);
+            for x in [v.eye_h, v.r_h, v.arc, v.ring, v.lid_out, v.lid_in, v.peek] { assert!((0.0..=1.2).contains(&x), "{f:?}"); }
+        }
+        assert_eq!(Face::from_index(99), Face::Idle);
+    }
+    #[test]
+    fn faces_are_distinct() {
+        for (i, a) in ALL.iter().enumerate() { for b in &ALL[i + 1..] { assert_ne!(view(*a), view(*b), "{a:?} == {b:?}"); } }
+    }
+    #[test]
     fn priorities() {
         let base = Ctx { hour: 14, ..Default::default() };
-        assert_eq!(pick(&base), Mood::Happy);
-        assert_eq!(pick(&Ctx { action: true, running: 2, ..base }), Mood::Alert);
-        assert_eq!(pick(&Ctx { running: 1, ..base }), Mood::Working);
-        assert_eq!(pick(&Ctx { running: 1, cpu: 0.7, ..base }), Mood::Thinking);
-        assert_eq!(pick(&Ctx { hour: 2, ..base }), Mood::Sleeping);
-        assert_eq!(pick(&Ctx { focus: true, ..base }), Mood::Focused);
-        assert_eq!(pick(&Ctx { prayer_left_s: 300, ..base }), Mood::Prayer);
-    }
-    #[test]
-    fn all_distinct_views_exist() {
-        for m in ALL { let v = view(m); assert!(v.eye_h > 0.0); }
-        assert_eq!(ALL.len(), 20);
-    }
-    #[test]
-    fn all_12_expressions_exist() {
-        for e in ALL_EXPRESSIONS {
-            let v = expression_view(e);
-            assert!(v.eye_h > 0.0);
-        }
-        assert_eq!(ALL_EXPRESSIONS.len(), 12);
+        assert_eq!(pick(&base), view(Face::Idle));
+        assert_eq!(pick(&Ctx { ai_action: true, ai_running: 2, ..base }).ring, 1.0);
+        assert_eq!(pick(&Ctx { ai_running: 1, ..base }), view(Face::Working));
+        assert_eq!(pick(&Ctx { ai_running: 1, cpu: 0.7, ..base }), view(Face::Thinking));
+        assert_eq!(pick(&Ctx { hour: 2, ..base }), view(Face::Sleepy));
+        assert_eq!(pick(&Ctx { just_done: true, ai_running: 1, ..base }), view(Face::Success));
+        assert_eq!(pick(&Ctx { music: true, ..base }).glyph, "♪");
+        assert_eq!(pick(&Ctx { cpu: 0.99, ai_running: 1, ..base }), view(Face::Error));
+        assert_eq!(pick(&Ctx { idle_long: true, ..base }).peek, 1.0);
     }
 }

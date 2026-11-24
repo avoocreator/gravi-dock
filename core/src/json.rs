@@ -216,3 +216,98 @@ mod tests {
         assert!(parse("[1,2] x").is_none());
     }
 }
+
+/* ---- penulis JSON ---- */
+
+/// Escape string untuk JSON (termasuk tanda kutip pembuka/penutup).
+pub fn quote(s: &str) -> String {
+    let mut o = String::with_capacity(s.len() + 2);
+    o.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => o.push_str("\\\""),
+            '\\' => o.push_str("\\\\"),
+            '\n' => o.push_str("\\n"),
+            '\r' => o.push_str("\\r"),
+            '\t' => o.push_str("\\t"),
+            c if (c as u32) < 0x20 => o.push_str(&format!("\\u{:04x}", c as u32)),
+            c => o.push(c),
+        }
+    }
+    o.push('"');
+    o
+}
+
+impl Value {
+    pub fn obj(kv: Vec<(&str, Value)>) -> Value {
+        Value::Obj(kv.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+    }
+    pub fn s(x: &str) -> Value { Value::Str(x.to_string()) }
+    pub fn n(x: f64) -> Value { Value::Num(x) }
+    pub fn b(x: bool) -> Value { Value::Bool(x) }
+
+    /// Setel/ganti kunci pada objek (tidak melakukan apa-apa bila bukan objek).
+    pub fn set(&mut self, key: &str, v: Value) {
+        if let Value::Obj(kv) = self {
+            if let Some(slot) = kv.iter_mut().find(|(k, _)| k == key) { slot.1 = v; } else { kv.push((key.to_string(), v)); }
+        }
+    }
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut Value> {
+        if let Value::Obj(kv) = self { kv.iter_mut().find(|(k, _)| k == key).map(|(_, v)| v) } else { None }
+    }
+
+    /// Serialisasi ringkas.
+    pub fn to_json(&self) -> String {
+        match self {
+            Value::Null => "null".into(),
+            Value::Bool(b) => b.to_string(),
+            Value::Num(n) => if n.fract() == 0.0 && n.abs() < 1e15 { format!("{}", *n as i64) } else { format!("{}", n) },
+            Value::Str(s) => quote(s),
+            Value::Arr(a) => format!("[{}]", a.iter().map(|v| v.to_json()).collect::<Vec<_>>().join(",")),
+            Value::Obj(kv) => format!("{{{}}}", kv.iter().map(|(k, v)| format!("{}:{}", quote(k), v.to_json())).collect::<Vec<_>>().join(",")),
+        }
+    }
+
+    /// Serialisasi berindentasi (untuk berkas yang dibaca manusia).
+    pub fn pretty(&self) -> String {
+        fn go(v: &Value, ind: usize, out: &mut String) {
+            let pad = "  ".repeat(ind + 1);
+            let end = "  ".repeat(ind);
+            match v {
+                Value::Arr(a) if !a.is_empty() => {
+                    out.push_str("[\n");
+                    for (i, x) in a.iter().enumerate() { out.push_str(&pad); go(x, ind + 1, out); if i + 1 < a.len() { out.push(','); } out.push('\n'); }
+                    out.push_str(&end); out.push(']');
+                }
+                Value::Obj(kv) if !kv.is_empty() => {
+                    out.push_str("{\n");
+                    for (i, (k, x)) in kv.iter().enumerate() { out.push_str(&pad); out.push_str(&quote(k)); out.push_str(": "); go(x, ind + 1, out); if i + 1 < kv.len() { out.push(','); } out.push('\n'); }
+                    out.push_str(&end); out.push('}');
+                }
+                other => out.push_str(&other.to_json()),
+            }
+        }
+        let mut s = String::new();
+        go(self, 0, &mut s);
+        s.push('\n');
+        s
+    }
+}
+
+#[cfg(test)]
+mod writer_tests {
+    use super::*;
+    #[test]
+    fn roundtrip_writer() {
+        let v = Value::obj(vec![("a", Value::s("x\"y\n")), ("n", Value::n(2.5)), ("i", Value::n(7.0)), ("l", Value::Arr(vec![Value::b(true), Value::Null]))]);
+        assert_eq!(parse(&v.to_json()).unwrap(), v);
+        assert_eq!(parse(&v.pretty()).unwrap(), v);
+    }
+    #[test]
+    fn set_replaces_or_adds() {
+        let mut v = Value::obj(vec![("a", Value::n(1.0))]);
+        v.set("a", Value::n(2.0)); v.set("b", Value::b(true));
+        assert_eq!(v.get("a").num(), Some(2.0));
+        assert!(v.get("b").truthy());
+    }
+}

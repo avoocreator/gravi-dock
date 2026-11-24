@@ -1,5 +1,5 @@
 //! FFI Win32 minimal (tanpa crate tambahan). Di non-Windows semua fungsi berupa stub agar `cargo check` tetap jalan.
-#![allow(non_snake_case, clippy::upper_case_acronyms, dead_code)]
+#![allow(non_snake_case, clippy::upper_case_acronyms)]
 
 #[cfg(windows)]
 mod sys {
@@ -19,6 +19,7 @@ mod sys {
         pub fn SetWindowLongPtrW(h: HWND, i: i32, v: isize) -> isize;
         pub fn SetWindowPos(h: HWND, after: HWND, x: i32, y: i32, cx: i32, cy: i32, flags: u32) -> i32;
         pub fn GetCursorPos(p: *mut POINT) -> i32;
+        pub fn GetWindowRect(h: HWND, r: *mut RECT) -> i32;
         pub fn GetForegroundWindow() -> HWND;
         pub fn SetForegroundWindow(h: HWND) -> i32;
         pub fn SystemParametersInfoW(a: u32, b: u32, c: *mut c_void, d: u32) -> i32;
@@ -42,7 +43,6 @@ mod sys {
         pub fn EmptyClipboard() -> i32;
         pub fn GetClipboardData(f: u32) -> *mut c_void;
         pub fn SetClipboardData(f: u32, h: *mut c_void) -> *mut c_void;
-        pub fn keybd_event(bVk: u8, bScan: u8, dwFlags: u32, dwExtraInfo: usize);
     }
     #[repr(C)] pub struct WNDCLASSW { pub style: u32, pub proc_: unsafe extern "system" fn(HWND, u32, usize, isize) -> isize, pub cls_extra: i32, pub wnd_extra: i32, pub inst: *mut c_void, pub icon: *mut c_void, pub cursor: *mut c_void, pub bg: *mut c_void, pub menu: *const u16, pub class: *const u16 }
     #[repr(C)] pub struct NID { pub size: u32, pub hwnd: HWND, pub id: u32, pub flags: u32, pub cb: u32, pub icon: *mut c_void, pub tip: [u16; 128], pub state: u32, pub smask: u32, pub info: [u16; 256], pub ver: u32, pub title: [u16; 64], pub iflags: u32, pub guid: [u8; 16], pub bicon: *mut c_void }
@@ -54,12 +54,20 @@ mod sys {
         pub fn ShellExecuteW(h: HWND, op: *const u16, file: *const u16, p: *const u16, d: *const u16, show: i32) -> isize;
     }
     #[link(name = "winmm")]
-    extern "system" { pub fn PlaySoundW(name: *const u16, m: *mut c_void, flags: u32) -> i32; }
+    extern "system" {
+        pub fn PlaySoundW(name: *const u16, m: *mut c_void, flags: u32) -> i32;
+        pub fn mciSendStringW(cmd: *const u16, ret: *mut u16, len: u32, cb: *mut c_void) -> u32;
+    }
+    #[link(name = "advapi32")]
+    extern "system" { pub fn RegGetValueW(key: isize, sub: *const u16, val: *const u16, flags: u32, ty: *mut u32, data: *mut c_void, len: *mut u32) -> i32; }
+    #[repr(C)] pub struct POWERSTATUS { pub ac: u8, pub flag: u8, pub pct: u8, pub saver: u8, pub life: u32, pub full: u32 }
     #[link(name = "kernel32")]
     extern "system" {
         pub fn CreateMutexW(a: *mut c_void, own: i32, name: *const u16) -> *mut c_void;
-        pub fn GetTickCount64() -> u64;
         pub fn GetLastError() -> u32;
+        pub fn GetTickCount64() -> u64;
+        pub fn GetDiskFreeSpaceExW(dir: *const u16, avail: *mut u64, total: *mut u64, free: *mut u64) -> i32;
+        pub fn GetSystemPowerStatus(p: *mut POWERSTATUS) -> i32;
         pub fn GetLocalTime(t: *mut SYSTEMTIME);
         pub fn GetTimeZoneInformation(t: *mut TZI) -> u32;
         pub fn GetSystemTimes(i: *mut FILETIME, k: *mut FILETIME, u: *mut FILETIME) -> i32;
@@ -84,27 +92,71 @@ pub struct Now { pub y: i64, pub mo: i64, pub d: i64, pub h: i64, pub mi: i64, p
 pub mod api {
     use super::{sys::*, Now};
     pub fn hwnd(title: &str) -> usize { unsafe { FindWindowW(std::ptr::null(), wide(title).as_ptr()) as usize } }
-    pub fn set_overlay_window(h: usize) {
-        if h == 0 { return; }
-        unsafe {
-            let hw = h as HWND;
-            let cur = GetWindowLongPtrW(hw, -20);
-            let n = (cur | 0x80 | 0x80000 | 0x08000000) & !0x40000;
-            if n != cur { SetWindowLongPtrW(hw, -20, n); }
-            SetWindowPos(hw, -1isize as HWND, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0020 | 0x0010 | 0x0040);
-        }
-    }
     /// Aktifkan/matikan click-through (WS_EX_TRANSPARENT) + sembunyikan dari Alt+Tab (TOOLWINDOW).
     pub fn set_passthrough(h: usize, on: bool) {
         if h == 0 { return; }
         unsafe {
             let hw = h as HWND;
             let cur = GetWindowLongPtrW(hw, -20);
-            let mut n = (cur | 0x80 | 0x80000 | 0x08000000) & !0x40000;
+            let mut n = cur | 0x80 | 0x80000; // TOOLWINDOW | LAYERED
             if on { n |= 0x20 } else { n &= !0x20 }
             if n != cur { SetWindowLongPtrW(hw, -20, n); }
         }
     }
+    /// Jendela tidak merebut fokus saat diklik (pil / kartu persetujuan). Matikan saat panel penuh agar bisa mengetik.
+    pub fn set_noactivate(h: usize, on: bool) {
+        if h == 0 { return; }
+        unsafe {
+            let hw = h as HWND;
+            let cur = GetWindowLongPtrW(hw, -20);
+            let mut n = cur | 0x80; // TOOLWINDOW (tidak muncul di Alt+Tab / taskbar)
+            if on { n |= 0x0800_0000 } else { n &= !0x0800_0000 }
+            if n != cur { SetWindowLongPtrW(hw, -20, n); }
+        }
+    }
+    pub fn window_rect(h: usize) -> (i32, i32, i32, i32) {
+        let mut r = RECT::default();
+        unsafe { if h == 0 || GetWindowRect(h as HWND, &mut r) == 0 { return (0, 0, 0, 0); } }
+        (r.left, r.top, r.right - r.left, r.bottom - r.top)
+    }
+    pub fn uptime_secs() -> u64 { unsafe { GetTickCount64() / 1000 } }
+    /// (terpakai 0..1, bebas bytes, total bytes) untuk drive sistem.
+    pub fn disk() -> (f32, u64, u64) {
+        let (mut a, mut t, mut f) = (0u64, 0u64, 0u64);
+        unsafe { if GetDiskFreeSpaceExW(wide("C:\\").as_ptr(), &mut a, &mut t, &mut f) == 0 || t == 0 { return (0.0, 0, 0); } }
+        (1.0 - f as f32 / t as f32, f, t)
+    }
+    /// (ada baterai, persen 0..1, sedang mengisi)
+    pub fn battery() -> (bool, f32, bool) {
+        let mut p = POWERSTATUS { ac: 0, flag: 0, pct: 255, saver: 0, life: 0, full: 0 };
+        unsafe { if GetSystemPowerStatus(&mut p) == 0 || p.flag & 128 != 0 || p.pct > 100 { return (false, 1.0, false); } }
+        (true, p.pct as f32 / 100.0, p.ac == 1)
+    }
+    /// Tema aplikasi Windows gelap? (HKCU\...\Personalize\AppsUseLightTheme)
+    pub fn system_dark() -> bool {
+        let mut v: u32 = 1; let mut n: u32 = 4;
+        unsafe {
+            let r = RegGetValueW(-2147483647isize, wide("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize").as_ptr(), wide("AppsUseLightTheme").as_ptr(), 0x10, std::ptr::null_mut(), &mut v as *mut _ as *mut _, &mut n);
+            r != 0 || v == 0
+        }
+    }
+    fn mci(cmd: &str) -> (u32, String) {
+        let mut buf = [0u16; 128];
+        let r = unsafe { mciSendStringW(wide(cmd).as_ptr(), buf.as_mut_ptr(), 128, std::ptr::null_mut()) };
+        let n = buf.iter().position(|&c| c == 0).unwrap_or(0);
+        (r, String::from_utf16_lossy(&buf[..n]))
+    }
+    /// Putar berkas audio apa pun yang dikenal Windows (wav/mp3/…) lewat MCI. `vol` 0..100.
+    pub fn mci_play(path: &str, vol: i64) -> bool {
+        mci("close gravi_adzan");
+        if mci(&format!("open \"{}\" alias gravi_adzan", path.replace('"', ""))).0 != 0 { return false; }
+        mci(&format!("setaudio gravi_adzan volume to {}", vol.clamp(0, 100) * 10));
+        mci("play gravi_adzan").0 == 0
+    }
+    pub fn mci_stop() { mci("stop gravi_adzan"); mci("close gravi_adzan"); }
+    pub fn mci_playing() -> bool { let (r, m) = mci("status gravi_adzan mode"); r == 0 && m == "playing" }
+    /// Putar WAV dari memori (tetap valid selama proses hidup) tanpa memblokir.
+    pub fn play_wav_mem(data: &'static [u8]) { unsafe { PlaySoundW(data.as_ptr() as *const u16, std::ptr::null_mut(), 0x4 | 0x1 | 0x2); } }
     pub fn topmost(h: usize) { if h != 0 { unsafe { SetWindowPos(h as HWND, -1isize as HWND, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 | 0x0040); } } }
     pub fn cursor() -> (i32, i32) { let mut p = POINT::default(); unsafe { GetCursorPos(&mut p); } (p.x, p.y) }
     pub fn foreground() -> usize { unsafe { GetForegroundWindow() as usize } }
@@ -119,7 +171,7 @@ pub mod api {
     }
     /// Return false jika sudah ada instance lain.
     pub fn single_instance() -> bool {
-        unsafe { let _ = CreateMutexW(std::ptr::null_mut(), 0, wide("Local\\AntigravityIslandRs").as_ptr()); GetLastError() != 183 }
+        unsafe { let _ = CreateMutexW(std::ptr::null_mut(), 0, wide("Local\\GraviIslandSingle").as_ptr()); GetLastError() != 183 }
     }
     /// Thread hotkey Ctrl+Alt+A; memanggil `f` setiap ditekan.
     pub fn hotkey(f: impl Fn() + Send + 'static) {
@@ -149,97 +201,8 @@ pub mod api {
         (ft(i), ft(k) + ft(u)) // kernel sudah termasuk idle
     }
     pub fn shell_open(target: &str) { unsafe { ShellExecuteW(std::ptr::null_mut(), wide("open").as_ptr(), wide(target).as_ptr(), std::ptr::null(), std::ptr::null(), 1); } }
-
-    fn make_wav(samples: &[i16], rate: u32) -> Vec<u8> {
-        let mut out = Vec::with_capacity(44 + samples.len() * 2);
-        let data_len = (samples.len() * 2) as u32;
-        let file_len = 36 + data_len;
-        out.extend_from_slice(b"RIFF");
-        out.extend_from_slice(&file_len.to_le_bytes());
-        out.extend_from_slice(b"WAVEfmt ");
-        out.extend_from_slice(&16u32.to_le_bytes());
-        out.extend_from_slice(&1u16.to_le_bytes());
-        out.extend_from_slice(&1u16.to_le_bytes());
-        out.extend_from_slice(&rate.to_le_bytes());
-        out.extend_from_slice(&(rate * 2).to_le_bytes());
-        out.extend_from_slice(&2u16.to_le_bytes());
-        out.extend_from_slice(&16u16.to_le_bytes());
-        out.extend_from_slice(b"data");
-        out.extend_from_slice(&data_len.to_le_bytes());
-        for &s in samples {
-            out.extend_from_slice(&s.to_le_bytes());
-        }
-        out
-    }
-
-    fn gen_pop_wav() -> Vec<u8> {
-        const RATE: u32 = 44100;
-        let n = (RATE as f32 * 0.045) as usize;
-        let mut samples = Vec::with_capacity(n);
-        let mut phase: f32 = 0.0;
-        for i in 0..n {
-            let t = i as f32 / RATE as f32;
-            let freq = 750.0 + 850.0 * (1.0 - t / 0.045);
-            phase += 2.0 * std::f32::consts::PI * freq / RATE as f32;
-            let env = (1.0 - t / 0.045).powi(2);
-            let s = (phase.sin() * env * 9500.0) as i16;
-            samples.push(s);
-        }
-        make_wav(&samples, RATE)
-    }
-
-    fn gen_chime_wav() -> Vec<u8> {
-        const RATE: u32 = 44100;
-        let n = (RATE as f32 * 0.16) as usize;
-        let mut samples = Vec::with_capacity(n);
-        for i in 0..n {
-            let t = i as f32 / RATE as f32;
-            let env = (1.0 - t / 0.16).powi(2);
-            let s1 = (2.0 * std::f32::consts::PI * 659.25 * t).sin() * env * 7000.0;
-            let s2 = (2.0 * std::f32::consts::PI * 880.0 * t).sin() * env * 5000.0;
-            samples.push((s1 + s2) as i16);
-        }
-        make_wav(&samples, RATE)
-    }
-
-    static POP_WAV: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
-    static CHIME_WAV: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
-
-    /// Suara pop gelembung lembut & lucu ala Coucou saat klik tab / tombol
-    pub fn play_click() {
-        let b = POP_WAV.get_or_init(gen_pop_wav);
-        unsafe { PlaySoundW(b.as_ptr() as *const u16, std::ptr::null_mut(), 0x0004 | 0x0001); }
-    }
-
-    /// Suara marimba chime manis saat aksi persetujuan AI / selesai
-    pub fn play_action_sfx() {
-        let b = CHIME_WAV.get_or_init(gen_chime_wav);
-        unsafe { PlaySoundW(b.as_ptr() as *const u16, std::ptr::null_mut(), 0x0004 | 0x0001); }
-    }
-
     pub fn play_wav(path: &str) {
-        if path.is_empty() {
-            play_action_sfx();
-        } else {
-            unsafe { PlaySoundW(wide(path).as_ptr(), std::ptr::null_mut(), 0x20000 | 1); }
-        }
-    }
-    pub fn uptime_str() -> String {
-        let s = unsafe { GetTickCount64() / 1000 };
-        let h = s / 3600;
-        let m = (s % 3600) / 60;
-        if h > 0 { format!("{}j {}m", h, m) } else { format!("{}m", m) }
-    }
-    /// Tekan tombol 'y' lalu Enter pada jendela aktif untuk menyetujui izin aksi AI.
-    pub fn send_action_confirm() {
-        unsafe {
-            // 'y' keydown & keyup
-            keybd_event(0x59, 0, 0, 0);
-            keybd_event(0x59, 0, 2, 0);
-            // Enter keydown & keyup
-            keybd_event(0x0D, 0, 0, 0);
-            keybd_event(0x0D, 0, 2, 0);
-        }
+        unsafe { if path.is_empty() { PlaySoundW(wide("SystemExclamation").as_ptr(), std::ptr::null_mut(), 0x10000 | 1); } else { PlaySoundW(wide(path).as_ptr(), std::ptr::null_mut(), 0x20000 | 1); } }
     }
     pub fn shell_open_args(file: &str, args: &str) { unsafe { ShellExecuteW(std::ptr::null_mut(), wide("open").as_ptr(), wide(file).as_ptr(), wide(args).as_ptr(), std::ptr::null(), 1); } }
     pub fn clip_seq() -> u32 { unsafe { GetClipboardSequenceNumber() } }
@@ -266,8 +229,9 @@ pub mod api {
     unsafe fn nid(h: HWND) -> NID {
         let mut d: NID = std::mem::zeroed();
         d.size = std::mem::size_of::<NID>() as u32; d.hwnd = h; d.id = 1; d.flags = 0x1 | 0x2 | 0x4; d.cb = 0x8001;
-        d.icon = LoadIconW(std::ptr::null_mut(), 32512usize as *const u16);
-        for (i, c) in "Antigravity Island".encode_utf16().enumerate() { d.tip[i] = c; }
+        let own = LoadIconW(GetModuleHandleW(std::ptr::null()), 1usize as *const u16);
+        d.icon = if own.is_null() { LoadIconW(std::ptr::null_mut(), 32512usize as *const u16) } else { own };
+        for (i, c) in "Gravi Island".encode_utf16().enumerate() { d.tip[i] = c; }
         d
     }
     unsafe extern "system" fn tray_proc(h: HWND, m: u32, w: usize, l: isize) -> isize {
@@ -277,7 +241,7 @@ pub mod api {
                 0x202 => TRAY_EVENT.store(1, SeqCst),
                 0x205 => {
                     let menu = CreatePopupMenu();
-                    AppendMenuW(menu, 0, 1, wide("Buka / tutup").as_ptr());
+                    AppendMenuW(menu, 0, 1, wide("Buka / tutup (Ctrl+Alt+A)").as_ptr());
                     AppendMenuW(menu, 0, 2, wide("Keluar").as_ptr());
                     let mut p = POINT::default(); GetCursorPos(&mut p);
                     SetForegroundWindow(h);
@@ -296,7 +260,7 @@ pub mod api {
     /// Ikon tray di thread sendiri (jendela pesan tersembunyi).
     pub fn tray() {
         std::thread::spawn(|| unsafe {
-            let class = wide("AIslandTray");
+            let class = wide("GraviIslandTray");
             let inst = GetModuleHandleW(std::ptr::null());
             let wc = WNDCLASSW { style: 0, proc_: tray_proc, cls_extra: 0, wnd_extra: 0, inst, icon: std::ptr::null_mut(), cursor: std::ptr::null_mut(), bg: std::ptr::null_mut(), menu: std::ptr::null(), class: class.as_ptr() };
             RegisterClassW(&wc);
@@ -377,9 +341,18 @@ pub mod api {
 pub mod api {
     use super::Now;
     pub fn hwnd(_: &str) -> usize { 0 }
-    pub fn set_overlay_window(_: usize) {}
     pub fn set_passthrough(_: usize, _: bool) {}
     pub fn topmost(_: usize) {}
+    pub fn set_noactivate(_: usize, _: bool) {}
+    pub fn window_rect(_: usize) -> (i32, i32, i32, i32) { (0, 0, 0, 0) }
+    pub fn uptime_secs() -> u64 { 3600 }
+    pub fn disk() -> (f32, u64, u64) { (0.5, 0, 0) }
+    pub fn battery() -> (bool, f32, bool) { (false, 1.0, false) }
+    pub fn system_dark() -> bool { true }
+    pub fn mci_play(_: &str, _: i64) -> bool { false }
+    pub fn mci_stop() {}
+    pub fn mci_playing() -> bool { false }
+    pub fn play_wav_mem(_: &'static [u8]) {}
     pub fn cursor() -> (i32, i32) { (0, 0) }
     pub fn foreground() -> usize { 0 }
     pub fn focus(_: usize) {}
@@ -393,8 +366,6 @@ pub mod api {
     pub fn proc_cpu(n: &[&str]) -> Vec<u64> { vec![0; n.len()] }
     pub fn shell_open(_: &str) {}
     pub fn play_wav(_: &str) {}
-    pub fn play_click() {}
-    pub fn play_action_sfx() {}
     pub fn clip_seq() -> u32 { 0 }
     pub fn clip_get() -> Option<String> { None }
     pub fn clip_set(_: &str) {}
@@ -402,6 +373,4 @@ pub mod api {
     pub fn tz_hours() -> f64 { 7.0 }
     pub fn cpu_times() -> (u64, u64) { (0, 1) }
     pub fn mem() -> (f32, f32, f32) { (0.0, 0.0, 0.0) }
-    pub fn uptime_str() -> String { "1j 30m".into() }
-    pub fn send_action_confirm() {}
 }

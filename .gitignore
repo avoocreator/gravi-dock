@@ -1,16 +1,8 @@
-# Rust build artifacts
-/target/
-
-# Windows
+target/
+dist/
+*.gravi-bak
+*.zip
 Thumbs.db
 Desktop.ini
-
-# IDEs & Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# OS / temporary files
-*.tmp
-*.zip

@@ -1,2028 +1,325 @@
-import { ScrollView } from "std-widgets.slint";
-// Antigravity Island (Slint). Satu jendela transparan tetap di tepi kanan; yang beranimasi hanya ukuran "island" di dalamnya.
-
-export struct MoodView {
-    eye-h: float,
-    eye-w: float,
-    eye-dy: float,
-    eye-dx: float,
-    eye-shape: int,
-    mouth: int,
-    glyph: string,
-    glyph-type: int,
-    peek: bool,
-    eye-color: color,
-}
-
-export struct SessionItem {
-    title: string,
-    sub: string,
-    meta: string,
-    mark: string,
-    tint: color,
-    running: bool,
-    action: bool,
-}
-
-export global Theme {
-    in-out property <bool> light: false;
-    in-out property <color> cyan: #5ae0ff;
-    out property <color> bg: light ? #f2f2f6 : #000000;
-    out property <color> surface: light ? #ffffff : #141416;
-    out property <color> border: light ? #0000000f : #ffffff12;
-    out property <color> chip: light ? #0000000a : #ffffff12;
-    out property <color> fg: light ? #16161a : #f5f5f7;
-    out property <color> mut: light ? #16161a99 : #ffffff99;
-    out property <color> mut2: light ? #16161a66 : #ffffff61;
-    out property <color> card: light ? #ffffff : #141416;
-    out property <color> line: light ? #0000001a : #ffffff24;
-    out property <color> amber: #ffb54d;
-    out property <color> good: #34d399;
-}
-
-// Maskot resmi Gravi Bot (vektor 3D mecha) dengan telinga pelangi & 12 ekspresi halus.
-component Gravi inherits Rectangle {
-    in property <length> size: 40px;
-    in property <bool> blink: false;
-    in property <MoodView> mood: {
-        eye-h: 1.0, eye-w: 1.0, eye-dy: 0.0, eye-dx: 0.0,
-        eye-shape: 0, mouth: 0, glyph: "", glyph-type: 0, peek: false,
-        eye-color: #5ae0ff
-    };
-    width: self.size;
-    height: self.size * 0.88;
-
-    property <length> u: self.size / 100;
-    property <length> eh: root.blink ? 2.5 * root.u : max(2.5 * root.u, root.mood.eye-h * 18.0 * root.u);
-    property <length> ew: max(4.0 * root.u, root.mood.eye-w * 9.0 * root.u);
-    property <length> m-y: 24 * root.u + root.mood.eye-dy * 5 * root.u - root.eh / 2;
-    property <length> lx: 18 * root.u + root.mood.eye-dx * 6 * root.u;
-    property <length> rx: 45 * root.u + root.mood.eye-dx * 6 * root.u;
-
-    // Bayangan Bawah 3D (Ambient Occlusion Helm)
-    Rectangle {
-        x: 10 * root.u;
-        y: 68 * root.u;
-        width: 80 * root.u;
-        height: 14 * root.u;
-        border-radius: 7 * root.u;
-        background: #00000030;
-    }
-
-    // Telinga Kiri Luar (Mecha Carbon / 3D Bevel)
-    Path {
-        x: 4 * root.u; y: 0; width: 34 * root.u; height: 36 * root.u;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 34; viewbox-height: 36;
-        commands: "M 4 36 L 14 3 Q 18 0 22 5 L 34 36 Z";
-        fill: @linear-gradient(135deg, #232738 0%, #12141c 100%);
-    }
-    // Telinga Kiri Dalam (Gradien Pelangi Dingin: Biru -> Cyan -> Emerald)
-    Path {
-        x: 8 * root.u; y: 5 * root.u; width: 24 * root.u; height: 28 * root.u;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 24; viewbox-height: 28;
-        commands: "M 3 28 L 10 5 Q 13 2 16 6 L 23 28 Z";
-        fill: @linear-gradient(145deg, #1d4ed8 0%, #06b6d4 50%, #10b981 100%);
-    }
-
-    // Telinga Kanan Luar (Mecha Carbon / 3D Bevel)
-    Path {
-        x: 62 * root.u; y: 0; width: 34 * root.u; height: 36 * root.u;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 34; viewbox-height: 36;
-        commands: "M 0 36 L 12 5 Q 16 0 20 3 L 30 36 Z";
-        fill: @linear-gradient(225deg, #232738 0%, #12141c 100%);
-    }
-    // Telinga Kanan Dalam (Gradien Pelangi Hangat: Crimson -> Oranye -> Kuning)
-    Path {
-        x: 68 * root.u; y: 5 * root.u; width: 24 * root.u; height: 28 * root.u;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 24; viewbox-height: 28;
-        commands: "M 1 28 L 8 6 Q 11 2 14 5 L 21 28 Z";
-        fill: @linear-gradient(215deg, #dc2626 0%, #ea580c 50%, #facc15 100%);
-    }
-
-    // Bodi Helm Utama (Volumetrik Keramik Putih 3D dengan Shading & Highlight Halus)
-    Rectangle {
-        x: 5 * root.u;
-        y: root.mood.peek ? 24 * root.u : 14 * root.u;
-        width: 90 * root.u;
-        height: 68 * root.u;
-        border-radius: 34 * root.u;
-        background: @linear-gradient(180deg, #ffffff 0%, #edf1fa 60%, #cbd4ea 100%);
-        border-width: 1.5px;
-        border-color: #dbe0ee;
-        clip: true;
-
-        // Highlight pantulan kubah atas helm
-        Rectangle {
-            x: 18 * root.u; y: 2 * root.u; width: 54 * root.u; height: 8 * root.u;
-            border-radius: 4 * root.u;
-            background: @linear-gradient(180deg, #ffffffbb 0%, #ffffff00 100%);
-        }
-
-        // Bayangan bezel dalam di sekitar lubang visor
-        Rectangle {
-            x: 8 * root.u; y: 9 * root.u; width: 74 * root.u; height: 50 * root.u;
-            border-radius: 25 * root.u;
-            background: #11131a22;
-        }
-
-        // Visor Kaca Hitam Mengkilap (3D Convex Glass Lens)
-        Rectangle {
-            x: 9 * root.u; y: 10 * root.u; width: 72 * root.u; height: 48 * root.u;
-            border-radius: 24 * root.u;
-            background: @linear-gradient(180deg, #181b28 0%, #0a0c12 100%);
-            border-width: 1.2px;
-            border-color: #2b3145;
-            clip: true;
-
-            // Pantulan kaca melengkung (Specular Curved Glass Pill)
-            Rectangle {
-                x: 6 * root.u; y: 4 * root.u; width: 24 * root.u; height: 9 * root.u;
-                border-radius: 4.5 * root.u;
-                background: @linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.05) 100%);
-            }
-            // Pantulan sekunder kaca bawah (Rim bounce glow)
-            Rectangle {
-                x: 18 * root.u; y: 40 * root.u; width: 36 * root.u; height: 5 * root.u;
-                border-radius: 2.5 * root.u;
-                background: @linear-gradient(180deg, rgba(90, 224, 255, 0.0) 0%, rgba(90, 224, 255, 0.16) 100%);
-            }
-
-            // === SEPASANG MATA VISOR DENGAN 12 EKSPRESI BERSIH ===
-            // 0. Bentuk Kapsul Tegak (Idle, Working, Searching, Peek)
-            if root.mood.eye-shape == 0: Rectangle {
-                x: root.lx; y: root.m-y; width: root.ew; height: root.eh;
-                border-radius: root.ew / 2; background: root.mood.eye-color;
-                animate height { duration: 100ms; }
-            }
-            if root.mood.eye-shape == 0: Rectangle {
-                x: root.rx; y: root.m-y; width: root.ew; height: root.eh;
-                border-radius: root.ew / 2; background: root.mood.eye-color;
-                animate height { duration: 100ms; }
-            }
-
-            // 1. Bentuk Senyum ^^ (Happy, Success, Love, Music)
-            if root.mood.eye-shape == 1: Path {
-                x: root.lx - 2 * root.u; y: root.m-y; width: 14 * root.u; height: 12 * root.u;
-                viewbox-x: 0; viewbox-y: 0; viewbox-width: 14; viewbox-height: 12;
-                commands: "M 1 11 Q 7 1 13 11";
-                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
-            }
-            if root.mood.eye-shape == 1: Path {
-                x: root.rx - 2 * root.u; y: root.m-y; width: 14 * root.u; height: 12 * root.u;
-                viewbox-x: 0; viewbox-y: 0; viewbox-width: 14; viewbox-height: 12;
-                commands: "M 1 11 Q 7 1 13 11";
-                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
-            }
-
-            // 2. Bentuk Bulat Besar OO (Surprised / Alert)
-            if root.mood.eye-shape == 2: Rectangle {
-                x: root.lx - 2 * root.u; y: root.m-y - 1 * root.u;
-                width: 14 * root.u; height: 14 * root.u; border-radius: 7 * root.u;
-                background: root.mood.eye-color;
-            }
-            if root.mood.eye-shape == 2: Rectangle {
-                x: root.rx - 2 * root.u; y: root.m-y - 1 * root.u;
-                width: 14 * root.u; height: 14 * root.u; border-radius: 7 * root.u;
-                background: root.mood.eye-color;
-            }
-
-            // 3. Bentuk Tidur/Tenang -- (Sleepy, Sleeping, Zen)
-            if root.mood.eye-shape == 3: Rectangle {
-                x: root.lx - 1 * root.u; y: 24 * root.u;
-                width: 12 * root.u; height: 3.2 * root.u; border-radius: 1.6 * root.u;
-                background: root.mood.eye-color;
-            }
-            if root.mood.eye-shape == 3: Rectangle {
-                x: root.rx - 1 * root.u; y: 24 * root.u;
-                width: 12 * root.u; height: 3.2 * root.u; border-radius: 1.6 * root.u;
-                background: root.mood.eye-color;
-            }
-
-            // 4. Bentuk Bingung / Curious (Asimetris: kiri kapsul, kanan strip)
-            if root.mood.eye-shape == 4: Rectangle {
-                x: root.lx; y: root.m-y; width: root.ew; height: root.eh;
-                border-radius: root.ew / 2; background: root.mood.eye-color;
-            }
-            if root.mood.eye-shape == 4: Rectangle {
-                x: root.rx; y: 24 * root.u; width: 12 * root.u; height: 3.2 * root.u;
-                border-radius: 1.6 * root.u; background: root.mood.eye-color;
-            }
-
-            // 5. Bentuk Sayu/Sedih (Sad)
-            if root.mood.eye-shape == 5: Path {
-                x: root.lx - 1 * root.u; y: root.m-y + 2 * root.u; width: 14 * root.u; height: 12 * root.u;
-                viewbox-x: 0; viewbox-y: 0; viewbox-width: 14; viewbox-height: 12;
-                commands: "M 1 2 Q 7 11 13 2";
-                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
-            }
-            if root.mood.eye-shape == 5: Path {
-                x: root.rx - 1 * root.u; y: root.m-y + 2 * root.u; width: 14 * root.u; height: 12 * root.u;
-                viewbox-x: 0; viewbox-y: 0; viewbox-width: 14; viewbox-height: 12;
-                commands: "M 1 2 Q 7 11 13 2";
-                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
-            }
-
-            // 6. Bentuk Menyipit Tajam (Thinking / Focused)
-            if root.mood.eye-shape == 6: Path {
-                x: root.lx; y: root.m-y; width: 12 * root.u; height: 10 * root.u;
-                viewbox-x: 0; viewbox-y: 0; viewbox-width: 12; viewbox-height: 10;
-                commands: "M 1 2 L 11 9";
-                stroke: root.mood.eye-color; stroke-width: 3.5px; fill: transparent;
-            }
-            if root.mood.eye-shape == 6: Path {
-                x: root.rx; y: root.m-y; width: 12 * root.u; height: 10 * root.u;
-                viewbox-x: 0; viewbox-y: 0; viewbox-width: 12; viewbox-height: 10;
-                commands: "M 1 9 L 11 2";
-                stroke: root.mood.eye-color; stroke-width: 3.5px; fill: transparent;
-            }
-
-            // 7. Bentuk Silang XX (Error / Dizzy)
-            if root.mood.eye-shape == 7: Path {
-                x: root.lx; y: root.m-y; width: 12 * root.u; height: 12 * root.u;
-                viewbox-x: 0; viewbox-y: 0; viewbox-width: 12; viewbox-height: 12;
-                commands: "M 2 2 L 10 10 M 10 2 L 2 10";
-                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
-            }
-            if root.mood.eye-shape == 7: Path {
-                x: root.rx; y: root.m-y; width: 12 * root.u; height: 12 * root.u;
-                viewbox-x: 0; viewbox-y: 0; viewbox-width: 12; viewbox-height: 12;
-                commands: "M 2 2 L 10 10 M 10 2 L 2 10";
-                stroke: root.mood.eye-color; stroke-width: 3.2px; fill: transparent;
-            }
-        }
-    }
-}
-
-// === KOMPONEN IKON VEKTOR MURNI (BEBAS TOFU / KOTAK-KOTAK WINDOWS) ===
-component CloseIcon inherits Path {
-    in property <color> icon-color: Theme.mut;
-    width: 10px; height: 10px;
-    viewbox-width: 10; viewbox-height: 10;
-    commands: "M 1.5 1.5 L 8.5 8.5 M 8.5 1.5 L 1.5 8.5";
-    stroke: root.icon-color; stroke-width: 1.8px; fill: transparent;
-}
-
-component ResetIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 16px; height: 16px;
-    viewbox-width: 20; viewbox-height: 20;
-    commands: "M 4 10 A 6.5 6.5 0 1 1 7.2 16.2 M 2 5 L 2 10.5 L 7.5 10.5";
-    stroke: root.icon-color; stroke-width: 2.2px; fill: transparent;
-}
-
-component PlayIcon inherits Path {
-    in property <color> icon-color: #000000;
-    width: 16px; height: 16px;
-    viewbox-width: 20; viewbox-height: 20;
-    commands: "M 6 4 L 17 10 L 6 16 Z";
-    fill: root.icon-color;
-}
-
-component PauseIcon inherits Path {
-    in property <color> icon-color: #000000;
-    width: 16px; height: 16px;
-    viewbox-width: 20; viewbox-height: 20;
-    commands: "M 5 4 L 8 4 L 8 16 L 5 16 Z M 12 4 L 15 4 L 15 16 L 12 16 Z";
-    fill: root.icon-color;
-}
-
-component PrevIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 16px; height: 16px;
-    viewbox-width: 20; viewbox-height: 20;
-    commands: "M 4 4 L 6.5 4 L 6.5 16 L 4 16 Z M 16 4 L 7 10 L 16 16 Z";
-    fill: root.icon-color;
-}
-
-component NextIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 16px; height: 16px;
-    viewbox-width: 20; viewbox-height: 20;
-    commands: "M 4 4 L 13 10 L 4 16 Z M 13.5 4 L 16 4 L 16 16 L 13.5 16 Z";
-    fill: root.icon-color;
-}
-
-component SearchIcon inherits Path {
-    in property <color> icon-color: Theme.mut2;
-    width: 14px; height: 14px;
-    viewbox-width: 20; viewbox-height: 20;
-    commands: "M 8.5 2 A 6.5 6.5 0 1 0 13.5 13.5 L 18 18 M 13.5 8.5";
-    stroke: root.icon-color; stroke-width: 2.2px; fill: transparent;
-}
-
-component ArrowRightIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 12px; height: 12px;
-    viewbox-width: 16; viewbox-height: 16;
-    commands: "M 3 8 L 13 8 M 9 4 L 13 8 L 9 12";
-    stroke: root.icon-color; stroke-width: 2px; fill: transparent;
-}
-
-// === KOMPONEN IKON VEKTOR REVAMP HOME ===
-component HomeTabIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 13px; height: 13px;
-    viewbox-width: 16; viewbox-height: 16;
-    commands: "M 2.5 7.5 L 8 2.5 L 13.5 7.5 L 13.5 13.5 L 9.5 13.5 L 9.5 10 L 6.5 10 L 6.5 13.5 L 2.5 13.5 Z";
-    stroke: root.icon-color; stroke-width: 1.5px; stroke-line-join: round; fill: transparent;
-}
-
-component CalendarTabIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 13px; height: 13px;
-    viewbox-width: 16; viewbox-height: 16;
-    commands: "M 3 4 C 3 3 4 2 5 2 L 11 2 C 12 2 13 3 13 4 L 13 13 C 13 14 12 15 11 15 L 5 15 C 4 15 3 14 3 13 Z M 3 6 L 13 6 M 5 1 L 5 3 M 11 1 L 11 3";
-    stroke: root.icon-color; stroke-width: 1.4px; stroke-line-cap: round; fill: transparent;
-}
-
-component FolderTabIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 13px; height: 13px;
-    viewbox-width: 16; viewbox-height: 16;
-    commands: "M 2 4 C 2 3 3 2 4 2 L 6.5 2 L 8 4 L 12 4 C 13 4 14 5 14 6 L 14 12 C 14 13 13 14 12 14 L 4 14 C 3 14 2 13 2 12 Z";
-    stroke: root.icon-color; stroke-width: 1.4px; stroke-line-join: round; fill: transparent;
-}
-
-component ChartTabIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 13px; height: 13px;
-    viewbox-width: 16; viewbox-height: 16;
-    commands: "M 3 14 L 3 9 M 7 14 L 7 5 M 11 14 L 11 2 M 14 14 L 14 7";
-    stroke: root.icon-color; stroke-width: 1.8px; stroke-line-cap: round; fill: transparent;
-}
-
-component DotsTabIcon inherits Path {
-    in property <color> icon-color: Theme.fg;
-    width: 13px; height: 13px;
-    viewbox-width: 16; viewbox-height: 16;
-    commands: "M 3 8 A 1.2 1.2 0 1 1 3 7.9 M 8 8 A 1.2 1.2 0 1 1 8 7.9 M 13 8 A 1.2 1.2 0 1 1 13 7.9";
-    stroke: root.icon-color; stroke-width: 2.2px; stroke-line-cap: round; fill: transparent;
-}
-
-component GearIcon inherits Path {
-    in property <color> icon-color: Theme.mut;
-    width: 15px; height: 15px;
-    viewbox-width: 20; viewbox-height: 20;
-    commands: "M 9 2 L 11 2 L 11.4 4.2 C 11.9 4.4 12.4 4.7 12.9 5.1 L 15 4.3 L 16.4 5.7 L 15.6 7.8 C 16 8.3 16.3 8.8 16.5 9.3 L 18.7 9.7 L 18.7 11.7 L 16.5 12.1 C 16.3 12.6 16 13.1 15.6 13.6 L 16.4 15.7 L 15 17.1 L 12.9 16.3 C 12.4 16.7 11.9 17 11.4 17.2 L 11 19.4 L 9 19.4 L 8.6 17.2 C 8.1 17 7.6 16.7 7.1 16.3 L 5 17.1 L 3.6 15.7 L 4.4 13.6 C 4 13.1 3.7 12.6 3.5 12.1 L 1.3 11.7 L 1.3 9.7 L 3.5 9.3 C 3.7 8.8 4 8.3 4.4 7.8 L 3.6 5.7 L 5 4.3 L 7.1 5.1 C 7.6 4.7 8.1 4.4 8.6 4.2 Z M 10 7.5 A 2.5 2.5 0 1 0 10 12.5 A 2.5 2.5 0 1 0 10 7.5";
-    fill: root.icon-color;
-}
-
-component AvooAvatar inherits Rectangle {
-    width: 38px;
-    height: 38px;
-    border-radius: 19px;
-    background: #181a24;
-    border-width: 1px;
-    border-color: #ffffff14;
-    Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2;
-        width: 16px;
-        height: 14px;
-        viewbox-width: 16;
-        viewbox-height: 14;
-        commands: "M 3 12 L 8 3 L 13 12";
-        stroke: @linear-gradient(180deg, #f59e0b 0%, #ea580c 100%);
-        stroke-width: 3.2px;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-        fill: transparent;
-    }
-}
-
-component SunCloudIcon inherits Rectangle {
-    width: 28px;
-    height: 24px;
-    Rectangle {
-        x: 12px; y: 2px; width: 14px; height: 14px; border-radius: 7px;
-        background: @radial-gradient(circle, #fde047 0%, #f59e0b 80%, #ea580c 100%);
-    }
-    Path {
-        x: 0px; y: 7px; width: 24px; height: 16px;
-        viewbox-width: 24; viewbox-height: 16;
-        commands: "M 6 15 L 18 15 A 4 4 0 0 0 18 7 A 6 6 0 0 0 7 8 A 4 4 0 0 0 6 15 Z";
-        fill: #e2e8f0;
-    }
-}
-
-component LocationPinIcon inherits Path {
-    in property <color> icon-color: Theme.mut2;
-    width: 10px; height: 12px;
-    viewbox-width: 10; viewbox-height: 12;
-    commands: "M 5 1 C 3 1 1.5 2.5 1.5 4.5 C 1.5 7.5 5 11 5 11 C 5 11 8.5 7.5 8.5 4.5 C 8.5 2.5 7 1 5 1 Z M 5 3.5 A 1 1 0 1 1 5 5.5 A 1 1 0 1 1 5 3.5";
-    fill: root.icon-color;
-}
-
-component MosqueSilhouette inherits Rectangle {
-    height: 52px;
-    clip: true;
-    Rectangle {
-        y: parent.height - 24px;
-        width: 100%;
-        height: 24px;
-        background: @linear-gradient(0deg, rgba(234, 88, 12, 0.22) 0%, rgba(234, 88, 12, 0) 100%);
-    }
-    Path {
-        x: parent.width - self.width;
-        y: parent.height - self.height;
-        width: 110px;
-        height: 48px;
-        viewbox-width: 110;
-        viewbox-height: 48;
-        commands: "M 0 48 L 15 48 L 15 30 L 19 30 L 19 48 L 45 48 Q 50 34 62 34 Q 74 34 79 48 L 88 48 L 88 22 L 86 22 L 89 12 L 92 22 L 90 22 L 90 48 L 110 48 L 110 48 Z M 62 30 L 62 34";
-        fill: #11131c;
-        opacity: 0.85;
-    }
-}
-
-component MosqueIcon inherits Path {
-    in property <color> icon-color: Theme.mut;
-    width: 14px; height: 14px;
-    viewbox-width: 16; viewbox-height: 16;
-    commands: "M 2 14 L 14 14 M 3 14 L 3 8 L 4 8 L 4 14 M 12 14 L 12 8 L 13 8 L 13 14 M 5 14 L 5 9 Q 8 6 11 9 L 11 14 Z M 8 4 L 8 6";
-    stroke: root.icon-color; stroke-width: 1.3px; fill: transparent;
-}
-
-component PulseIcon inherits Path {
-    in property <color> icon-color: #818cf8;
-    width: 14px; height: 12px;
-    viewbox-width: 16; viewbox-height: 12;
-    commands: "M 1 6 L 4 6 L 6 2 L 9 10 L 11 4 L 13 6 L 15 6";
-    stroke: root.icon-color; stroke-width: 1.8px; stroke-line-cap: round; stroke-line-join: round; fill: transparent;
-}
-
-component SparklineMini inherits Path {
-    in property <color> line-color: #818cf8;
-    width: 38px; height: 8px;
-    viewbox-width: 38; viewbox-height: 8;
-    commands: "M 1 4 Q 10 1 19 5 T 37 4";
-    stroke: root.line-color; stroke-width: 1.8px; stroke-line-cap: round; fill: transparent;
-}
-
-component LightbulbIcon inherits Path {
-    in property <color> icon-color: #f59e0b;
-    width: 13px; height: 15px;
-    viewbox-width: 16; viewbox-height: 18;
-    commands: "M 8 1 C 4.7 1 2 3.7 2 7 C 2 9.2 3.2 11 5 12 L 5 14 C 5 14.5 5.5 15 6 15 L 10 15 C 10.5 15 11 14.5 11 14 L 11 12 C 12.8 11 14 9.2 14 7 C 14 3.7 11.3 1 8 1 Z M 6 17 L 10 17";
-    stroke: root.icon-color; stroke-width: 1.5px; stroke-line-cap: round; fill: transparent;
-}
-
-component SparkleStar inherits Path {
-    in property <color> star-color: #f59e0b88;
-    in property <length> sz: 10px;
-    width: root.sz; height: root.sz;
-    viewbox-width: 12; viewbox-height: 12;
-    commands: "M 6 0 Q 6 6 0 6 Q 6 6 6 12 Q 6 6 12 6 Q 6 6 6 0 Z";
-    fill: root.star-color;
-}
-
-component CircularGauge inherits Rectangle {
-    in property <float> progress: 0.5;
-    in property <color> tint: #6366f1;
-    in property <string> text-val: "50%";
-    width: 46px;
-    height: 46px;
-
-    property <float> q: max(0.01, min(0.99, root.progress));
-    property <angle> th: root.q * 360deg;
-
-    Path {
-        width: 100%; height: 100%;
-        viewbox-width: 40; viewbox-height: 40;
-        commands: "M 20 4 A 16 16 0 1 1 20 36 A 16 16 0 1 1 20 4";
-        stroke: #ffffff14; stroke-width: 3.5px; fill: transparent;
-    }
-    Path {
-        width: 100%; height: 100%;
-        viewbox-width: 40; viewbox-height: 40;
-        commands: "M 20 4 A 16 16 0 " + (root.q > 0.5 ? "1" : "0") + " 1 " + (20 + 16 * sin(root.th)) + " " + (20 - 16 * cos(root.th));
-        stroke: root.tint; stroke-width: 3.5px; stroke-line-cap: round; fill: transparent;
-    }
-    Text {
-        text: root.text-val;
-        color: Theme.fg;
-        font-size: 13px;
-        font-weight: 700;
-        horizontal-alignment: center;
-        vertical-alignment: center;
-    }
-}
-
-component GraviPeeking inherits Rectangle {
-    in property <length> size: 48px;
-    in property <bool> blink: false;
-    in property <MoodView> mood: {
-        eye-h: 1.0, eye-w: 1.0, eye-dy: 0.0, eye-dx: 0.0,
-        eye-shape: 0, mouth: 0, glyph: "", glyph-type: 0, peek: false,
-        eye-color: #5ae0ff
-    };
-    width: self.size * 1.35;
-    height: self.size;
-
-    // Spark lines di atas telinga kiri: \ | /
-    Path {
-        x: 4px; y: 1px; width: 14px; height: 10px;
-        viewbox-width: 14; viewbox-height: 10;
-        commands: "M 2 8 L 5 4 M 7 1 L 7 5 M 12 4 L 9 7";
-        stroke: #f59e0b; stroke-width: 1.8px; stroke-line-cap: round; fill: transparent;
-    }
-
-    // Bot Head
-    Gravi {
-        x: (parent.width - self.width) / 2;
-        y: 6px;
-        size: root.size * 0.88;
-        blink: root.blink;
-        mood: root.mood;
-    }
-
-    // Sepasang cakar putih mecha bersandar di ledge
-    Rectangle {
-        x: (parent.width - 44px) / 2;
-        y: parent.height - 7px;
-        width: 12px;
-        height: 7px;
-        border-radius: 3.5px;
-        background: @linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
-        border-width: 1px;
-        border-color: #94a3b8;
-    }
-    Rectangle {
-        x: (parent.width - 44px) / 2 + 32px;
-        y: parent.height - 7px;
-        width: 12px;
-        height: 7px;
-        border-radius: 3.5px;
-        background: @linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
-        border-width: 1px;
-        border-color: #94a3b8;
-    }
-}
-
-component TabPillItem inherits Rectangle {
-    in property <string> text;
-    in property <int> tab-index;
-    in property <bool> on;
-    callback clicked();
-
-    height: 30px;
-    HorizontalLayout {
-        padding-left: 6px; padding-right: 6px;
-        spacing: 5px; alignment: center;
-
-        if root.tab-index == 0: HomeTabIcon {
-            y: (parent.height - self.height) / 2;
-            icon-color: root.on ? #ffffff : #7a8294;
-        }
-        if root.tab-index == 1: CalendarTabIcon {
-            y: (parent.height - self.height) / 2;
-            icon-color: root.on ? #ffffff : #7a8294;
-        }
-        if root.tab-index == 2: FolderTabIcon {
-            y: (parent.height - self.height) / 2;
-            icon-color: root.on ? #ffffff : #7a8294;
-        }
-        if root.tab-index == 3: ChartTabIcon {
-            y: (parent.height - self.height) / 2;
-            icon-color: root.on ? #ffffff : #7a8294;
-        }
-        if root.tab-index == 4: DotsTabIcon {
-            y: (parent.height - self.height) / 2;
-            icon-color: root.on ? #ffffff : #7a8294;
-        }
-
-        Text {
-            text: root.text;
-            color: root.on ? #ffffff : #7a8294;
-            font-size: 11px;
-            font-weight: root.on ? 700 : 500;
-            vertical-alignment: center;
-        }
-    }
-
-    Rectangle {
-        y: root.height - 3px;
-        x: (root.width - self.width) / 2;
-        width: root.on ? 18px : 0px;
-        height: 2px;
-        border-radius: 1px;
-        background: #f59e0b;
-        animate width { duration: 200ms; easing: ease-out; }
-    }
-
-    TouchArea { clicked => { root.clicked(); } }
-}
-
-// Logo AI Asli (Vektor OpenAI, Anthropic Claude, Copilot, Antigravity) + status bar animasi di bawah
-component AiLogo inherits Rectangle {
-    in property <string> provider: "agy";
-    in property <color> tint: Theme.cyan;
-    in property <bool> running: false;
-    in property <bool> action: false;
-    in property <bool> breathe: false;
-    in property <length> sz: 32px;
-
-    width: self.sz;
-    height: self.sz;
-    border-radius: self.sz * 0.28;
-    background: root.action
-        ? Theme.amber.with-alpha(0.22)
-        : (root.running ? root.tint.with-alpha(0.18) : #ffffff0e);
-    border-width: 1px;
-    border-color: root.action
-        ? Theme.amber.with-alpha(0.5)
-        : (root.running ? root.tint.with-alpha(0.35) : #ffffff14);
-
-    // Glow aura saat berjalan / butuh tindakan
-    Rectangle {
-        visible: root.running || root.action;
-        width: 100%;
-        height: 100%;
-        border-radius: root.border-radius;
-        background: root.action ? Theme.amber : root.tint;
-        opacity: root.breathe ? 0.0 : 0.22;
-        animate opacity { duration: 900ms; easing: ease-in-out; }
-    }
-
-    // 1. ChatGPT: OpenAI Spiral Rosette
-    if root.provider == "chatgpt": Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 - 2px;
-        width: root.sz * 0.54;
-        height: root.sz * 0.54;
-        viewbox-width: 24; viewbox-height: 24;
-        commands: "M 20.5 11.2 C 20.1 8.8 18.2 7.1 15.8 7.1 C 15.4 7.1 15 7.2 14.6 7.4 C 14.1 5.7 12.6 4.5 10.8 4.5 C 9.3 4.5 8 5.3 7.3 6.6 C 6.9 6.4 6.5 6.3 6.1 6.3 C 4.1 6.3 2.4 7.8 2.1 9.8 C 1.9 10.4 2 11 2.2 11.5 C 1.5 12.6 1.4 14.1 2 15.2 C 2.7 16.5 4.1 17.3 5.6 17.3 C 5.8 17.3 6 17.3 6.2 17.2 C 6.8 18.7 8.3 19.7 10 19.7 C 11.4 19.7 12.6 19 13.3 18 C 13.8 18.3 14.3 18.5 14.9 18.5 C 17 18.5 18.7 16.9 18.9 14.8 C 19.7 13.8 19.8 12.4 19.2 11.3 Z M 12 14.5 C 10.6 14.5 9.5 13.4 9.5 12 C 9.5 10.6 10.6 9.5 12 9.5 C 13.4 9.5 14.5 10.6 14.5 12 C 14.5 13.4 13.4 14.5 12 14.5 Z";
-        fill: root.action ? Theme.amber : (root.running ? #10a37f : #e5e7eb);
-    }
-
-    // 2. Claude & Claude Desktop: Anthropic Spark Asterisk
-    if root.provider == "claude" || root.provider == "claudedesk": Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 - 2px;
-        width: root.sz * 0.54;
-        height: root.sz * 0.54;
-        viewbox-width: 24; viewbox-height: 24;
-        commands: "M 13.5 2 L 13.5 8.5 L 18.5 3.5 L 20 5 L 15 10 L 22 10 L 22 12 L 15 12 L 20 17 L 18.5 18.5 L 13.5 13.5 L 13.5 20.5 L 11.5 20.5 L 11.5 13.5 L 6.5 18.5 L 5 17 L 10 12 L 3 12 L 3 10 L 10 10 L 5 5 L 6.5 3.5 L 11.5 8.5 L 11.5 2 Z";
-        fill: root.action ? Theme.amber : (root.running ? (root.provider == "claudedesk" ? #e06c43 : #f59e0b) : #e5e7eb);
-    }
-
-    // 3. GitHub Copilot: Sleek Robot Face
-    if root.provider == "copilot": Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 - 2px;
-        width: root.sz * 0.56;
-        height: root.sz * 0.56;
-        viewbox-width: 24; viewbox-height: 24;
-        commands: "M 12 3 C 7.5 3 4 6.2 4 10.2 C 4 12.5 5.2 14.6 7 15.9 L 6.5 19.5 L 10.2 18.2 C 10.8 18.4 11.4 18.5 12 18.5 C 16.5 18.5 20 15.3 20 11.2 C 20 7.2 16.5 3 12 3 Z M 8.5 12.2 C 7.7 12.2 7 11.5 7 10.7 C 7 9.9 7.7 9.2 8.5 9.2 C 9.3 9.2 10 9.9 10 10.7 C 10 11.5 9.3 12.2 8.5 12.2 Z M 15.5 12.2 C 14.7 12.2 14 11.5 14 10.7 C 14 9.9 14.7 9.2 15.5 9.2 C 16.3 9.2 17 9.9 17 10.7 C 17 11.5 16.3 12.2 15.5 12.2 Z";
-        fill: root.action ? Theme.amber : (root.running ? #818cf8 : #e5e7eb);
-    }
-
-    // 4. Antigravity Desktop: Futuristic Atomic Orbit Rings
-    if root.provider == "agy": Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 - 2px;
-        width: root.sz * 0.56;
-        height: root.sz * 0.56;
-        viewbox-width: 24; viewbox-height: 24;
-        commands: "M 12 3 A 9 9 0 0 0 3 12 A 9 9 0 0 0 12 21 A 9 9 0 0 0 21 12 A 9 9 0 0 0 12 3 Z M 12 5.5 A 6.5 6.5 0 1 1 5.5 12 A 6.5 6.5 0 0 1 12 5.5 Z M 12 9 A 3 3 0 1 0 12 15 A 3 3 0 0 0 12 9 Z";
-        fill: root.action ? Theme.amber : (root.running ? #5ae0ff : #e5e7eb);
-    }
-
-    // 5. Antigravity CLI: Sleek Terminal Console
-    if root.provider == "agycli": Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 - 2px;
-        width: root.sz * 0.54;
-        height: root.sz * 0.54;
-        viewbox-width: 24; viewbox-height: 24;
-        commands: "M 4 5 L 11 12 L 4 19 M 13 19 L 21 19";
-        stroke: root.action ? Theme.amber : (root.running ? #38bdf8 : #e5e7eb);
-        stroke-width: 2.6px;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-        fill: transparent;
-    }
-
-    // 6. Gemini: Google Gemini 4-Point Sparkle Star
-    if root.provider == "gemini": Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 - 2px;
-        width: root.sz * 0.56;
-        height: root.sz * 0.56;
-        viewbox-width: 24; viewbox-height: 24;
-        commands: "M 12 2 C 12 7.5 7.5 12 2 12 C 7.5 12 12 16.5 12 22 C 12 16.5 16.5 12 22 12 C 16.5 12 12 7.5 12 2 Z";
-        fill: root.action ? Theme.amber : (root.running ? #4285f4 : #e5e7eb);
-    }
-
-    // 7. Hermes: Winged Helmet
-    if root.provider == "hermes": Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 - 2px;
-        width: root.sz * 0.56;
-        height: root.sz * 0.56;
-        viewbox-width: 24; viewbox-height: 24;
-        commands: "M 12 3 C 8.5 3 6 5.5 6 9 C 6 12 8 14 10 15 L 10 18 C 10 18.5 10.5 19 11 19 L 13 19 C 13.5 19 14 18.5 14 18 L 14 15 C 16 14 18 12 18 9 C 18 5.5 15.5 3 12 3 Z M 4 7 C 2.5 8 1 10.5 2 13 C 3.2 13 5 12 5.5 10 Z M 20 7 C 21.5 8 23 10.5 22 13 C 20.8 13 19 12 18.5 10 Z";
-        fill: root.action ? Theme.amber : (root.running ? #06b6d4 : #e5e7eb);
-    }
-
-    // Fallback: AI Diamond Spark
-    if root.provider != "chatgpt" && root.provider != "claude" && root.provider != "claudedesk" && root.provider != "copilot" && root.provider != "agy" && root.provider != "agycli" && root.provider != "gemini" && root.provider != "hermes": Path {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 - 2px;
-        width: root.sz * 0.52;
-        height: root.sz * 0.52;
-        viewbox-width: 24; viewbox-height: 24;
-        commands: "M 12 2 Q 12 12 2 12 Q 12 12 12 22 Q 12 12 22 12 Q 12 12 12 2 Z";
-        fill: root.action ? Theme.amber : (root.running ? root.tint : #e5e7eb);
-    }
-
-    // Status Pill Indicator di bawah (Sesuai Screenshot 1 & Coucou)
-    Rectangle {
-        y: parent.height - 4px;
-        x: (parent.width - self.width) / 2;
-        width: root.running || root.action ? 12px : 0px;
-        height: 2.2px;
-        border-radius: 1.1px;
-        background: root.action ? Theme.amber : (root.running ? root.tint : #ffffff44);
-        opacity: root.breathe ? 0.45 : 1.0;
-        animate opacity { duration: 800ms; easing: ease-in-out; }
-        animate width { duration: 250ms; easing: ease-out; }
-    }
-}
-
-component Tile inherits Rectangle {
-    background: Theme.surface;
-    border-radius: 18px;
-    border-width: 1px;
-    border-color: Theme.border;
-}
-
-component Cap inherits Text {
-    color: Theme.mut2;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.6px;
-}
-
-component IconBtn inherits Rectangle {
-    in property <string> kind: "play"; // "play", "pause", "reset", "prev", "next"
-    in property <bool> primary: false;
-    in property <color> tint: Theme.cyan;
-    callback clicked();
-    width: 46px;
-    height: 46px;
-    border-radius: self.width / 2;
-    background: root.primary ? root.tint : Theme.chip;
-    opacity: ta.pressed ? 0.7 : 1.0;
-    animate opacity { duration: 90ms; }
-
-    if root.kind == "play": PlayIcon {
-        x: (parent.width - self.width) / 2 + 1px;
-        y: (parent.height - self.height) / 2;
-        icon-color: root.primary ? #000000 : Theme.fg;
-    }
-    if root.kind == "pause": PauseIcon {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2;
-        icon-color: root.primary ? #000000 : Theme.fg;
-    }
-    if root.kind == "reset": ResetIcon {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2;
-        icon-color: root.primary ? #000000 : Theme.fg;
-    }
-    if root.kind == "prev": PrevIcon {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2;
-        icon-color: root.primary ? #000000 : Theme.fg;
-    }
-    if root.kind == "next": NextIcon {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2;
-        icon-color: root.primary ? #000000 : Theme.fg;
-    }
-
-    ta := TouchArea { clicked => { root.clicked(); } }
-}
-
-component Pill inherits Rectangle {
-    in property <string> text;
-    in property <color> tint: Theme.fg;
-    in property <bool> filled;
-    callback clicked();
-    height: 34px;
-    border-radius: 17px;
-    background: root.filled ? root.tint : Theme.chip;
-    opacity: pa.pressed ? 0.7 : 1.0;
-    Text { text: root.text; color: root.filled ? #000000 : root.tint; font-size: 12px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
-    pa := TouchArea { clicked => { root.clicked(); } }
-}
-
-component ToggleRow inherits Rectangle {
-    in property <string> text;
-    in property <bool> on;
-    callback toggled();
-    height: 40px;
-    HorizontalLayout {
-        padding-left: 14px;
-        padding-right: 14px;
-        Text { text: root.text; color: Theme.fg; font-size: 12.5px; vertical-alignment: center; }
-        Rectangle {
-            width: 40px;
-            Rectangle {
-                y: (parent.height - self.height) / 2;
-                width: 40px;
-                height: 22px;
-                border-radius: 11px;
-                background: root.on ? Theme.cyan : Theme.line;
-                animate background { duration: 160ms; }
-                Rectangle {
-                    x: root.on ? 20px : 2px;
-                    y: 2px;
-                    width: 18px;
-                    height: 18px;
-                    border-radius: 9px;
-                    background: #ffffff;
-                    animate x { duration: 180ms; easing: cubic-bezier(0.34, 1.3, 0.64, 1); }
-                }
-            }
-        }
-    }
-    TouchArea { clicked => { root.toggled(); } }
-}
-
-component WaveformBar inherits Rectangle {
-    in property <length> h: 8px;
-    in property <color> tint: Theme.cyan;
-    width: 3.5px;
-    height: root.h;
-    border-radius: 1.75px;
-    background: root.tint;
-    animate height { duration: 160ms; easing: ease-in-out; }
-}
-
-component AudioWaveform inherits HorizontalLayout {
-    in property <bool> playing: false;
-    in property <int> tick: 0;
-    in property <color> tint: Theme.cyan;
-    spacing: 3px;
-    alignment: center;
-    WaveformBar { h: root.playing ? (sin(root.tick * 32deg) * 8px + 12px) : 4px; tint: root.tint; }
-    WaveformBar { h: root.playing ? (cos(root.tick * 42deg) * 10px + 14px) : 6px; tint: root.tint; }
-    WaveformBar { h: root.playing ? (sin(root.tick * 55deg + 25deg) * 12px + 15px) : 4px; tint: root.tint; }
-    WaveformBar { h: root.playing ? (cos(root.tick * 38deg + 50deg) * 9px + 13px) : 7px; tint: root.tint; }
-    WaveformBar { h: root.playing ? (sin(root.tick * 48deg + 80deg) * 11px + 14px) : 5px; tint: root.tint; }
-}
-
-component SessionRow inherits Tile {
-    in property <SessionItem> item;
-    in property <bool> breathe;
-    callback action-clicked();
-    height: 58px;
+import { Theme } from "theme.slint";
+import { AppState, FaceParams, SessionItem, ApprovalItem, EventItem, AlarmItem, LapItem, CommitRow, RepoRow, ClipItem, ShelfItem, DayCell, PrayerRow, SearchHit } from "state.slint";
+import { Icon, Icons, Label, Muted, Btn, IconBtn, Badge, Ornaments, Sparkle, Wave } from "widgets.slint";
+import { Mascot } from "mascot.slint";
+import { HomePage, AiPage, MusicPage, ClockPage } from "pages_a.slint";
+import { CalendarPage, GithubPage, SystemPage, ClipPage, SettingsPage } from "pages_b.slint";
+
+export { AppState, Theme, FaceParams, SessionItem, ApprovalItem, EventItem, AlarmItem, LapItem, CommitRow, RepoRow, ClipItem, ShelfItem, DayCell, PrayerRow, SearchHit }
+
+component NavItem inherits Rectangle {
+    in property <string> d;
+    in property <int> index;
+    in property <int> badge: 0;
+    width: 44px;
+    height: 44px;
     border-radius: 16px;
+    background: AppState.page == root.index ? Theme.grad-v : (ta.has-hover ? Theme.surface2 : transparent);
+    border-width: AppState.page == root.index ? 1px : 0px;
+    border-color: #ffffff44;
+    animate background { duration: 140ms; }
+    Icon {
+        d: root.d;
+        size: 22px;
+        tint: AppState.page == root.index ? Theme.on-accent : Theme.muted;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+    if AppState.page == root.index : Rectangle {
+        x: (parent.width - 6px) / 2;
+        y: parent.height - 9px;
+        width: 5px;
+        height: 5px;
+        border-radius: 3px;
+        background: Theme.on-accent;
+    }
+    if root.badge > 0 : Rectangle {
+        x: parent.width - 15px;
+        y: 0px;
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: Theme.bad;
+        Text { text: root.badge; color: #ffffff; font-size: 9px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+    }
+    ta := TouchArea { clicked => { AppState.page = root.index; AppState.page-changed(root.index); } }
+}
+
+// kepala halaman: maskot + orbit, sapaan, tombol bulat (pengaturan di Beranda, tutup di halaman lain)
+component PageHeader inherits Rectangle {
+    height: 72px;
     HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
         spacing: 12px;
         Rectangle {
-            width: 34px;
-            AiLogo {
-                y: (parent.height - self.height) / 2;
-                sz: 34px;
-                provider: root.item.mark;
-                tint: root.item.tint;
-                running: root.item.running;
-                action: root.item.action;
-                breathe: root.breathe;
+            width: 84px;
+            if AppState.mascot-on : Path {
+                x: 0px; y: 34px; width: 84px; height: 34px; viewbox-width: 84; viewbox-height: 34;
+                commands: "M 4 14 C 4 2 70 2 80 12 C 84 20 40 32 6 22";
+                stroke: Theme.accent.with-alpha(0.7);
+                stroke-width: 2.5px;
+                fill: transparent;
             }
+            if AppState.mascot-on : Mascot { face: AppState.face; size: 78px; x: 3px; y: 0px; clicked => { AppState.mascot-clicked(); } }
         }
         VerticalLayout {
             alignment: center;
-            spacing: 2px;
-            Text { text: root.item.title; color: Theme.fg; font-size: 12.5px; font-weight: 600; overflow: elide; }
-            Text { text: root.item.sub; color: Theme.mut; font-size: 11px; overflow: elide; }
+            horizontal-stretch: 1;
+            Text { text: AppState.greeting; color: Theme.text; font-size: 22px; font-weight: 800; overflow: elide; }
+            Text { text: AppState.date-long; color: Theme.accent; font-size: 13px; overflow: elide; }
         }
-        Rectangle {
-            width: root.item.action ? 78px : 64px;
-            Rectangle {
-                y: (parent.height - self.height) / 2;
-                height: root.item.action ? 26px : 22px;
-                border-radius: root.item.action ? 13px : 11px;
-                background: root.item.action ? (btn-act.has-hover ? Theme.amber : Theme.amber.with-alpha(0.85)) : (root.item.running ? root.item.tint.with-alpha(0.2) : Theme.chip);
-                Text {
-                    text: root.item.action ? "Setujui ✓" : root.item.meta;
-                    color: root.item.action ? #000000 : (root.item.running ? root.item.tint : Theme.mut2);
-                    font-size: 10px;
-                    font-weight: 800;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-                btn-act := TouchArea {
-                    enabled: root.item.action;
-                    clicked => { if root.item.action { root.action-clicked(); } }
-                }
+        VerticalLayout {
+            alignment: start;
+            padding-top: 4px;
+            IconBtn {
+                d: AppState.page == 0 ? Icons.gear : Icons.close;
+                size: 40px;
+                clicked => { if (AppState.page == 0) { AppState.page = 8; AppState.page-changed(8); } else { AppState.collapse(); } }
             }
         }
     }
 }
 
-export struct LaunchItem { name: string, hint: string }
-
 export component MainWindow inherits Window {
-    title: "Antigravity Island";
+    title: "Gravi Island";
     no-frame: true;
     always-on-top: true;
     background: transparent;
-    preferred-width: 440px;
-    preferred-height: 720px;
+    default-font-family: "Segoe UI";
 
-    in-out property <int> mode: 0; // 0 idle, 1 live, 2 terbuka
-    in-out property <int> tab: 0;  // 0 beranda, 1 agenda, 2 proyek, 3 statistik, 4 lainnya
-    in property <string> user-name: "Avian";
-    in property <string> weather-temp: "29°C";
-    in property <string> weather-desc: "Berawan";
-    in property <[SessionItem]> sessions;
-    in property <[SessionItem]> live;
-    in property <int> running-count;
-    in property <MoodView> mood: { eye-h: 1.0, eye-dy: 0.0, mouth: 0, glyph: "", eye-color: #5ae0ff };
-    in property <bool> media-active;
-    in property <bool> media-playing;
-    in property <string> media-title: "Memuat…";
-    in property <string> media-artist;
-    in property <[string]> shelf;
-    callback media-cmd(string);
-    callback shelf-add();
-    callback shelf-open(int);
-    callback shelf-remove(int);
-    in property <string> clock;
-    in property <string> date;
-    in property <string> greeting;
-    in property <string> prayer-name;
-    in property <string> prayer-time;
-    in property <string> prayer-left;
-    in property <string> cpu-text;
-    in property <string> cpu-sparkline: "";
-    in property <string> uptime: "0m";
-    in property <int> wave-tick: 0;
-    in property <string> mem-text;
-    in property <float> cpu;
-    in property <float> mem;
-    in property <bool> breathe;
-    in property <bool> blink;
-    in property <string> weather-text: "—";
-    in property <string> event-text: "Tidak ada agenda";
-    in property <string> focus-label: "25:00";
-    in property <string> focus-phase: "Siap";
-    in property <bool> focus-running;
-    in property <int> focus-done;
-    in-out property <int> focus-mode: 0; // 0 Pomodoro, 1 Stopwatch
-    in property <string> sw-label: "00:00";
-    in property <bool> sw-running: false;
-    callback sw-toggle();
-    callback sw-reset();
-    in property <[string]> clips;
-    in property <[LaunchItem]> results;
-    in-out property <bool> hover-open;
-    in-out property <bool> src-claude: true;
-    in-out property <bool> src-copilot: true;
-    in-out property <bool> src-agy: true;
-    in-out property <bool> src-desk: true;
-    in-out property <bool> adzan: true;
-    in property <string> city: "Bandung";
-    callback clicked-open();
-    callback clicked-close();
-    callback focus-start();
-    callback focus-pause();
-    callback focus-stop();
-    callback copy-clip(int);
-    callback query-changed(string);
-    callback run-result(int);
-    callback settings-changed();
-    callback cycle-city();
-    callback quit();
-
-    in-out property <string> dock-pos: "top"; // "top" (default Coucou notch), "right", "left"
-    in-out property <bool> sfx: true;
-
-    in property <int> gh-commits-today: 0;
-    in property <string> gh-recent-repo: "";
-    in property <string> gh-recent-commit: "";
-    in property <[int]> gh-heatmap: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    callback gh-open();
-    callback cal-open();
-    callback session-action(int);
-    callback play-sfx();
-
-    out property <length> hit-x: island.x;
-    out property <length> hit-y: island.y;
-    out property <length> hit-w: island.width;
-    out property <length> hit-h: island.height + (root.dock-pos == "top" ? 8px : 24px);
-
-    in property <bool> is-hovered: false;
-
-    // Ketinggian adaptif sesuai tab aktif (tidak ada ruang hitam kosong!)
-    property <length> target-h: root.dock-pos == "top"
-        ? (root.mode == 0 ? (root.is-hovered ? 41px : 38px) : (root.mode == 1 ? (root.is-hovered ? 47px : 44px) :
-            (root.tab == 0 ? 556px :
-             root.tab == 1 ? 460px :
-             root.tab == 2 ? 460px :
-             root.tab == 3 ? 420px : 520px)))
-        : (root.mode == 0 ? 60px : (root.mode == 1 ? 62px + 52px * root.live.length + 18px : root.height - 40px));
-
-    property <length> tw: root.dock-pos == "top"
-        ? (root.mode == 0 ? (root.is-hovered ? 190px : 172px) : (root.mode == 1 ? (root.is-hovered ? 304px : 290px) : 396px))
-        : (root.mode == 0 ? 46px : (root.mode == 1 ? 50px : 392px));
-    property <length> th: root.target-h;
-    property <[string]> tabs: ["Beranda", "Agenda", "Proyek", "Statistik", "Lainnya"];
-
-    island := Rectangle {
-        x: root.dock-pos == "left"
-            ? 0px
-            : (root.dock-pos == "top" ? (root.width - self.width) / 2 : root.width - self.width);
-        y: root.dock-pos == "top" ? 0px : 20px;
-        width: root.tw;
-        height: root.th;
-        background: Theme.bg;
-        border-width: 1px;
-        border-color: Theme.border;
-        clip: true;
-        border-top-left-radius: root.dock-pos == "left" ? (root.mode == 2 ? 18px : 0px) : (root.dock-pos == "top" ? 0px : 28px);
-        border-bottom-left-radius: root.dock-pos == "left" ? 28px : (root.dock-pos == "top" ? (root.mode < 2 ? 19px : 26px) : 28px);
-        border-top-right-radius: root.dock-pos == "left" ? 28px : (root.dock-pos == "top" ? 0px : (root.mode == 2 ? 18px : 0px));
-        border-bottom-right-radius: root.dock-pos == "left" ? 28px : (root.dock-pos == "top" ? (root.mode < 2 ? 19px : 26px) : (root.dock-pos == "right" ? 28px : 0px));
-
-        // Animasi kurva pegas Coucou / macOS notch murni pada width dan height (x otomatis sinkron dan simetris dari tengah!)
-        animate width { duration: 320ms; easing: cubic-bezier(0.16, 1, 0.3, 1); }
-        animate height { duration: 320ms; easing: cubic-bezier(0.16, 1, 0.3, 1); }
-
-        if root.mode < 2: TouchArea { clicked => { root.clicked-open(); } }
-
-        // Mode 0: Idle Capsule (Horizontal jika di Top, Vertikal jika di Right/Left)
-        if root.mode == 0 && root.dock-pos == "top": HorizontalLayout {
-            padding-left: 10px; padding-right: 12px; spacing: 8px; alignment: center;
-            Gravi { size: 30px; blink: root.blink; mood: root.mood; }
-            Text { text: root.clock; color: Theme.fg; font-size: 13.5px; font-weight: 700; vertical-alignment: center; }
-            Rectangle {
-                width: 7px; height: 7px; border-radius: 3.5px;
-                background: root.running-count > 0 ? Theme.good : Theme.line;
-                y: (parent.height - self.height) / 2;
+    FocusScope {
+        key-pressed(e) => {
+            if (e.text == Key.Escape) {
+                AppState.collapse();
+                return accept;
             }
-        }
-        if root.mode == 0 && root.dock-pos != "top": Gravi {
-            x: root.dock-pos == "left" ? 3px : island.width - self.width - 3px;
-            y: 9px; size: 38px; blink: root.blink; mood: root.mood;
+            return reject;
         }
 
-        // Mode 1: Live Compact Pill (Logo AI asli + bar status Coucou)
-        if root.mode == 1 && root.dock-pos == "top": HorizontalLayout {
-            padding-left: 12px; padding-right: 12px; spacing: 10px; alignment: center;
-            Gravi { size: 32px; blink: root.blink; mood: root.mood; }
-            Text { text: root.clock; color: Theme.fg; font-size: 13px; font-weight: 700; vertical-alignment: center; }
-            if root.live.length > 0: HorizontalLayout {
-                spacing: 6px; alignment: center;
-                AiLogo { sz: 26px; provider: root.live[0].mark; tint: root.live[0].tint; running: root.live[0].running; action: root.live[0].action; breathe: root.breathe; }
-                Text { text: root.live[0].meta; color: root.live[0].tint; font-size: 10.5px; font-weight: 700; vertical-alignment: center; }
+        island := Rectangle {
+            x: AppState.isl-x;
+            y: AppState.isl-y;
+            width: AppState.isl-w;
+            height: AppState.isl-h;
+            border-radius: AppState.mode == 0 ? (AppState.vertical ? 36px : self.height / 2) : 34px;
+            background: AppState.mode == 0 ? (Theme.dark ? #050506 : #101114) : Theme.bg;
+            border-width: 1px;
+            border-color: AppState.mode == 0 ? Theme.accent.with-alpha(0.35) : Theme.edge;
+            clip: true;
+            animate x, y, width, height { duration: AppState.snap ? 0ms : 300ms; easing: ease-in-out; }
+            animate border-radius, background { duration: AppState.snap ? 0ms : 300ms; }
+
+            if AppState.mode != 0 : Ornaments { width: parent.width; height: parent.height; ghost: AppState.mode == 2; }
+
+            // ================= PIL VERTIKAL =================
+            if AppState.mode == 0 && AppState.vertical : Rectangle {
+                width: parent.width;
+                height: parent.height;
+                TouchArea { clicked => { AppState.toggle-island(); } mouse-cursor: pointer; }
+                VerticalLayout {
+                    padding: 8px;
+                    spacing: 3px;
+                    alignment: center;
+                    if AppState.mascot-on : Mascot {
+                        face: AppState.face;
+                        size: 58px;
+                        clicked => { AppState.toggle-island(); }
+                    }
+                    Text { text: AppState.clock; color: #f4f6fa; font-size: 15px; font-weight: 800; horizontal-alignment: center; }
+                    if AppState.ai-running > 0 : Text { text: "AI ×" + AppState.ai-running; color: Theme.accent; font-size: 10px; font-weight: 800; horizontal-alignment: center; }
+                    if AppState.ai-running == 0 && AppState.pill-line != "" : Text { text: AppState.pill-line; color: #8d95a5; font-size: 9px; font-weight: 700; horizontal-alignment: center; overflow: elide; }
+                    HorizontalLayout { alignment: center; Icon { d: Icons.chev-down; size: 14px; tint: #8d95a5; } }
+                }
+                if AppState.badge > 0 : Rectangle {
+                    x: parent.width - 24px;
+                    y: 6px;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 9px;
+                    background: Theme.bad;
+                    Text { text: AppState.badge; color: #ffffff; font-size: 10px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                }
             }
-        }
-        if root.mode == 1 && root.dock-pos != "top": VerticalLayout {
-            x: root.dock-pos == "left" ? 0px : island.width - 50px;
-            width: 50px;
-            padding-top: 10px;
-            spacing: 4px;
-            alignment: start;
-            Gravi { x: 6px; size: 36px; blink: root.blink; mood: root.mood; }
-            for s in root.live: Rectangle {
-                height: 48px;
-                AiLogo { x: 9px; y: 2px; sz: 32px; provider: s.mark; tint: s.tint; running: s.running; action: s.action; breathe: root.breathe; }
-                Text { y: 36px; width: parent.width; text: s.meta; color: s.tint; font-size: 9.5px; font-weight: 700; horizontal-alignment: center; }
-            }
-        }
 
-        // Mode 2: Expanded Content
-        if root.mode == 2: VerticalLayout {
-            width: 100%;
-            height: 100%;
-            padding-left: 14px;
-            padding-right: 14px;
-            padding-top: 14px;
-            padding-bottom: 12px;
-            spacing: 10px;
-            opacity: island.width >= 300px ? 1.0 : 0.0;
-            animate opacity { duration: 160ms; easing: ease-out; }
-
-                // header
+            // ================= PIL HORIZONTAL (dock atas) =================
+            if AppState.mode == 0 && !AppState.vertical : Rectangle {
+                width: parent.width;
+                height: parent.height;
+                TouchArea { clicked => { AppState.toggle-island(); } mouse-cursor: pointer; }
                 HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 14px;
                     spacing: 10px;
                     alignment: center;
-                    AvooAvatar {
+                    if AppState.mascot-on : Mascot {
+                        face: AppState.face;
+                        size: 50px;
                         y: (parent.height - self.height) / 2;
+                        clicked => { AppState.toggle-island(); }
                     }
-                    VerticalLayout {
-                        alignment: center;
-                        spacing: 1px;
-                        Text { text: root.greeting; color: Theme.fg; font-size: 15px; font-weight: 700; }
-                        Text { text: root.user-name; color: #8c94a6; font-size: 12px; font-weight: 500; }
-                    }
-                    Rectangle { } // Spacer to push Bot & Gear to right
-                    GraviPeeking {
-                        y: parent.height - self.height + 3px;
-                        size: 46px;
-                        blink: root.blink;
-                        mood: root.mood;
-                    }
-                    Rectangle {
-                        y: (parent.height - self.height) / 2;
-                        width: 30px; height: 30px; border-radius: 15px;
-                        background: gear-btn.has-hover ? #252838 : #181a24;
-                        border-width: 1px;
-                        border-color: #ffffff14;
-                        animate background { duration: 120ms; }
-                        GearIcon {
-                            x: (parent.width - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                            icon-color: gear-btn.has-hover ? Theme.fg : #8c94a6;
-                        }
-                        gear-btn := TouchArea {
-                            clicked => {
-                                root.tab = 4; // Switch to Lainnya / Atur
-                                root.play-sfx();
-                            }
-                        }
-                    }
-                    Rectangle {
-                        y: (parent.height - self.height) / 2;
-                        width: 28px; height: 28px; border-radius: 14px;
-                        background: closer.has-hover ? Theme.line : Theme.chip;
-                        animate background { duration: 120ms; }
-                        CloseIcon {
-                            x: (parent.width - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                            icon-color: closer.has-hover ? Theme.fg : Theme.mut;
-                        }
-                        closer := TouchArea { clicked => { root.clicked-close(); } }
-                    }
-                }
-
-                // Tab Bar (5 Tabs Sesuai Mockup)
-                Rectangle {
-                    height: 34px;
-                    border-radius: 17px;
-                    background: #14161f;
-                    border-width: 1px;
-                    border-color: #ffffff0d;
-                    HorizontalLayout {
-                        padding-left: 6px; padding-right: 6px;
-                        for t[i] in root.tabs: TabPillItem {
-                            text: t;
-                            tab-index: i;
-                            on: root.tab == i;
-                            clicked => { root.tab = i; root.play-sfx(); }
-                        }
-                    }
-                }
-
-                // ---------- Home (Beranda) Revamp Sesuai Mockup ----------
-                if root.tab == 0: VerticalLayout {
-                    spacing: 8px;
-
-                    // Card 1: Hero Clock & Weather Card
-                    Rectangle {
-                        height: 120px;
-                        border-radius: 20px;
-                        background: @linear-gradient(135deg, #151822 0%, #1f1b26 100%);
-                        border-width: 1px;
-                        border-color: #ffffff12;
+                    if AppState.ai-running > 0 : VerticalLayout { alignment: center; Rectangle { width: 10px; height: 10px; border-radius: 5px; background: Theme.good; } }
+                    Text { text: AppState.clock; color: #f4f6fa; font-size: 20px; font-weight: 800; vertical-alignment: center; }
+                    Text { text: AppState.ai-running > 0 ? "AI ×" + AppState.ai-running : AppState.pill-line; color: #9aa1b4; font-size: 14px; font-weight: 600; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
+                    if AppState.ai-running > 1 : Rectangle {
+                        width: 62px;
                         clip: true;
-
-                        // Sunset Glow in top-right corner
-                        Rectangle {
-                            x: parent.width - 130px;
-                            y: -20px;
-                            width: 150px;
-                            height: 140px;
-                            background: @radial-gradient(circle, rgba(245, 158, 11, 0.28) 0%, rgba(234, 88, 12, 0.12) 40%, rgba(0, 0, 0, 0) 70%);
-                        }
-
-                        // Sparkle Stars
-                        SparkleStar { x: parent.width - 64px; y: 16px; sz: 12px; star-color: #f59e0b99; }
-                        SparkleStar { x: parent.width - 105px; y: 46px; sz: 7px; star-color: #f59e0b55; }
-
                         HorizontalLayout {
-                            padding-left: 18px;
-                            padding-right: 18px;
-                            padding-top: 14px;
-                            padding-bottom: 14px;
-
-                            // Left Side: Date, Big Clock, Status
-                            VerticalLayout {
-                                alignment: space-between;
-                                Text {
-                                    text: root.date;
-                                    color: #8c93a4;
-                                    font-size: 10.5px;
-                                    font-weight: 700;
-                                    letter-spacing: 0.6px;
-                                }
-                                Text {
-                                    text: root.clock;
-                                    color: #ffffff;
-                                    font-size: 46px;
-                                    font-weight: 700;
-                                }
-                                HorizontalLayout {
-                                    spacing: 6px;
-                                    alignment: start;
-                                    Rectangle {
-                                        y: (parent.height - self.height) / 2;
-                                        width: 6px; height: 6px; border-radius: 3px;
-                                        background: #f59e0b;
-                                    }
-                                    Text {
-                                        text: "Pagi yang produktif";
-                                        color: #9aa1b2;
-                                        font-size: 11.5px;
-                                        font-weight: 500;
-                                        vertical-alignment: center;
-                                    }
-                                }
-                            }
-
-                            // Right Side: Weather, Temp, City
-                            VerticalLayout {
-                                alignment: space-between;
-                                HorizontalLayout {
-                                    alignment: end;
-                                    spacing: 8px;
-                                    SunCloudIcon {
-                                        y: (parent.height - self.height) / 2;
-                                    }
-                                    Text {
-                                        text: root.weather-temp != "" ? root.weather-temp : "29°C";
-                                        color: #ffffff;
-                                        font-size: 22px;
-                                        font-weight: 700;
-                                        vertical-alignment: center;
-                                    }
-                                }
-                                Text {
-                                    text: root.weather-desc != "" ? root.weather-desc : "Berawan";
-                                    color: #9aa1b2;
-                                    font-size: 12px;
-                                    font-weight: 500;
-                                    horizontal-alignment: right;
-                                }
-                                HorizontalLayout {
-                                    alignment: end;
-                                    spacing: 4px;
-                                    LocationPinIcon {
-                                        y: (parent.height - self.height) / 2;
-                                    }
-                                    Text {
-                                        text: root.city != "" ? root.city : "Surabaya";
-                                        color: #7d8596;
-                                        font-size: 11px;
-                                        font-weight: 500;
-                                        vertical-alignment: center;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Row 2: Agenda Hari Ini + CPU & RAM
-                    HorizontalLayout {
-                        spacing: 8px;
-
-                        // Card 2A: Agenda Hari Ini
-                        Rectangle {
-                            width: (parent.width - 8px) / 2;
-                            height: 126px;
-                            border-radius: 18px;
-                            background: #151722;
-                            border-width: 1px;
-                            border-color: #ffffff10;
-                            clip: true;
-
-                            // Silhouette Mosque Background
-                            MosqueSilhouette {
-                                y: parent.height - self.height;
-                                width: 100%;
-                            }
-
-                            VerticalLayout {
-                                padding-left: 14px;
-                                padding-right: 14px;
-                                padding-top: 12px;
-                                padding-bottom: 12px;
-                                alignment: space-between;
-
-                                // Header
-                                HorizontalLayout {
-                                    spacing: 6px;
-                                    CalendarTabIcon {
-                                        y: (parent.height - self.height) / 2;
-                                        icon-color: #ffffff;
-                                    }
-                                    Text {
-                                        text: "Agenda Hari Ini";
-                                        color: #ffffff;
-                                        font-size: 12px;
-                                        font-weight: 700;
-                                        vertical-alignment: center;
-                                    }
-                                    Rectangle { } // Spacer
-                                    Text {
-                                        text: "Lihat Semua →";
-                                        color: #f59e0b;
-                                        font-size: 10px;
-                                        font-weight: 700;
-                                        vertical-alignment: center;
-                                    }
-                                }
-
-                                // Sholat Schedule Timeline Item
-                                HorizontalLayout {
-                                    spacing: 10px;
-                                    alignment: start;
-
-                                    // Timeline line
-                                    Rectangle {
-                                        width: 6px;
-                                        Rectangle {
-                                            y: 2px;
-                                            width: 6px; height: 6px; border-radius: 3px;
-                                            background: #f59e0b;
-                                        }
-                                        Rectangle {
-                                            x: 2.5px; y: 8px; width: 1px; height: parent.height - 8px;
-                                            background: #f59e0b55;
-                                        }
-                                    }
-
-                                    // Schedule Info
-                                    VerticalLayout {
-                                        spacing: 3px;
-                                        Text {
-                                            text: root.prayer-time != "" ? root.prayer-time : "11:18";
-                                            color: #ffffff;
-                                            font-size: 16px;
-                                            font-weight: 700;
-                                        }
-                                        HorizontalLayout {
-                                            spacing: 5px;
-                                            MosqueIcon {
-                                                y: (parent.height - self.height) / 2;
-                                                icon-color: #9aa1b2;
-                                            }
-                                            Text {
-                                                text: "Sholat " + (root.prayer-name != "" ? root.prayer-name : "Dzuhur");
-                                                color: #e2e8f0;
-                                                font-size: 12px;
-                                                font-weight: 600;
-                                                vertical-alignment: center;
-                                            }
-                                        }
-                                        // Chip badge
-                                        Rectangle {
-                                            height: 20px;
-                                            border-radius: 10px;
-                                            background: #2e1d12;
-                                            border-width: 1px;
-                                            border-color: #f59e0b44;
-                                            HorizontalLayout {
-                                                padding-left: 8px; padding-right: 8px;
-                                                Text {
-                                                    text: "≈ " + (root.prayer-left != "" ? root.prayer-left : "41 mnt lagi");
-                                                    color: #f59e0b;
-                                                    font-size: 9.5px;
-                                                    font-weight: 700;
-                                                    vertical-alignment: center;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            TouchArea { clicked => { root.tab = 1; root.play-sfx(); } }
-                        }
-
-                        // Card 2B: CPU & RAM
-                        Rectangle {
-                            width: (parent.width - 8px) / 2;
-                            height: 126px;
-                            border-radius: 18px;
-                            background: #151722;
-                            border-width: 1px;
-                            border-color: #ffffff10;
-
-                            VerticalLayout {
-                                padding-left: 14px;
-                                padding-right: 14px;
-                                padding-top: 12px;
-                                padding-bottom: 12px;
-                                alignment: space-between;
-
-                                // Header
-                                HorizontalLayout {
-                                    spacing: 6px;
-                                    PulseIcon {
-                                        y: (parent.height - self.height) / 2;
-                                        icon-color: #818cf8;
-                                    }
-                                    Text {
-                                        text: "CPU & RAM";
-                                        color: #ffffff;
-                                        font-size: 12px;
-                                        font-weight: 700;
-                                        vertical-alignment: center;
-                                    }
-                                    Rectangle { } // Spacer
-                                    Text {
-                                        text: "›";
-                                        color: #7d8596;
-                                        font-size: 14px;
-                                        font-weight: 700;
-                                        vertical-alignment: center;
-                                    }
-                                }
-
-                                // Dual Gauges
-                                HorizontalLayout {
-                                    spacing: 8px;
-                                    alignment: space-around;
-
-                                    // CPU Gauge
-                                    VerticalLayout {
-                                        spacing: 4px;
-                                        alignment: center;
-                                        CircularGauge {
-                                            progress: root.cpu;
-                                            tint: #6366f1;
-                                            text-val: root.cpu-text != "" ? root.cpu-text : "30%";
-                                        }
-                                        Text {
-                                            text: "CPU";
-                                            color: #8c94a6;
-                                            font-size: 10px;
-                                            font-weight: 700;
-                                            horizontal-alignment: center;
-                                        }
-                                        SparklineMini {
-                                            line-color: #6366f1;
-                                        }
-                                    }
-
-                                    // RAM Gauge
-                                    VerticalLayout {
-                                        spacing: 4px;
-                                        alignment: center;
-                                        CircularGauge {
-                                            progress: root.mem;
-                                            tint: #f59e0b;
-                                            text-val: Math.round(root.mem * 100) + "%";
-                                        }
-                                        Text {
-                                            text: "RAM";
-                                            color: #8c94a6;
-                                            font-size: 10px;
-                                            font-weight: 700;
-                                            horizontal-alignment: center;
-                                        }
-                                        SparklineMini {
-                                            line-color: #f59e0b;
-                                        }
-                                    }
-                                }
-                            }
-
-                            TouchArea { clicked => { root.tab = 3; root.play-sfx(); } }
-                        }
-                    }
-
-                    // Row 3: Aktivitas Sistem Bar
-                    Rectangle {
-                        height: 52px;
-                        border-radius: 16px;
-                        background: #14161f;
-                        border-width: 1px;
-                        border-color: #ffffff0e;
-
-                        VerticalLayout {
-                            padding-left: 14px;
-                            padding-right: 14px;
-                            padding-top: 8px;
-                            padding-bottom: 8px;
-                            alignment: space-between;
-
-                            // Top row: Title + Green Dot Aktif
-                            HorizontalLayout {
-                                spacing: 6px;
-                                PulseIcon {
-                                    y: (parent.height - self.height) / 2;
-                                    icon-color: #ffffff;
-                                }
-                                Text {
-                                    text: "Aktivitas Sistem";
-                                    color: #ffffff;
-                                    font-size: 11.5px;
-                                    font-weight: 700;
-                                    vertical-alignment: center;
-                                }
-                                Rectangle { } // Spacer
-                                HorizontalLayout {
-                                    spacing: 4px;
-                                    Rectangle {
-                                        y: (parent.height - self.height) / 2;
-                                        width: 6px; height: 6px; border-radius: 3px;
-                                        background: #34d399;
-                                    }
-                                    Text {
-                                        text: "Aktif";
-                                        color: #34d399;
-                                        font-size: 10.5px;
-                                        font-weight: 700;
-                                        vertical-alignment: center;
-                                    }
-                                }
-                            }
-
-                            // Bottom row: Prompt + Audio Equalizer
-                            HorizontalLayout {
-                                spacing: 6px;
-                                Text {
-                                    text: ">";
-                                    color: root.live.length > 0 ? root.live[0].tint : #6b7280;
-                                    font-size: 11.5px;
-                                    font-weight: 700;
-                                    vertical-alignment: center;
-                                }
-                                Text {
-                                    text: root.live.length > 0 ? (root.live[0].sub != "" ? root.live[0].sub : root.live[0].title) : "Siap membantu, Avian.";
-                                    color: root.live.length > 0 ? #f1f5f9 : #cbd5e1;
-                                    font-size: 11.5px;
-                                    font-weight: 500;
-                                    overflow: elide;
-                                    vertical-alignment: center;
-                                }
-                                Rectangle { } // Spacer
+                            spacing: 0px;
+                            for s in AppState.sessions : Rectangle {
+                                width: s.running ? 30px : 0px;
                                 Rectangle {
-                                    width: 32px;
-                                    AudioWaveform {
-                                        y: (parent.height - self.height) / 2;
-                                        playing: true;
-                                        tick: root.wave-tick;
-                                        tint: root.live.length > 0 ? root.live[0].tint : #4b5563;
-                                    }
+                                    x: 0px; y: (parent.height - 26px) / 2; width: 26px; height: 26px; border-radius: 13px;
+                                    background: s.tint.with-alpha(0.3);
+                                    border-width: 1px; border-color: s.tint;
+                                    Text { text: s.mark; color: #ffffff; font-size: 9px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
                                 }
                             }
                         }
-                        TouchArea { clicked => { root.tab = 2; root.play-sfx(); } }
                     }
+                    if AppState.badge > 0 : VerticalLayout { alignment: center; Badge { text: AppState.badge + "!"; tint: Theme.bad; } }
+                    VerticalLayout { alignment: center; Rectangle { width: 1px; height: 28px; background: #ffffff22; } }
+                    VerticalLayout { alignment: center; Icon { d: Icons.chev-down; size: 20px; tint: #9aa1b4; } }
+                }
+            }
 
-                    // Row 4: Pesan Hari Ini Card
-                    Rectangle {
-                        height: 78px;
-                        border-radius: 18px;
-                        background: #161924;
-                        border-width: 1px;
-                        border-color: #ffffff10;
-                        clip: true;
-
-                        // Warm radial glow in bottom-right
-                        Rectangle {
-                            x: parent.width - 100px;
-                            y: parent.height - 70px;
-                            width: 100px;
-                            height: 70px;
-                            background: @radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(234, 88, 12, 0.08) 50%, rgba(0, 0, 0, 0) 80%);
-                        }
-
-                        // Glowing Lambda Chevron Watermark
-                        Path {
-                            x: parent.width - 56px;
-                            y: 16px;
-                            width: 44px;
-                            height: 48px;
-                            viewbox-width: 36;
-                            viewbox-height: 40;
-                            commands: "M 4 34 L 18 8 L 32 34";
-                            stroke: @linear-gradient(180deg, rgba(245, 158, 11, 0.6) 0%, rgba(234, 88, 12, 0.15) 100%);
-                            stroke-width: 7px;
-                            stroke-line-cap: round;
-                            stroke-line-join: round;
-                            fill: transparent;
-                        }
-
+            // ================= PERINGATAN: PERSETUJUAN =================
+            if AppState.mode == 1 : Rectangle {
+                width: parent.width;
+                height: parent.height;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 10px;
+                    HorizontalLayout {
+                        spacing: 10px;
+                        height: 58px;
+                        if AppState.mascot-on : Mascot { face: AppState.face; size: 64px; interactive: false; }
                         VerticalLayout {
-                            padding-left: 16px;
-                            padding-right: 60px;
-                            padding-top: 12px;
-                            padding-bottom: 12px;
-                            alignment: space-between;
-
-                            // Header
-                            HorizontalLayout {
-                                spacing: 6px;
-                                LightbulbIcon {
-                                    y: (parent.height - self.height) / 2;
-                                    icon-color: #f59e0b;
-                                }
-                                Text {
-                                    text: "Pesan Hari Ini";
-                                    color: #9ca3af;
-                                    font-size: 11px;
-                                    font-weight: 600;
-                                    vertical-alignment: center;
-                                }
-                            }
-
-                            // Quote
-                            Text {
-                                text: "Tidak ada yang berjalan dengan mudah, tapi kamu bisa.";
-                                color: #ffffff;
-                                font-size: 12.5px;
-                                font-weight: 500;
-                                wrap: word-wrap;
-                            }
+                            alignment: center;
+                            horizontal-stretch: 1;
+                            Text { text: "Butuh persetujuan"; color: Theme.text; font-size: 20px; font-weight: 800; }
+                            Text { text: AppState.approvals.length > 1 ? AppState.approvals.length + " permintaan menunggu" : "1 permintaan menunggu"; color: Theme.accent; font-size: 13px; }
                         }
+                        VerticalLayout { alignment: center; IconBtn { d: Icons.close; size: 38px; clicked => { AppState.collapse(); } } }
                     }
-                }
-
-                // ---------- Agenda ----------
-                if root.tab == 1: ScrollView {
-                    VerticalLayout {
-                        spacing: 8px;
-                        // Card Agenda Google Calendar
-                        Tile {
-                            height: 110px;
-                            VerticalLayout {
-                                padding: 14px; spacing: 8px; alignment: center;
-                                HorizontalLayout {
-                                    CalendarTabIcon { y: (parent.height - self.height) / 2; icon-color: #f59e0b; }
-                                    Text { text: "AGENDA GOOGLE CALENDAR"; color: Theme.mut2; font-size: 10px; font-weight: 700; }
-                                    Rectangle { }
-                                    Text { text: "Buka Kalender ↗"; color: #f59e0b; font-size: 10.5px; font-weight: 700; }
-                                }
-                                Text { text: root.event-text; color: Theme.fg; font-size: 13.5px; font-weight: 600; wrap: word-wrap; }
-                            }
-                            TouchArea { clicked => { root.cal-open(); } }
-                        }
-                        // Card Jadwal Sholat Lengkap
-                        Tile {
-                            height: 124px;
-                            VerticalLayout {
-                                padding: 14px; spacing: 10px;
-                                HorizontalLayout {
-                                    MosqueIcon { y: (parent.height - self.height) / 2; icon-color: Theme.cyan; }
-                                    Text { text: "JADWAL SHOLAT · " + root.city; color: Theme.mut2; font-size: 10px; font-weight: 700; }
-                                    Rectangle { }
-                                    Text { text: root.prayer-name + " · " + root.prayer-time; color: #f59e0b; font-size: 11px; font-weight: 700; }
-                                }
-                                HorizontalLayout {
-                                    spacing: 6px; alignment: space-between;
-                                    for p in [
-                                        { name: "Subuh", time: "03:52" },
-                                        { name: "Dzuhur", time: "11:18" },
-                                        { name: "Ashar", time: "14:41" },
-                                        { name: "Maghrib", time: "17:34" },
-                                        { name: "Isya", time: "18:48" }
-                                    ]: Rectangle {
-                                        width: 66px; height: 54px; border-radius: 12px;
-                                        background: p.name == root.prayer-name ? #f59e0b22 : Theme.chip;
-                                        border-width: p.name == root.prayer-name ? 1px : 0px;
-                                        border-color: #f59e0b;
-                                        VerticalLayout {
-                                            alignment: center; spacing: 2px;
-                                            Text { text: p.name; color: p.name == root.prayer-name ? #f59e0b : Theme.mut; font-size: 10.5px; font-weight: 700; horizontal-alignment: center; }
-                                            Text { text: p.name == root.prayer-name ? root.prayer-time : p.time; color: Theme.fg; font-size: 12.5px; font-weight: 700; horizontal-alignment: center; }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ---------- Proyek (GitHub + AI Sesi) ----------
-                if root.tab == 2: ScrollView {
-                    VerticalLayout {
-                        spacing: 8px;
-                        // Card GitHub
-                        Tile {
-                            height: 120px;
-                            VerticalLayout {
-                                padding: 12px; spacing: 5px;
-                                HorizontalLayout {
-                                    Cap { text: "GITHUB · @AVOOCREATOR"; }
-                                    Text {
-                                        text: root.gh-commits-today > 0 ? (root.gh-commits-today + " commit hari ini") : "Aktivitas Terakhir";
-                                        color: root.gh-commits-today > 0 ? Theme.good : Theme.mut2;
-                                        font-size: 11px; font-weight: 700;
-                                        horizontal-alignment: right;
-                                    }
-                                }
-                                HorizontalLayout {
-                                    spacing: 8px;
-                                    VerticalLayout {
-                                        alignment: center; spacing: 2px;
-                                        Text { text: root.gh-recent-repo != "" ? root.gh-recent-repo : "gravi-dock"; color: Theme.fg; font-size: 12.5px; font-weight: 600; overflow: elide; }
-                                        Text { text: root.gh-recent-commit != "" ? root.gh-recent-commit : "Aktivitas commit terkini"; color: Theme.mut; font-size: 10px; overflow: elide; }
-                                    }
-                                }
-                                HorizontalLayout {
-                                    spacing: 3px; alignment: center;
-                                    for col-idx in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]: VerticalLayout {
-                                        spacing: 3px;
-                                        for row-idx in [0, 1, 2]: Rectangle {
-                                            width: 7.5px; height: 7.5px; border-radius: 1.5px;
-                                            property <int> lvl: root.gh-heatmap[col-idx * 3 + row-idx];
-                                            background: lvl == 0 ? #21262d : (lvl == 1 ? #0e4429 : (lvl == 2 ? #006d32 : (lvl == 3 ? #26a641 : #39d353)));
-                                        }
-                                    }
-                                }
-                            }
-                            TouchArea { clicked => { root.gh-open(); } }
-                        }
-                        // Sesi AI list
-                        Tile {
-                            VerticalLayout {
-                                padding: 12px; spacing: 6px;
-                                Cap { text: "SESI AI BERJALAN (" + root.running-count + ")"; }
-                                if root.sessions.length == 0: Text { text: "Belum ada sesi AI aktif."; color: Theme.mut2; font-size: 12px; }
-                                for s[i] in root.sessions: SessionRow {
-                                    item: s;
-                                    breathe: root.breathe;
-                                    action-clicked => { root.session-action(i); }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ---------- Statistik & Fokus ----------
-                if root.tab == 3: ScrollView {
-                    VerticalLayout {
-                        spacing: 8px;
-                        // Dual CPU & RAM details
-                        HorizontalLayout {
+                    if AppState.approvals.length > 0 : Rectangle {
+                        vertical-stretch: 1;
+                        border-radius: 22px;
+                        background: @linear-gradient(155deg, Theme.surface 0%, Theme.surface2 100%);
+                        border-width: 1px;
+                        border-color: Theme.warn.with-alpha(0.55);
+                        Rectangle { border-radius: 22px; background: @linear-gradient(160deg, Theme.warn.with-alpha(0.12) 0%, transparent 60%); }
+                        VerticalLayout {
+                            padding: 14px;
                             spacing: 8px;
-                            Tile {
-                                height: 96px;
+                            HorizontalLayout {
+                                spacing: 12px;
                                 VerticalLayout {
-                                    padding: 12px; spacing: 4px;
-                                    HorizontalLayout {
-                                        Cap { text: "CPU"; }
-                                        Text { text: root.cpu-text; color: #6366f1; font-size: 13px; font-weight: 700; horizontal-alignment: right; }
-                                    }
-                                    Path {
-                                        width: 100%; height: 32px;
-                                        viewbox-x: 0; viewbox-y: 0; viewbox-width: 58; viewbox-height: 30;
-                                        commands: root.cpu-sparkline != "" ? root.cpu-sparkline : "M 0 25 L 15 20 L 30 22 L 45 15 L 58 10";
-                                        stroke: #6366f1; stroke-width: 2.4px; fill: transparent;
-                                    }
-                                    Text { text: "Uptime: " + root.uptime; color: Theme.mut2; font-size: 10px; }
-                                }
-                            }
-                            Tile {
-                                height: 96px;
-                                HorizontalLayout {
-                                    padding: 12px; spacing: 10px;
+                                    alignment: center;
                                     Rectangle {
-                                        width: 56px;
-                                        CircularGauge {
-                                            y: (parent.height - self.height) / 2;
-                                            progress: root.mem;
-                                            tint: #f59e0b;
-                                            text-val: Math.round(root.mem * 100) + "%";
-                                        }
-                                    }
-                                    VerticalLayout {
-                                        alignment: center; spacing: 2px;
-                                        Cap { text: "RAM"; }
-                                        Text { text: root.mem-text; color: Theme.fg; font-size: 12px; font-weight: 700; overflow: elide; }
-                                        Text { text: "20 GB LOQ"; color: Theme.mut2; font-size: 10px; }
+                                        width: 44px; height: 44px; border-radius: 22px;
+                                        background: AppState.approvals[0].tint.with-alpha(0.28);
+                                        Text { text: AppState.approvals[0].mark; color: AppState.approvals[0].tint; font-size: 14px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
                                     }
                                 }
-                            }
-                        }
-
-                        // Fokus & Stopwatch controls
-                        Rectangle {
-                            height: 32px; border-radius: 16px; background: Theme.chip;
-                            HorizontalLayout {
-                                padding-left: 4px; padding-right: 4px;
-                                for m[i] in ["Pomodoro", "Stopwatch"]: Rectangle {
-                                    height: 26px; y: 3px; border-radius: 13px;
-                                    background: root.focus-mode == i ? Theme.surface : #00000000;
-                                    Text {
-                                        text: m;
-                                        color: root.focus-mode == i ? Theme.fg : Theme.mut2;
-                                        font-size: 11px; font-weight: 700;
-                                        horizontal-alignment: center; vertical-alignment: center;
-                                    }
-                                    TouchArea { clicked => { root.focus-mode = i; } }
-                                }
-                            }
-                        }
-
-                        if root.focus-mode == 0: VerticalLayout {
-                            spacing: 8px;
-                            Tile {
-                                height: 110px;
                                 VerticalLayout {
-                                    alignment: center; spacing: 2px;
-                                    Text { text: root.focus-label; color: Theme.fg; font-size: 46px; font-weight: 600; horizontal-alignment: center; }
-                                    HorizontalLayout {
-                                        alignment: center; spacing: 6px;
-                                        Rectangle {
-                                            width: 7px; height: 7px; border-radius: 3.5px;
-                                            background: root.focus-running ? Theme.amber : Theme.good;
-                                            y: (parent.height - self.height) / 2;
-                                        }
-                                        Text { text: root.focus-phase + " · " + root.focus-done + " sesi selesai"; color: Theme.mut; font-size: 11.5px; }
-                                    }
+                                    alignment: center;
+                                    horizontal-stretch: 1;
+                                    Text { text: AppState.approvals[0].tool; color: Theme.text; font-size: 17px; font-weight: 800; overflow: elide; }
+                                    Text { text: AppState.approvals[0].summary; color: Theme.muted; font-size: 12px; overflow: elide; }
                                 }
                             }
+                            Rectangle { height: 1px; background: Theme.edge; }
+                            Muted { text: "Akses ke:"; }
                             HorizontalLayout {
-                                alignment: center; spacing: 14px;
-                                IconBtn { kind: "reset"; clicked => { root.focus-stop(); } }
-                                IconBtn { kind: root.focus-running ? "pause" : "play"; primary: true; tint: #f59e0b; width: 50px; height: 50px; border-radius: 25px; clicked => { if root.focus-running { root.focus-pause(); } else { root.focus-start(); } } }
-                            }
-                        }
-
-                        if root.focus-mode == 1: VerticalLayout {
-                            spacing: 8px;
-                            Tile {
-                                height: 110px;
-                                VerticalLayout {
-                                    alignment: center; spacing: 4px;
-                                    Text { text: root.sw-label; color: Theme.fg; font-size: 46px; font-weight: 600; horizontal-alignment: center; }
-                                    Text { text: "Stopwatch Presisi"; color: Theme.cyan; font-size: 12px; horizontal-alignment: center; }
-                                }
+                                spacing: 8px;
+                                VerticalLayout { alignment: center; Icon { d: Icons.folder; size: 18px; tint: Theme.muted; } }
+                                Text { text: AppState.approvals[0].cwd; color: Theme.text; font-size: 13px; overflow: elide; vertical-alignment: center; horizontal-stretch: 1; }
                             }
                             HorizontalLayout {
-                                alignment: center; spacing: 14px;
-                                IconBtn { kind: "reset"; clicked => { root.sw-reset(); } }
-                                IconBtn { kind: root.sw-running ? "pause" : "play"; primary: true; tint: Theme.cyan; width: 50px; height: 50px; border-radius: 25px; clicked => { root.sw-toggle(); } }
+                                spacing: 8px;
+                                Btn { text: "Setujui"; kind: 1; clicked => { AppState.approve(AppState.approvals[0].id, 1); } }
+                                Btn { text: "Tolak"; kind: 2; clicked => { AppState.approve(AppState.approvals[0].id, 0); } }
+                                Rectangle { horizontal-stretch: 1; }
+                                Btn { text: AppState.approvals.length > 1 ? "Semua" : "Terminal"; icon: Icons.terminal; clicked => { if (AppState.approvals.length > 1) { AppState.page = 1; AppState.toggle-island(); } else { AppState.approve(AppState.approvals[0].id, 2); } } }
                             }
                         }
                     }
                 }
+            }
 
-                // ---------- Lainnya (Cari, Shelf, Klip, Atur) ----------
-                if root.tab == 4: ScrollView {
-                    VerticalLayout {
-                        spacing: 8px;
-                        // Quick Search / Launcher
-                        Tile {
-                            height: 44px; border-radius: 22px;
-                            SearchIcon {
-                                x: 15px;
-                                y: (parent.height - self.height) / 2;
-                            }
-                            q := TextInput {
-                                x: 40px; width: parent.width - 86px; height: 100%;
-                                font-size: 13px; color: Theme.fg; vertical-alignment: center; single-line: true;
-                                edited => { root.query-changed(self.text); }
-                                accepted => { root.run-result(0); }
-                            }
-                            if q.text == "": Text { x: 40px; text: "Aplikasi, 2+2, atau alamat web…"; color: Theme.mut2; font-size: 13px; vertical-alignment: center; height: 100%; }
+            // ================= PANEL PENUH =================
+            if AppState.mode == 2 : Rectangle {
+                width: parent.width;
+                height: parent.height;
+                VerticalLayout {
+                    padding: 14px;
+                    padding-bottom: 20px;
+                    spacing: 10px;
+                    PageHeader { }
+                    Rectangle {
+                        vertical-stretch: 1;
+                        clip: true;
+                        if AppState.page == 0 : HomePage { }
+                        if AppState.page == 1 : AiPage { }
+                        if AppState.page == 2 : MusicPage { }
+                        if AppState.page == 3 : ClockPage { }
+                        if AppState.page == 4 : CalendarPage { }
+                        if AppState.page == 5 : GithubPage { }
+                        if AppState.page == 6 : SystemPage { }
+                        if AppState.page == 7 : ClipPage { }
+                        if AppState.page == 8 : SettingsPage { }
+                    }
+                    Rectangle {
+                        height: 60px;
+                        border-radius: 30px;
+                        background: @linear-gradient(90deg, Theme.surface 0%, Theme.surface2 100%);
+                        border-width: 1px;
+                        border-color: Theme.edge;
+                        HorizontalLayout {
+                            padding: 8px;
+                            alignment: space-around;
+                            NavItem { d: Icons.home; index: 0; }
+                            NavItem { d: Icons.ai; index: 1; badge: AppState.badge; }
+                            NavItem { d: Icons.music; index: 2; }
+                            NavItem { d: Icons.clock; index: 3; }
+                            NavItem { d: Icons.calendar; index: 4; }
+                            NavItem { d: Icons.github; index: 5; }
+                            NavItem { d: Icons.system; index: 6; }
+                            NavItem { d: Icons.tray; index: 7; }
+                            NavItem { d: Icons.settings; index: 8; }
+                        }
+                    }
+                }
+                if AppState.toast != "" : Rectangle {
+                    y: parent.height - 136px;
+                    x: (parent.width - self.width) / 2;
+                    width: Math.min(parent.width - 28px, toast-text.preferred-width + 76px);
+                    height: 52px;
+                    border-radius: 18px;
+                    background: @linear-gradient(90deg, Theme.surface2 0%, Theme.surface 100%);
+                    border-width: 1px;
+                    border-color: AppState.toast-kind == 2 ? Theme.bad : AppState.toast-kind == 1 ? Theme.accent : Theme.good;
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 14px;
+                        spacing: 12px;
+                        VerticalLayout {
+                            alignment: center;
                             Rectangle {
-                                x: parent.width - 38px; y: 7px; width: 30px; height: 30px; border-radius: 15px; background: Theme.chip;
-                                ArrowRightIcon {
+                                width: 32px; height: 32px; border-radius: 16px;
+                                background: (AppState.toast-kind == 2 ? Theme.bad : AppState.toast-kind == 1 ? Theme.accent : Theme.good).with-alpha(0.22);
+                                Icon {
+                                    d: AppState.toast-kind == 2 ? Icons.warn : AppState.toast-kind == 1 ? Icons.info : Icons.ok;
+                                    size: 18px;
+                                    tint: AppState.toast-kind == 2 ? Theme.bad : AppState.toast-kind == 1 ? Theme.accent : Theme.good;
                                     x: (parent.width - self.width) / 2;
                                     y: (parent.height - self.height) / 2;
                                 }
-                                TouchArea { clicked => { root.run-result(0); } }
                             }
                         }
-
-                        // Search Results if any
-                        if root.results.length > 0: Tile {
-                            VerticalLayout {
-                                padding: 6px; spacing: 4px;
-                                for r[i] in root.results: Rectangle {
-                                    height: 36px; border-radius: 10px;
-                                    background: rt.has-hover ? Theme.chip : #00000000;
-                                    HorizontalLayout {
-                                        padding-left: 12px; padding-right: 12px; spacing: 8px;
-                                        Text { text: r.name; color: Theme.fg; font-size: 12px; overflow: elide; vertical-alignment: center; }
-                                        Text { text: r.hint; color: Theme.mut2; font-size: 10px; horizontal-alignment: right; vertical-alignment: center; }
-                                    }
-                                    rt := TouchArea { clicked => { root.run-result(i); } }
-                                }
-                            }
-                        }
-
-                        // File Shelf
-                        Tile {
-                            height: 52px;
-                            border-radius: 14px;
-                            border-width: 1px;
-                            border-color: Theme.cyan.with-alpha(0.35);
-                            background: add-box.has-hover ? Theme.chip : Theme.surface;
-                            HorizontalLayout {
-                                padding-left: 14px; padding-right: 14px; spacing: 10px;
-                                Rectangle {
-                                    width: 28px; height: 28px; border-radius: 14px; background: Theme.cyan.with-alpha(0.2); y: (parent.height - self.height) / 2;
-                                    Text { text: "+"; color: Theme.cyan; font-size: 16px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
-                                }
-                                VerticalLayout {
-                                    alignment: center; spacing: 2px;
-                                    Text { text: "Simpan Berkas Cepat (File Shelf)"; color: Theme.fg; font-size: 12px; font-weight: 600; }
-                                    Text { text: "Salin berkas di Explorer (Ctrl+C), lalu klik di sini"; color: Theme.mut2; font-size: 10px; }
-                                }
-                            }
-                            add-box := TouchArea { clicked => { root.shelf-add(); } }
-                        }
-
-                        // Riwayat Klip Terakhir
-                        if root.clips.length > 0: Tile {
-                            VerticalLayout {
-                                padding: 8px; spacing: 4px;
-                                Cap { text: "PAPAN KLIP TERAKHIR"; }
-                                for c[i] in root.clips: Rectangle {
-                                    height: 32px; border-radius: 8px;
-                                    background: ct.has-hover ? Theme.chip : #00000000;
-                                    Text { x: 8px; width: parent.width - 16px; text: c; color: Theme.fg; font-size: 11.5px; overflow: elide; vertical-alignment: center; }
-                                    ct := TouchArea { clicked => { root.copy-clip(i); } }
-                                }
-                            }
-                        }
-
-                        // Pengaturan Inti
-                        Tile {
-                            VerticalLayout {
-                                padding-top: 4px; padding-bottom: 4px;
-                                ToggleRow { text: "Mode terang"; on: Theme.light; toggled => { Theme.light = !Theme.light; root.settings-changed(); } }
-                                ToggleRow { text: "Buka saat kursor di atas"; on: root.hover-open; toggled => { root.hover-open = !root.hover-open; root.settings-changed(); } }
-                                ToggleRow { text: "Adzan otomatis"; on: root.adzan; toggled => { root.adzan = !root.adzan; root.settings-changed(); } }
-                                ToggleRow { text: "Efek suara (SFX)"; on: root.sfx; toggled => { root.sfx = !root.sfx; root.settings-changed(); } }
-                            }
-                        }
-
-                        Tile {
-                            height: 48px;
-                            HorizontalLayout {
-                                padding-left: 14px; padding-right: 14px;
-                                Text { text: "Kota jadwal sholat"; color: Theme.fg; font-size: 12px; vertical-alignment: center; }
-                                Text { text: root.city + "  ▸"; color: #f59e0b; font-size: 12px; font-weight: 700; horizontal-alignment: right; vertical-alignment: center; }
-                            }
-                            TouchArea { clicked => { root.cycle-city(); } }
-                        }
-
-                        Tile {
-                            height: 48px;
-                            HorizontalLayout {
-                                padding-left: 14px; padding-right: 14px; spacing: 10px;
-                                Text { text: "Posisi Island"; color: Theme.fg; font-size: 12px; vertical-alignment: center; }
-                                HorizontalLayout {
-                                    alignment: end; spacing: 6px;
-                                    for p in ["left", "top", "right"]: Rectangle {
-                                        width: 54px; height: 26px; border-radius: 13px;
-                                        background: root.dock-pos == p ? #f59e0b : Theme.chip;
-                                        animate background { duration: 150ms; }
-                                        Text {
-                                            text: p == "left" ? "Kiri" : (p == "top" ? "Atas" : "Kanan");
-                                            color: root.dock-pos == p ? #000000 : Theme.fg;
-                                            font-size: 10.5px; font-weight: 700;
-                                            horizontal-alignment: center; vertical-alignment: center;
-                                        }
-                                        TouchArea { clicked => { root.dock-pos = p; root.settings-changed(); } }
-                                    }
-                                }
-                            }
-                        }
-
-                        Pill { text: "Keluar"; tint: #ff6b6b; clicked => { root.quit(); } }
+                        toast-text := Text { text: AppState.toast; color: Theme.text; font-size: 13px; font-weight: 700; vertical-alignment: center; overflow: elide; }
                     }
                 }
             }
         }
-
-    if root.dock-pos == "right": Path {
-        x: root.width - 16px; y: island.y - 16px; width: 16px; height: 16px;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 16; viewbox-height: 16;
-        commands: "M 0 16 A 16 16 0 0 0 16 0 L 16 16 Z";
-        fill: Theme.bg;
-    }
-    if root.dock-pos == "right": Path {
-        x: root.width - 16px; y: island.y + island.height; width: 16px; height: 16px;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 16; viewbox-height: 16;
-        commands: "M 0 0 A 16 16 0 0 1 16 16 L 16 0 Z";
-        fill: Theme.bg;
-    }
-    if root.dock-pos == "left": Path {
-        x: 0px; y: island.y - 16px; width: 16px; height: 16px;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 16; viewbox-height: 16;
-        commands: "M 16 16 A 16 16 0 0 1 0 0 L 0 16 Z";
-        fill: Theme.bg;
-    }
-    if root.dock-pos == "left": Path {
-        x: 0px; y: island.y + island.height; width: 16px; height: 16px;
-        viewbox-x: 0; viewbox-y: 0; viewbox-width: 16; viewbox-height: 16;
-        commands: "M 16 0 A 16 16 0 0 0 0 16 L 0 0 Z";
-        fill: Theme.bg;
     }
 }

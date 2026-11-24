@@ -1,0 +1,216 @@
+import { FaceParams } from "state.slint";
+
+// Maskot Gravi, digambar vektor. Koordinat desain 200 x 150 (u = lebar / 200), diukur dari lembar referensi.
+// Semua parameter wajah dianimasikan -> transisi mulus antar ekspresi. Bentuk statis dipakai ulang oleh tools/render_mascot.py.
+export component Mascot inherits Rectangle {
+    in property <FaceParams> face;
+    in property <length> size: 120px;
+    in property <bool> active: true;
+    in property <bool> interactive: true;
+    callback clicked();
+
+    property <length> u: root.size / 200;
+
+    // ---- nilai teranimasi ----
+    property <float> p-eye-h: root.face.eye-h;
+    property <float> p-eye-w: root.face.eye-w;
+    property <float> p-r-h: root.face.r-h;
+    property <float> p-r-w: root.face.r-w;
+    property <float> p-arc: root.face.arc;
+    property <float> p-ring: root.face.ring;
+    property <float> p-lid-out: root.face.lid-out;
+    property <float> p-lid-in: root.face.lid-in;
+    property <float> p-look-x: root.face.look-x;
+    property <float> p-look-y: root.face.look-y;
+    property <float> p-peek: root.face.peek;
+    animate p-eye-h, p-eye-w, p-r-h, p-r-w, p-arc, p-ring, p-lid-out, p-lid-in, p-look-x, p-look-y { duration: 240ms; easing: ease-out-back; }
+    animate p-peek { duration: 420ms; easing: ease-in-out; }
+
+    // ---- gerak hidup ----
+    in-out property <bool> blinking: false;
+    in-out property <bool> bob: false;
+    in-out property <float> hop: 0.0;         // lompat kecil saat diklik
+    in-out property <float> wiggle: 0.0;      // -1..1 goyangan telinga
+    property <float> blink-k: root.blinking ? 0.08 : 1.0;
+    animate blink-k { duration: 80ms; }
+    animate hop { duration: 140ms; easing: ease-out; }
+    animate wiggle { duration: 180ms; easing: ease-in-out; }
+
+    Timer { interval: 3400ms; running: root.active; triggered => { root.blinking = true; } }
+    Timer { interval: 130ms; running: root.blinking; triggered => { root.blinking = false; } }
+    Timer { interval: 1700ms; running: root.active; triggered => { root.bob = !root.bob; } }
+    Timer { interval: 5200ms; running: root.active; triggered => { root.wiggle = root.wiggle > 0.5 ? -0.6 : 1.0; } }
+    Timer { interval: 160ms; running: root.hop > 0.5; triggered => { root.hop = 0.0; } }
+
+    property <float> follow-x: (ta.has-hover && root.interactive) ? Math.clamp((ta.mouse-x - root.width / 2) / (root.width / 2), -1, 1) : 0.0;
+    property <float> follow-y: (ta.has-hover && root.interactive) ? Math.clamp((ta.mouse-y - root.height / 2) / (root.height / 2), -1, 1) : 0.0;
+    animate follow-x, follow-y { duration: 140ms; }
+
+    width: root.size;
+    height: root.size * 0.75;
+    clip: true;
+
+    body := Rectangle {
+        width: parent.width;
+        height: parent.height;
+        property <length> bob-y: root.bob ? -1.2px : 1.2px;
+        animate bob-y { duration: 1700ms; easing: ease-in-out; }
+        y: root.p-peek * root.height * 0.56 + self.bob-y - root.hop * 5 * root.u;
+
+        // ---- telinga (bagian gelap) ----
+        Path {
+            x: root.wiggle * -1.2px;
+            width: parent.width; height: parent.height; viewbox-width: 200; viewbox-height: 150;
+            commands: "M 13 7 Q 14 0 22 2 L 74 25 L 30 56 Z";
+            fill: #2b2a38;
+        }
+        Path {
+            x: root.wiggle * 1.2px;
+            width: parent.width; height: parent.height; viewbox-width: 200; viewbox-height: 150;
+            commands: "M 187 7 Q 186 0 178 2 L 126 25 L 170 56 Z";
+            fill: #2b2a38;
+        }
+        // ---- petal berwarna di sisi luar telinga ----
+        Path {
+            x: root.wiggle * -1.2px;
+            width: parent.width; height: parent.height; viewbox-width: 200; viewbox-height: 150;
+            commands: "M 15 2 C 4 14 -2 40 1 58 C 3 68 7 74 11 75 C 20 67 27 58 31 50 Z";
+            fill: @linear-gradient(180deg, #3a5bff 0%, #3aa6c9 55%, #5fcf9b 100%);
+        }
+        Path {
+            x: root.wiggle * 1.2px;
+            width: parent.width; height: parent.height; viewbox-width: 200; viewbox-height: 150;
+            commands: "M 185 2 C 196 14 202 40 199 58 C 197 68 193 74 189 75 C 180 67 173 58 169 50 Z";
+            fill: @linear-gradient(180deg, #ff5a36 0%, #ff9a3d 50%, #ffcf4d 100%);
+        }
+
+        // ---- kepala ----
+        Path {
+            width: parent.width; height: parent.height; viewbox-width: 200; viewbox-height: 150;
+            commands: "M 6 108 C 6 52 48 22 100 22 C 152 22 194 52 194 108 C 194 133 168 148 100 148 C 32 148 6 133 6 108 Z";
+            fill: @linear-gradient(180deg, #fdfbff 0%, #efe9f6 62%, #d4c9e4 100%);
+            stroke: #ffffff90;
+            stroke-width: 1px;
+        }
+        // ---- layar ----
+        Rectangle {
+            x: 30 * root.u; y: 43 * root.u; width: 142 * root.u; height: 87 * root.u;
+            border-radius: 40 * root.u;
+            background: #201f2e;
+            border-width: 2px;
+            border-color: #d6cdea;
+        }
+        Path {
+            width: parent.width; height: parent.height; viewbox-width: 200; viewbox-height: 150;
+            commands: "M 41 77 C 45 66 56 58 68 57 C 63 65 53 73 46 81 Z";
+            fill: #ffffff30;
+        }
+
+        // ---- mata (pil 15 x 34, jarak 28 dari tengah, pusat y = 91) ----
+        property <length> ecx: 100 * root.u + (root.p-look-x + root.follow-x * 0.7) * 6 * root.u;
+        property <length> ecy: 91 * root.u + (root.p-look-y + root.follow-y * 0.7) * 5 * root.u;
+        property <length> gap: 28 * root.u;
+
+        eye-l := Rectangle {
+            width: 15 * root.u * root.p-eye-w;
+            height: Math.max(0.1px, 34 * root.u * root.p-eye-h * root.blink-k);
+            x: body.ecx - body.gap - self.width / 2;
+            y: body.ecy - self.height / 2;
+            border-radius: Math.min(self.width, self.height) / 2;
+            background: #f4f7ff;
+            opacity: Math.min(1.0, root.p-eye-h * 8);
+            border-width: 1px;
+            border-color: #b7c4ff;
+        }
+        eye-r := Rectangle {
+            width: 15 * root.u * root.p-r-w;
+            height: Math.max(0.1px, 34 * root.u * root.p-r-h * root.blink-k);
+            x: body.ecx + body.gap - self.width / 2;
+            y: body.ecy - self.height / 2;
+            border-radius: Math.min(self.width, self.height) / 2;
+            background: #f4f7ff;
+            opacity: Math.min(1.0, root.p-r-h * 8);
+            border-width: 1px;
+            border-color: #b7c4ff;
+        }
+        // kelopak: segitiga warna layar yang memotong sudut atas mata (luar = sedih, dalam = serius/berpikir)
+        // luar (sedih) mata kiri: potong sudut kiri-atas
+        Path {
+            x: eye-l.x - 1px; y: eye-l.y - 1px; width: eye-l.width + 2px; height: eye-l.height + 2px;
+            viewbox-width: 16; viewbox-height: 36;
+            commands: "M 0 0 L 16 0 L 0 \{36 * root.p-lid-out} Z";
+            fill: #201f2e;
+            opacity: Math.min(1.0, root.p-lid-out * 8);
+        }
+        // dalam (serius) mata kiri: potong sudut kanan-atas
+        Path {
+            x: eye-l.x - 1px; y: eye-l.y - 1px; width: eye-l.width + 2px; height: eye-l.height + 2px;
+            viewbox-width: 16; viewbox-height: 36;
+            commands: "M 0 0 L 16 0 L 16 \{36 * root.p-lid-in} Z";
+            fill: #201f2e;
+            opacity: Math.min(1.0, root.p-lid-in * 8);
+        }
+        // luar mata kanan: potong sudut kanan-atas
+        Path {
+            x: eye-r.x - 1px; y: eye-r.y - 1px; width: eye-r.width + 2px; height: eye-r.height + 2px;
+            viewbox-width: 16; viewbox-height: 36;
+            commands: "M 16 0 L 0 0 L 16 \{36 * root.p-lid-out} Z";
+            fill: #201f2e;
+            opacity: Math.min(1.0, root.p-lid-out * 8);
+        }
+        // dalam mata kanan: potong sudut kiri-atas
+        Path {
+            x: eye-r.x - 1px; y: eye-r.y - 1px; width: eye-r.width + 2px; height: eye-r.height + 2px;
+            viewbox-width: 16; viewbox-height: 36;
+            commands: "M 0 0 L 16 0 L 0 \{36 * root.p-lid-in} Z";
+            fill: #201f2e;
+            opacity: Math.min(1.0, root.p-lid-in * 8);
+        }
+        // busur ^ ^ (senang / berhasil)
+        for side in [-1, 1] : Path {
+            x: body.ecx + side * body.gap - 9 * root.u;
+            y: body.ecy - 6 * root.u;
+            width: 18 * root.u; height: 12 * root.u; viewbox-width: 18; viewbox-height: 12;
+            commands: "M 2 10 L 9 2 L 16 10";
+            stroke: #f4f7ff;
+            stroke-width: 3.4 * root.u;
+            stroke-line-cap: round;
+            stroke-line-join: round;
+            fill: transparent;
+            opacity: root.p-arc;
+        }
+        // cincin (terkejut)
+        for side in [-1, 1] : Rectangle {
+            x: body.ecx + side * body.gap - 10 * root.u;
+            y: body.ecy - 10 * root.u;
+            width: 20 * root.u; height: 20 * root.u;
+            border-radius: 10 * root.u;
+            border-width: 3 * root.u;
+            border-color: #f4f7ff;
+            opacity: root.p-ring;
+        }
+
+        // ---- aksesori melayang (di luar kepala, kanan atas) ----
+        Text {
+            x: parent.width - self.preferred-width - 1 * root.u;
+            y: (root.bob ? 0 : 3) * root.u;
+            text: root.face.glyph;
+            color: root.face.glyph-color;
+            font-size: 20 * root.u;
+            font-weight: 800;
+            opacity: root.face.glyph == "" ? 0.0 : 1.0;
+            animate y { duration: 1700ms; easing: ease-in-out; }
+            animate opacity { duration: 200ms; }
+        }
+    }
+
+    ta := TouchArea {
+        enabled: root.interactive;
+        mouse-cursor: pointer;
+        clicked => {
+            root.hop = 1.0;
+            root.wiggle = 1.0;
+            root.clicked();
+        }
+    }
+}

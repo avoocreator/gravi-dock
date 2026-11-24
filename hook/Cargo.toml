@@ -1,0 +1,12 @@
+[package]
+name = "gravi-hook"
+version = "1.0.0"
+edition = "2021"
+description = "Pembantu kecil yang dipanggil Claude Code / Copilot CLI pada event permission, lalu meneruskannya ke Gravi Island."
+
+[[bin]]
+name = "gravi-hook"
+path = "src/main.rs"
+
+[dependencies]
+island-core = { path = "../core" }
