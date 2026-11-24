@@ -9,7 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const RECENT_MS: i64 = 36 * 3600 * 1000;
 const KEEP_IDLE_MS: i64 = 24 * 3600 * 1000;
-const MID_TURN_MS: i64 = 180_000; // giliran belum selesai tapi berkas diam selama ini -> berhenti
+const MID_TURN_MS: i64 = 60_000; // giliran belum selesai tapi berkas diam selama ini -> berhenti
 const QUIET_RUN_MS: i64 = 10_000; // format tak dikenal: berjalan bila ditulis dalam 10 dtk terakhir
 const MAX_PER_PROVIDER: usize = 30;
 const HEAD: u64 = 64 * 1024;
@@ -33,7 +33,7 @@ pub struct Session {
 struct Parsed { final_: Option<bool>, title: String, cwd: String, current: String, action: bool }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Kind { Claude, Copilot, AgyTranscript, AgyLight, Desk, ChatGpt, Hermes }
+enum Kind { Claude, Copilot, AgyTranscript, Desk, ChatGpt, Hermes }
 
 struct Provider { id: &'static str, kind: Kind, roots: Vec<PathBuf>, depth: usize }
 
@@ -203,22 +203,40 @@ fn parse_copilot(head: &[Value], tail: &[Value], dir: &Path) -> Parsed {
 fn parse_agy(head: &[Value], tail: &[Value]) -> Parsed {
     let first = head.iter().find(|e| e.get("type").text() == "USER_INPUT" && !e.get("content").text().trim().is_empty())
         .map(|e| strip_tags(e.get("content").text())).unwrap_or_default();
-    let (mut final_, mut current, mut action) = (None, String::new(), false);
+    let (mut final_, mut current, mut action) = (Some(true), String::new(), false);
     for e in tail.iter().rev() {
-        if e.get("type").text().is_empty() { continue; }
+        let ty = e.get("type").text();
+        if ty.is_empty() { continue; }
         let st = e.get("status").text();
-        if !st.is_empty() && !matches!(st.to_uppercase().as_str(), "DONE" | "COMPLETE" | "COMPLETED" | "SUCCESS") {
+        let up = st.to_uppercase();
+        if !st.is_empty() && !matches!(up.as_str(), "DONE" | "COMPLETE" | "COMPLETED" | "SUCCESS") {
             final_ = Some(false);
-            let up = st.to_uppercase();
             action = ["WAIT", "BLOCK", "APPROV", "PERMISSION", "CONFIRM", "PENDING_USER", "NEED"].iter().any(|k| up.contains(k));
             current = if action { "Menunggu persetujuanmu".into() } else { "Bekerja…".into() };
             break;
         }
-        let calls = e.get("tool_calls").arr();
-        if e.get("type").text() == "PLANNER_RESPONSE" && calls.is_empty() { final_ = Some(true); break; }
-        final_ = Some(false);
-        current = if let Some(c) = calls.first() { clean(&c.get("name").text().replace('_', " "), 40) } else if e.get("type").text() == "USER_INPUT" { "Berpikir…".into() } else { "Bekerja…".into() };
-        break;
+        if ty == "PLANNER_RESPONSE" {
+            let calls = e.get("tool_calls").arr();
+            if calls.is_empty() {
+                // Jawaban final ke user sudah selesai -> IDLE
+                final_ = Some(true);
+                current.clear();
+            } else {
+                // Sedang mengeksekusi tool -> RUNNING
+                final_ = Some(false);
+                current = if let Some(c) = calls.first() { clean(&c.get("name").text().replace('_', " "), 40) } else { "Bekerja…".into() };
+            }
+            break;
+        } else if ty == "USER_INPUT" {
+            let src = e.get("source").text();
+            if src != "SYSTEM" {
+                // User baru saja mengirim prompt -> RUNNING (Berpikir…)
+                final_ = Some(false);
+                current = "Berpikir…".into();
+                break;
+            }
+        }
+        // Jika type == "GENERIC" (output eksekusi tool), lewati dan cari PLANNER_RESPONSE yang memicunya
     }
     Parsed { final_, title: clean(&first, 80), cwd: String::new(), current, action }
 }
@@ -381,10 +399,8 @@ impl Scanner {
             Provider { id: "copilot", kind: Kind::Copilot, roots: vec![copilot.join("session-state")], depth: 2 },
             // Antigravity Desktop
             Provider { id: "agy", kind: Kind::AgyTranscript, roots: vec![agy_desk.join("brain"), agy_ide.join("brain")], depth: 4 },
-            Provider { id: "agy", kind: Kind::AgyLight, roots: vec![agy_desk.join("conversations")], depth: 1 },
             // Antigravity CLI
             Provider { id: "agycli", kind: Kind::AgyTranscript, roots: vec![agy_cli.join("brain")], depth: 4 },
-            Provider { id: "agycli", kind: Kind::AgyLight, roots: vec![agy_cli.join("conversations")], depth: 1 },
             // ChatGPT Desktop (Codex)
             Provider { id: "chatgpt", kind: Kind::ChatGpt, roots: vec![codex.join("thread-writer-locks"), codex.join("sessions")], depth: 5 },
             // Hermes
@@ -399,7 +415,6 @@ impl Scanner {
             Kind::Claude => Box::new(|n, _| n.ends_with(".jsonl")),
             Kind::Copilot => Box::new(|n, _| n.ends_with(".jsonl") || n == "workspace.yaml" || n.starts_with("inuse.")),
             Kind::AgyTranscript => Box::new(|n, p| n == "transcript.jsonl" && p.parent().and_then(|x| x.file_name()).map(|x| x == "logs").unwrap_or(false)),
-            Kind::AgyLight => Box::new(|n, _| (n.ends_with(".db") || n.ends_with(".db-wal") || n.ends_with(".pb")) && !n.starts_with("implicit")),
             Kind::Desk => Box::new(|n, _| n == "audit.jsonl" || n == "session.json" || n.ends_with(".jsonl")),
             Kind::ChatGpt => Box::new(|n, _| (n.ends_with(".lock") && n != ".coordination.lock") || n.contains("rollout-")),
             Kind::Hermes => Box::new(|n, _| n.starts_with("request_dump_") && n.ends_with(".json")),
@@ -412,7 +427,6 @@ impl Scanner {
             Kind::Copilot => if stem(f) == "events.jsonl" || stem(f) == "workspace.yaml" || stem(f).starts_with("inuse.") { f.parent().map(stem).unwrap_or_default() } else { f.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default() },
             // .../brain/<id>/.system_generated/logs/transcript.jsonl
             Kind::AgyTranscript => f.parent().and_then(|p| p.parent()).and_then(|p| p.parent()).map(stem).unwrap_or_default(),
-            Kind::AgyLight => { let n = stem(f); for suf in [".db-wal", ".db", ".pb"] { if let Some(x) = n.strip_suffix(suf) { return x.to_string(); } } n }
             Kind::Desk => f.parent().map(stem).unwrap_or_default(),
             Kind::ChatGpt => {
                 let n = stem(f);
@@ -468,7 +482,6 @@ impl Scanner {
                     Kind::Claude => { let (h, t) = head_tail(&f, size); parse_claude(&h, &t) }
                     Kind::Copilot => { let (h, t) = head_tail(&f, size); parse_copilot(&h, &t, dir) }
                     Kind::AgyTranscript => { let (h, t) = head_tail(&f, size); parse_agy(&h, &t) }
-                    Kind::AgyLight => Parsed { current: "Bekerja…".into(), ..Default::default() },
                     Kind::Desk => parse_desk(dir),
                     Kind::ChatGpt => { let sid = Self::id_of(p.kind, &f); parse_chatgpt(&f, &sid) }
                     Kind::Hermes => { let (h, t) = head_tail(&f, size); parse_hermes(&h, &t) }
@@ -575,7 +588,13 @@ mod tests {
         let tc = ".gemini/antigravity-cli/brain/cli1/.system_generated/logs/transcript.jsonl";
         write(&h, tc, concat!(r#"{"step_index":0,"type":"USER_INPUT","status":"DONE","content":"Riset algoritma"}"#, "\n", r#"{"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE","tool_calls":[{"name":"search_web"}]}"#, "\n"), 1000);
         write(&h, ".gemini/antigravity-cli/brain/cli2/.system_generated/logs/transcript.jsonl", concat!(r#"{"type":"USER_INPUT","status":"DONE","content":"Selesai"}"#, "\n", r#"{"type":"PLANNER_RESPONSE","status":"DONE","content":"jawaban"}"#, "\n"), 1000);
-        write(&h, ".gemini/antigravity/conversations/aaaa-1111.db-wal", "x", 2000);
+        // Antigravity Desktop yang sudah selesai (bahkan jika ada trailing GENERIC log)
+        let td_done = ".gemini/antigravity/brain/desk_done/.system_generated/logs/transcript.jsonl";
+        write(&h, td_done, concat!(
+            r#"{"step_index":0,"type":"USER_INPUT","status":"DONE","content":"Halo Antigravity"}"#, "\n",
+            r#"{"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE","content":"Halo! Ada yang bisa dibantu?"}"#, "\n",
+            r#"{"step_index":2,"type":"GENERIC","status":"DONE","content":"log telemetry"}"#, "\n"
+        ), 1000);
 
         let r = scan(&h, &[]);
         let desk = find(&r, "agy:desk1");
@@ -589,7 +608,7 @@ mod tests {
         assert_eq!(cli.current, "search web");
 
         assert_eq!(find(&r, "agycli:cli2").state, State::Idle);
-        assert_eq!(find(&r, "agy:aaaa-1111").state, State::Running);
+        assert_eq!(find(&r, "agy:desk_done").state, State::Idle);
     }
 
     #[test]
