@@ -33,7 +33,7 @@ pub struct Session {
 struct Parsed { final_: Option<bool>, title: String, cwd: String, current: String, action: bool }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Kind { Claude, Copilot, AgyTranscript, AgyLight, Desk }
+enum Kind { Claude, Copilot, AgyTranscript, AgyLight, Desk, ChatGpt, Hermes }
 
 struct Provider { id: &'static str, kind: Kind, roots: Vec<PathBuf>, depth: usize }
 
@@ -149,6 +149,16 @@ fn parse_claude(head: &[Value], tail: &[Value]) -> Parsed {
 }
 
 fn parse_copilot(head: &[Value], tail: &[Value], dir: &Path) -> Parsed {
+    let mut is_inuse = false;
+    if let Ok(rd) = fs::read_dir(dir) {
+        for e in rd.flatten() {
+            let n = e.file_name().to_string_lossy().to_string();
+            if n.starts_with("inuse.") && (n.ends_with(".lock") || n.ends_with(".hold")) {
+                is_inuse = true;
+                break;
+            }
+        }
+    }
     let (mut first, mut cwd) = (String::new(), String::new());
     for e in head {
         let d = if e.get("data").is_null() { e } else { e.get("data") };
@@ -170,16 +180,21 @@ fn parse_copilot(head: &[Value], tail: &[Value], dir: &Path) -> Parsed {
         }
     }
     let (mut final_, mut current) = (None, String::new());
-    for e in tail.iter().rev() {
-        let ty = e.get("type").text().to_lowercase();
-        if ty.is_empty() { continue; }
-        if ["turn_end", "session.idle", "session.shutdown", "task_complete", "abort"].iter().any(|k| ty.contains(k)) { final_ = Some(true); break; }
-        if ["turn_start", "user.", "tool", "assistant."].iter().any(|k| ty.contains(k)) {
-            final_ = Some(false);
-            let d = if e.get("data").is_null() { e } else { e.get("data") };
-            let tn = [d.get("toolName").text(), d.get("tool").text(), d.get("name").text()].into_iter().find(|s| !s.is_empty()).unwrap_or("");
-            current = if ty.contains("tool") && !tn.is_empty() { clean(tn, 40) } else { "Bekerja…".into() };
-            break;
+    if is_inuse {
+        final_ = Some(false);
+        current = "Bekerja…".into();
+    } else {
+        for e in tail.iter().rev() {
+            let ty = e.get("type").text().to_lowercase();
+            if ty.is_empty() { continue; }
+            if ["turn_end", "session.idle", "session.shutdown", "task_complete", "abort"].iter().any(|k| ty.contains(k)) { final_ = Some(true); break; }
+            if ["turn_start", "user.", "tool", "assistant."].iter().any(|k| ty.contains(k)) {
+                final_ = Some(false);
+                let d = if e.get("data").is_null() { e } else { e.get("data") };
+                let tn = [d.get("toolName").text(), d.get("tool").text(), d.get("name").text()].into_iter().find(|s| !s.is_empty()).unwrap_or("");
+                current = if ty.contains("tool") && !tn.is_empty() { clean(tn, 40) } else { "Bekerja…".into() };
+                break;
+            }
         }
     }
     Parsed { final_, title: clean(if title.is_empty() { &first } else { &title }, 80), cwd, current, action: false }
@@ -208,9 +223,22 @@ fn parse_agy(head: &[Value], tail: &[Value]) -> Parsed {
     Parsed { final_, title: clean(&first, 80), cwd: String::new(), current, action }
 }
 fn strip_tags(s: &str) -> String {
-    let (mut out, mut inside) = (String::new(), false);
-    for c in s.chars() { match c { '<' => inside = true, '>' => { inside = false; out.push(' '); } _ if !inside => out.push(c), _ => {} } }
-    out
+    let text = if let Some(start) = s.find("<USER_REQUEST>") {
+        let after = &s[start + "<USER_REQUEST>".len()..];
+        if let Some(end) = after.find("</USER_REQUEST>") {
+            &after[..end]
+        } else {
+            after
+        }
+    } else {
+        s
+    };
+    let mut out = String::new();
+    let mut inside = false;
+    for c in text.chars() { match c { '<' => inside = true, '>' => { inside = false; out.push(' '); } _ if !inside => out.push(c), _ => {} } }
+    let words: Vec<&str> = out.split_whitespace().collect();
+    let non_url_words: Vec<&str> = words.into_iter().filter(|w| !w.starts_with("http://") && !w.starts_with("https://")).collect();
+    non_url_words.join(" ")
 }
 
 fn parse_desk(dir: &Path) -> Parsed {
@@ -228,6 +256,82 @@ fn parse_desk(dir: &Path) -> Parsed {
     Parsed { final_: None, title: clean(&title, 80), cwd: String::new(), current: "Bekerja…".into(), action: false }
 }
 
+fn parse_chatgpt(f: &Path, id: &str) -> Parsed {
+    let mut root = f.parent();
+    let mut codex_dir = None;
+    for _ in 0..6 {
+        if let Some(r) = root {
+            if r.join("session_index.jsonl").exists() || r.join("thread-writer-locks").exists() {
+                codex_dir = Some(r);
+                break;
+            }
+            root = r.parent();
+        } else {
+            break;
+        }
+    }
+
+    let mut title = String::new();
+    let mut running = false;
+
+    if let Some(cd) = codex_dir {
+        let lock_file = cd.join("thread-writer-locks").join(format!("{id}.lock"));
+        if lock_file.exists() {
+            if let Ok(md) = lock_file.metadata() {
+                let age = now_ms() - mtime_ms(&md);
+                if age < MID_TURN_MS {
+                    running = true;
+                }
+            }
+        }
+
+        if let Ok(content) = fs::read_to_string(cd.join("session_index.jsonl")) {
+            for line in content.lines() {
+                let l = line.trim();
+                if l.is_empty() { continue; }
+                if let Some(v) = json::parse(l) {
+                    if v.get("id").text() == id {
+                        title = v.get("thread_name").text().to_string();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    Parsed {
+        final_: if running { Some(false) } else { None },
+        title: clean(&title, 80),
+        cwd: String::new(),
+        current: if running { "Menulis…".into() } else { String::new() },
+        action: false,
+    }
+}
+
+fn parse_hermes(head: &[Value], tail: &[Value]) -> Parsed {
+    let mut title = String::new();
+    for v in head.iter().chain(tail.iter()) {
+        let msgs = v.get("request").get("body").get("messages").arr();
+        for m in msgs.iter().rev() {
+            if m.get("role").text() == "user" {
+                let t = strip_tags(m.get("content").text());
+                if usable(&t) {
+                    title = t;
+                    break;
+                }
+            }
+        }
+        if !title.is_empty() { break; }
+    }
+    Parsed {
+        final_: None,
+        title: clean(&title, 80),
+        cwd: String::new(),
+        current: "Bekerja…".into(),
+        action: false,
+    }
+}
+
 /* ---------------------------------------------------------------- pemindai */
 
 pub struct Scanner { provs: Vec<Provider> }
@@ -242,6 +346,15 @@ impl Scanner {
             local.join("Claude").join("local-agent-mode-sessions"),
             local.join("Claude-3p").join("local-agent-mode-sessions"),
         ];
+        if let Ok(rd) = fs::read_dir(local.join("Claude-Data")) {
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    desk.push(p.join("local-agent-mode-sessions"));
+                    desk.push(p.join("claude-code-sessions"));
+                }
+            }
+        }
         if let Ok(rd) = fs::read_dir(local.join("Packages")) {
             for e in rd.flatten() {
                 let n = e.file_name().to_string_lossy().to_lowercase();
@@ -252,33 +365,88 @@ impl Scanner {
         }
         let claude = claude_dir.map(Path::to_path_buf).unwrap_or_else(|| home.join(".claude"));
         let copilot = copilot_dir.map(Path::to_path_buf).unwrap_or_else(|| home.join(".copilot"));
-        let agy = home.join(".gemini").join("antigravity-cli");
+        let codex = home.join(".codex");
+        let hermes_dir = local.join("hermes");
+
+        let agy_desk = home.join(".gemini").join("antigravity");
+        let agy_cli = home.join(".gemini").join("antigravity-cli");
+        let agy_ide = home.join(".gemini").join("antigravity-ide");
+
         Scanner { provs: vec![
+            // Claude Code CLI
             Provider { id: "claude", kind: Kind::Claude, roots: vec![claude.join("projects")], depth: 1 },
-            Provider { id: "copilot", kind: Kind::Copilot, roots: vec![copilot.join("session-state")], depth: 2 },
-            Provider { id: "agy", kind: Kind::AgyTranscript, roots: vec![agy.join("brain")], depth: 4 },
-            Provider { id: "agy", kind: Kind::AgyLight, roots: vec![agy.join("conversations")], depth: 1 },
+            // Claude Desktop
             Provider { id: "claudedesk", kind: Kind::Desk, roots: desk, depth: 5 },
+            // GitHub Copilot CLI
+            Provider { id: "copilot", kind: Kind::Copilot, roots: vec![copilot.join("session-state")], depth: 2 },
+            // Antigravity Desktop
+            Provider { id: "agy", kind: Kind::AgyTranscript, roots: vec![agy_desk.join("brain"), agy_ide.join("brain")], depth: 4 },
+            Provider { id: "agy", kind: Kind::AgyLight, roots: vec![agy_desk.join("conversations")], depth: 1 },
+            // Antigravity CLI
+            Provider { id: "agycli", kind: Kind::AgyTranscript, roots: vec![agy_cli.join("brain")], depth: 4 },
+            Provider { id: "agycli", kind: Kind::AgyLight, roots: vec![agy_cli.join("conversations")], depth: 1 },
+            // ChatGPT Desktop (Codex)
+            Provider { id: "chatgpt", kind: Kind::ChatGpt, roots: vec![codex.join("thread-writer-locks"), codex.join("sessions")], depth: 5 },
+            // Hermes
+            Provider { id: "hermes", kind: Kind::Hermes, roots: vec![hermes_dir.join("sessions")], depth: 1 },
+            // Gemini Desktop / hooks
+            Provider { id: "gemini", kind: Kind::AgyTranscript, roots: vec![home.join(".gemini").join("desktop").join("brain")], depth: 4 },
         ] }
     }
 
     fn matcher(kind: Kind) -> Box<dyn Fn(&str, &Path) -> bool> {
         match kind {
-            Kind::Claude | Kind::Copilot => Box::new(|n, _| n.ends_with(".jsonl")),
+            Kind::Claude => Box::new(|n, _| n.ends_with(".jsonl")),
+            Kind::Copilot => Box::new(|n, _| n.ends_with(".jsonl") || n == "workspace.yaml" || n.starts_with("inuse.")),
             Kind::AgyTranscript => Box::new(|n, p| n == "transcript.jsonl" && p.parent().and_then(|x| x.file_name()).map(|x| x == "logs").unwrap_or(false)),
             Kind::AgyLight => Box::new(|n, _| (n.ends_with(".db") || n.ends_with(".db-wal") || n.ends_with(".pb")) && !n.starts_with("implicit")),
-            Kind::Desk => Box::new(|n, _| n == "audit.jsonl"),
+            Kind::Desk => Box::new(|n, _| n == "audit.jsonl" || n == "session.json" || n.ends_with(".jsonl")),
+            Kind::ChatGpt => Box::new(|n, _| (n.ends_with(".lock") && n != ".coordination.lock") || n.contains("rollout-")),
+            Kind::Hermes => Box::new(|n, _| n.starts_with("request_dump_") && n.ends_with(".json")),
         }
     }
     fn id_of(kind: Kind, f: &Path) -> String {
         let stem = |p: &Path| p.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
         match kind {
             Kind::Claude => f.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default(),
-            Kind::Copilot => if stem(f) == "events.jsonl" { f.parent().map(stem).unwrap_or_default() } else { f.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default() },
+            Kind::Copilot => if stem(f) == "events.jsonl" || stem(f) == "workspace.yaml" || stem(f).starts_with("inuse.") { f.parent().map(stem).unwrap_or_default() } else { f.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default() },
             // .../brain/<id>/.system_generated/logs/transcript.jsonl
             Kind::AgyTranscript => f.parent().and_then(|p| p.parent()).and_then(|p| p.parent()).map(stem).unwrap_or_default(),
             Kind::AgyLight => { let n = stem(f); for suf in [".db-wal", ".db", ".pb"] { if let Some(x) = n.strip_suffix(suf) { return x.to_string(); } } n }
             Kind::Desk => f.parent().map(stem).unwrap_or_default(),
+            Kind::ChatGpt => {
+                let n = stem(f);
+                if n.ends_with(".lock") {
+                    f.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default()
+                } else if let Some(idx) = n.rfind('-') {
+                    let rem = &n[..idx];
+                    if let Some(idx2) = rem.rfind('-') {
+                        let candidate = &n[idx2 + 1..];
+                        if let Some(dot) = candidate.find('.') {
+                            candidate[..dot].to_string()
+                        } else {
+                            candidate.to_string()
+                        }
+                    } else {
+                        n
+                    }
+                } else {
+                    n
+                }
+            }
+            Kind::Hermes => {
+                let n = f.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+                if let Some(strip) = n.strip_prefix("request_dump_") {
+                    let parts: Vec<&str> = strip.split('_').collect();
+                    if parts.len() >= 3 {
+                        format!("{}_{}_{}", parts[0], parts[1], parts[2])
+                    } else {
+                        n
+                    }
+                } else {
+                    n
+                }
+            }
         }
     }
 
@@ -302,6 +470,8 @@ impl Scanner {
                     Kind::AgyTranscript => { let (h, t) = head_tail(&f, size); parse_agy(&h, &t) }
                     Kind::AgyLight => Parsed { current: "Bekerja…".into(), ..Default::default() },
                     Kind::Desk => parse_desk(dir),
+                    Kind::ChatGpt => { let sid = Self::id_of(p.kind, &f); parse_chatgpt(&f, &sid) }
+                    Kind::Hermes => { let (h, t) = head_tail(&f, size); parse_hermes(&h, &t) }
                 };
                 let age = now - mt;
                 let mut state = State::Idle;
@@ -313,7 +483,16 @@ impl Scanner {
                 if state == State::Idle && age > KEEP_IDLE_MS { continue; }
                 let mut current = if state == State::Running { parsed.current.clone() } else { String::new() };
                 if state == State::Running && parsed.final_ == Some(false) && age > 15_000 && !current.contains("Menulis") && !current.contains("Berpikir") { current.push_str(" · menunggu…"); }
-                let fallback = match p.kind { Kind::AgyLight | Kind::AgyTranscript => "Sesi Antigravity CLI", Kind::Desk => "Sesi Claude Desktop", _ => "Sesi tanpa judul" };
+                let fallback = match p.id {
+                    "agy" => "Sesi Antigravity Desktop",
+                    "agycli" => "Sesi Antigravity CLI",
+                    "chatgpt" => "Sesi ChatGPT Desktop",
+                    "claudedesk" => "Sesi Claude Desktop",
+                    "copilot" => "Sesi GitHub Copilot",
+                    "gemini" => "Sesi Gemini Desktop",
+                    "hermes" => "Sesi Hermes",
+                    _ => "Sesi AI",
+                };
                 out.push(Session { id, provider: p.id, title: if parsed.title.is_empty() { fallback.into() } else { parsed.title }, state, updated_ms: mt, cwd: parsed.cwd, current });
             }
         }
@@ -386,18 +565,69 @@ mod tests {
     }
 
     #[test]
-    fn antigravity_cli_dan_cadangan() {
+    fn antigravity_desktop_dan_cli() {
         let h = tmp();
-        let t = ".gemini/antigravity-cli/brain/3b4a/.system_generated/logs/transcript.jsonl";
-        write(&h, t, concat!(r#"{"step_index":0,"type":"USER_INPUT","status":"DONE","content":"Riset algoritma"}"#, "\n", r#"{"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE","tool_calls":[{"name":"search_web"}]}"#, "\n"), 1000);
-        write(&h, ".gemini/antigravity-cli/brain/9f9f/.system_generated/logs/transcript.jsonl", concat!(r#"{"type":"USER_INPUT","status":"DONE","content":"Selesai"}"#, "\n", r#"{"type":"PLANNER_RESPONSE","status":"DONE","content":"jawaban"}"#, "\n"), 1000);
-        write(&h, ".gemini/antigravity-cli/conversations/aaaa-1111.db-wal", "x", 2000);
+        // Antigravity Desktop
+        let td = ".gemini/antigravity/brain/desk1/.system_generated/logs/transcript.jsonl";
+        write(&h, td, concat!(r#"{"step_index":0,"type":"USER_INPUT","status":"DONE","content":"<USER_REQUEST>Perbaiki sistem dynamic island</USER_REQUEST>"}"#, "\n", r#"{"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE","tool_calls":[{"name":"run_command"}]}"#, "\n"), 1000);
+        
+        // Antigravity CLI
+        let tc = ".gemini/antigravity-cli/brain/cli1/.system_generated/logs/transcript.jsonl";
+        write(&h, tc, concat!(r#"{"step_index":0,"type":"USER_INPUT","status":"DONE","content":"Riset algoritma"}"#, "\n", r#"{"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE","tool_calls":[{"name":"search_web"}]}"#, "\n"), 1000);
+        write(&h, ".gemini/antigravity-cli/brain/cli2/.system_generated/logs/transcript.jsonl", concat!(r#"{"type":"USER_INPUT","status":"DONE","content":"Selesai"}"#, "\n", r#"{"type":"PLANNER_RESPONSE","status":"DONE","content":"jawaban"}"#, "\n"), 1000);
+        write(&h, ".gemini/antigravity/conversations/aaaa-1111.db-wal", "x", 2000);
+
         let r = scan(&h, &[]);
-        assert_eq!(find(&r, "agy:3b4a").state, State::Running);
-        assert_eq!(find(&r, "agy:3b4a").title, "Riset algoritma");
-        assert_eq!(find(&r, "agy:3b4a").current, "search web");
-        assert_eq!(find(&r, "agy:9f9f").state, State::Idle);
+        let desk = find(&r, "agy:desk1");
+        assert_eq!(desk.state, State::Running);
+        assert_eq!(desk.title, "Perbaiki sistem dynamic island");
+        assert_eq!(desk.current, "run command");
+
+        let cli = find(&r, "agycli:cli1");
+        assert_eq!(cli.state, State::Running);
+        assert_eq!(cli.title, "Riset algoritma");
+        assert_eq!(cli.current, "search web");
+
+        assert_eq!(find(&r, "agycli:cli2").state, State::Idle);
         assert_eq!(find(&r, "agy:aaaa-1111").state, State::Running);
+    }
+
+    #[test]
+    fn chatgpt_desktop() {
+        let h = tmp();
+        let idx = r#"{"id":"gpt123","thread_name":"Bantu tugas coding","updated_at":"2026-11-24T00:00:00Z"}"#;
+        write(&h, ".codex/session_index.jsonl", idx, 1000);
+        write(&h, ".codex/thread-writer-locks/gpt123.lock", "", 1000);
+        let r = scan(&h, &[]);
+        let gpt = find(&r, "chatgpt:gpt123");
+        assert_eq!(gpt.state, State::Running);
+        assert_eq!(gpt.title, "Bantu tugas coding");
+    }
+
+    #[test]
+    fn hermes_session() {
+        let h = tmp();
+        let dump = r#"{"session_id":"hermes99","request":{"body":{"messages":[{"role":"user","content":"Buatkan modul auth"}]}}}"#;
+        write(&h, "AppData/Local/hermes/sessions/request_dump_20261124_100000_hermes99.json", dump, 1000);
+        let r = scan(&h, &[]);
+        let hm = find(&r, "hermes:20261124_100000_hermes99");
+        assert_eq!(hm.state, State::Running);
+        assert_eq!(hm.title, "Buatkan modul auth");
+    }
+
+    #[test]
+    fn test_live_system_scan() {
+        if let Ok(home) = std::env::var("USERPROFILE") {
+            let p = PathBuf::from(home);
+            let ad = std::env::var_os("APPDATA").map(PathBuf::from);
+            let la = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
+            let sc = Scanner::new(&p, ad.as_deref(), la.as_deref(), None, None);
+            let res = sc.scan(now_ms(), &|_| true);
+            println!("LIVE DETECTED SESSIONS ({}):", res.len());
+            for s in &res {
+                println!("  [{}] [{:?}] {} (updated {}s ago) current: '{}'", s.provider, s.state, s.title, (now_ms() - s.updated_ms) / 1000, s.current);
+            }
+        }
     }
 
     #[test]

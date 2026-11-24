@@ -51,12 +51,15 @@ fn pull_settings(ui: &MainWindow, s: &mut Settings) {
 fn style(p: &str) -> (&'static str, slint::Color) {
     let c = |r: u8, g: u8, b: u8| slint::Color::from_rgb_u8(r, g, b);
     match p {
-        "agy" => ("agy", c(0x6f, 0x9b, 0xff)),
-        "claude" => ("claude", c(0xf0, 0x8a, 0x5d)),
-        "claudedesk" => ("claudedesk", c(0xe8, 0xa8, 0x7c)),
-        "copilot" => ("copilot", c(0x4f, 0xb3, 0xff)),
-        "chatgpt" => ("chatgpt", c(0x2f, 0xd2, 0x9a)),
-        _ => ("agy", c(0x9b, 0x8c, 0xff)),
+        "agy" => ("agy", c(0x5a, 0xe0, 0xff)),         // Antigravity Desktop (cyan)
+        "agycli" => ("agycli", c(0x38, 0xbd, 0xf8)),   // Antigravity CLI (sky blue)
+        "chatgpt" => ("chatgpt", c(0x10, 0xa3, 0x7f)), // ChatGPT Desktop (emerald)
+        "claude" => ("claude", c(0xf0, 0x8a, 0x5d)),   // Claude Code CLI
+        "claudedesk" => ("claudedesk", c(0xe8, 0xa8, 0x7c)), // Claude Desktop (coral)
+        "copilot" => ("copilot", c(0x81, 0x8c, 0xf8)), // GitHub Copilot CLI (indigo)
+        "gemini" => ("gemini", c(0x42, 0x85, 0xf4)),   // Gemini Desktop (Google blue)
+        "hermes" => ("hermes", c(0x06, 0xb6, 0xd4)),   // Hermes (cyan/teal)
+        _ => ("agy", c(0x5a, 0xe0, 0xff)),
     }
 }
 

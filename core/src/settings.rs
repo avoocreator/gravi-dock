@@ -10,6 +10,7 @@ pub struct Settings {
     pub adzan: bool, pub adzan_wav: String,
     pub focus_min: i64, pub break_min: i64,
     pub src_claude: bool, pub src_copilot: bool, pub src_agy: bool, pub src_desk: bool,
+    pub src_chatgpt: bool, pub src_hermes: bool, pub src_gemini: bool,
     pub position: String,     // "right", "left", "top"
     pub sfx: bool,            // sound effects
 }
@@ -19,6 +20,7 @@ impl Default for Settings {
         Settings { lat: -6.9175, lon: 107.6191, city: "Bandung".into(), hover: false, top_pct: 0.0, light: false, accent: "#5ae0ff".into(),
             ical: String::new(), adzan: true, adzan_wav: String::new(), focus_min: 25, break_min: 5,
             src_claude: true, src_copilot: true, src_agy: true, src_desk: true,
+            src_chatgpt: true, src_hermes: true, src_gemini: true,
             position: "top".into(), sfx: true }
     }
 }
@@ -44,15 +46,26 @@ impl Settings {
         }
         s.hover = b("hover", s.hover); s.light = b("light", s.light); s.adzan = b("adzan", s.adzan); s.sfx = b("sfx", true);
         s.src_claude = b("srcClaude", true); s.src_copilot = b("srcCopilot", true); s.src_agy = b("srcAgy", true); s.src_desk = b("srcDesk", true);
+        s.src_chatgpt = b("srcChatGpt", true); s.src_hermes = b("srcHermes", true); s.src_gemini = b("srcGemini", true);
         s
     }
     pub fn to_json(&self) -> String {
-        format!("{{\n \"lat\": {}, \"lon\": {}, \"city\": {}, \"hover\": {}, \"topPct\": {}, \"light\": {}, \"accent\": {},\n \"ical\": {}, \"adzan\": {}, \"adzanWav\": {}, \"focusMin\": {}, \"breakMin\": {},\n \"srcClaude\": {}, \"srcCopilot\": {}, \"srcAgy\": {}, \"srcDesk\": {},\n \"position\": {}, \"sfx\": {}\n}}\n",
+        format!("{{\n \"lat\": {}, \"lon\": {}, \"city\": {}, \"hover\": {}, \"topPct\": {}, \"light\": {}, \"accent\": {},\n \"ical\": {}, \"adzan\": {}, \"adzanWav\": {}, \"focusMin\": {}, \"breakMin\": {},\n \"srcClaude\": {}, \"srcCopilot\": {}, \"srcAgy\": {}, \"srcDesk\": {},\n \"srcChatGpt\": {}, \"srcHermes\": {}, \"srcGemini\": {},\n \"position\": {}, \"sfx\": {}\n}}\n",
             self.lat, self.lon, q(&self.city), self.hover, self.top_pct, self.light, q(&self.accent), q(&self.ical), self.adzan, q(&self.adzan_wav),
-            self.focus_min, self.break_min, self.src_claude, self.src_copilot, self.src_agy, self.src_desk, q(&self.position), self.sfx)
+            self.focus_min, self.break_min, self.src_claude, self.src_copilot, self.src_agy, self.src_desk,
+            self.src_chatgpt, self.src_hermes, self.src_gemini, q(&self.position), self.sfx)
     }
     pub fn enabled(&self, provider: &str) -> bool {
-        match provider { "claude" => self.src_claude, "copilot" => self.src_copilot, "agy" => self.src_agy, "claudedesk" => self.src_desk, _ => true }
+        match provider {
+            "claude" => self.src_claude,
+            "claudedesk" => self.src_desk,
+            "copilot" => self.src_copilot,
+            "agy" | "agycli" => self.src_agy,
+            "chatgpt" => self.src_chatgpt,
+            "hermes" => self.src_hermes,
+            "gemini" => self.src_gemini,
+            _ => true,
+        }
     }
 }
 

@@ -677,7 +677,7 @@ component AiLogo inherits Rectangle {
         fill: root.action ? Theme.amber : (root.running ? #818cf8 : #e5e7eb);
     }
 
-    // 4. Antigravity: Futuristic Atomic Orbit Rings
+    // 4. Antigravity Desktop: Futuristic Atomic Orbit Rings
     if root.provider == "agy": Path {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2 - 2px;
@@ -688,8 +688,45 @@ component AiLogo inherits Rectangle {
         fill: root.action ? Theme.amber : (root.running ? #5ae0ff : #e5e7eb);
     }
 
+    // 5. Antigravity CLI: Sleek Terminal Console
+    if root.provider == "agycli": Path {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2 - 2px;
+        width: root.sz * 0.54;
+        height: root.sz * 0.54;
+        viewbox-width: 24; viewbox-height: 24;
+        commands: "M 4 5 L 11 12 L 4 19 M 13 19 L 21 19";
+        stroke: root.action ? Theme.amber : (root.running ? #38bdf8 : #e5e7eb);
+        stroke-width: 2.6px;
+        stroke-line-cap: round;
+        stroke-line-join: round;
+        fill: transparent;
+    }
+
+    // 6. Gemini: Google Gemini 4-Point Sparkle Star
+    if root.provider == "gemini": Path {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2 - 2px;
+        width: root.sz * 0.56;
+        height: root.sz * 0.56;
+        viewbox-width: 24; viewbox-height: 24;
+        commands: "M 12 2 C 12 7.5 7.5 12 2 12 C 7.5 12 12 16.5 12 22 C 12 16.5 16.5 12 22 12 C 16.5 12 12 7.5 12 2 Z";
+        fill: root.action ? Theme.amber : (root.running ? #4285f4 : #e5e7eb);
+    }
+
+    // 7. Hermes: Winged Helmet
+    if root.provider == "hermes": Path {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2 - 2px;
+        width: root.sz * 0.56;
+        height: root.sz * 0.56;
+        viewbox-width: 24; viewbox-height: 24;
+        commands: "M 12 3 C 8.5 3 6 5.5 6 9 C 6 12 8 14 10 15 L 10 18 C 10 18.5 10.5 19 11 19 L 13 19 C 13.5 19 14 18.5 14 18 L 14 15 C 16 14 18 12 18 9 C 18 5.5 15.5 3 12 3 Z M 4 7 C 2.5 8 1 10.5 2 13 C 3.2 13 5 12 5.5 10 Z M 20 7 C 21.5 8 23 10.5 22 13 C 20.8 13 19 12 18.5 10 Z";
+        fill: root.action ? Theme.amber : (root.running ? #06b6d4 : #e5e7eb);
+    }
+
     // Fallback: AI Diamond Spark
-    if root.provider != "chatgpt" && root.provider != "claude" && root.provider != "claudedesk" && root.provider != "copilot" && root.provider != "agy": Path {
+    if root.provider != "chatgpt" && root.provider != "claude" && root.provider != "claudedesk" && root.provider != "copilot" && root.provider != "agy" && root.provider != "agycli" && root.provider != "gemini" && root.provider != "hermes": Path {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2 - 2px;
         width: root.sz * 0.52;
@@ -1515,16 +1552,17 @@ export component MainWindow inherits Window {
                                 spacing: 6px;
                                 Text {
                                     text: ">";
-                                    color: #6b7280;
+                                    color: root.live.length > 0 ? root.live[0].tint : #6b7280;
                                     font-size: 11.5px;
                                     font-weight: 700;
                                     vertical-alignment: center;
                                 }
                                 Text {
-                                    text: "Siap membantu, Avian.";
-                                    color: #cbd5e1;
+                                    text: root.live.length > 0 ? (root.live[0].sub != "" ? root.live[0].sub : root.live[0].title) : "Siap membantu, Avian.";
+                                    color: root.live.length > 0 ? #f1f5f9 : #cbd5e1;
                                     font-size: 11.5px;
                                     font-weight: 500;
+                                    overflow: elide;
                                     vertical-alignment: center;
                                 }
                                 Rectangle { } // Spacer
@@ -1534,11 +1572,12 @@ export component MainWindow inherits Window {
                                         y: (parent.height - self.height) / 2;
                                         playing: true;
                                         tick: root.wave-tick;
-                                        tint: #4b5563;
+                                        tint: root.live.length > 0 ? root.live[0].tint : #4b5563;
                                     }
                                 }
                             }
                         }
+                        TouchArea { clicked => { root.tab = 2; root.play-sfx(); } }
                     }
 
                     // Row 4: Pesan Hari Ini Card
