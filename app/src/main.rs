@@ -285,7 +285,21 @@ fn main() {
     ctl.render();
     ui.show().expect("gagal menampilkan jendela");
     ctl.go(0, true);
-    ctl.hwnd.set(win::api::hwnd(TITLE));
+    #[cfg(feature = "dragdrop")]
+    {
+        use slint::winit_030::WinitWindowAccessor;
+        use slint::winit_030::winit::platform::windows::WindowExtWindows;
+        use slint::winit_030::winit::raw_window_handle::HasWindowHandle;
+        ui.window().with_winit_window(|w| {
+            w.set_skip_taskbar(true);
+            if let Ok(handle) = w.window_handle() {
+                if let slint::winit_030::winit::raw_window_handle::RawWindowHandle::Win32(win32) = handle.as_raw() {
+                    ctl.hwnd.set(win32.hwnd.get() as usize);
+                }
+            }
+        });
+    }
+    if ctl.hwnd.get() == 0 { ctl.hwnd.set(win::api::hwnd(TITLE)); }
     win::api::set_noactivate(ctl.hwnd.get(), true);
     win::api::topmost(ctl.hwnd.get());
     win::api::tray();
@@ -372,7 +386,24 @@ fn main() {
         let c = ctl.clone(); let signal = data.join("show.signal");
         t_ctl.start(TimerMode::Repeated, Duration::from_millis(100), move || {
             let Some(ui) = c.ui.upgrade() else { return };
-            if c.hwnd.get() == 0 { c.hwnd.set(win::api::hwnd(TITLE)); win::api::set_noactivate(c.hwnd.get(), c.sh.borrow().mode != 2); }
+            if c.hwnd.get() == 0 {
+                #[cfg(feature = "dragdrop")]
+                {
+                    use slint::winit_030::WinitWindowAccessor;
+                    use slint::winit_030::winit::platform::windows::WindowExtWindows;
+                    use slint::winit_030::winit::raw_window_handle::HasWindowHandle;
+                    ui.window().with_winit_window(|w| {
+                        w.set_skip_taskbar(true);
+                        if let Ok(handle) = w.window_handle() {
+                            if let slint::winit_030::winit::raw_window_handle::RawWindowHandle::Win32(win32) = handle.as_raw() {
+                                c.hwnd.set(win32.hwnd.get() as usize);
+                            }
+                        }
+                    });
+                }
+                if c.hwnd.get() == 0 { c.hwnd.set(win::api::hwnd(TITLE)); }
+                win::api::set_noactivate(c.hwnd.get(), c.sh.borrow().mode != 2);
+            }
             let cfg = c.cfg();
             let n = { let mut s = c.sh.borrow_mut(); s.tick += 1; s.tick };
 

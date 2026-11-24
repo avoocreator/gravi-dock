@@ -109,9 +109,12 @@ pub mod api {
         unsafe {
             let hw = h as HWND;
             let cur = GetWindowLongPtrW(hw, -20);
-            let mut n = cur | 0x80; // TOOLWINDOW (tidak muncul di Alt+Tab / taskbar)
-            if on { n |= 0x0800_0000 } else { n &= !0x0800_0000 }
-            if n != cur { SetWindowLongPtrW(hw, -20, n); }
+            let mut n = (cur | 0x80) & !0x0004_0000; // TOOLWINDOW & NOT APPWINDOW (sembunyikan dari taskbar & Alt+Tab)
+            if on { n |= 0x0800_0000; } else { n &= !0x0800_0000; }
+            if n != cur {
+                SetWindowLongPtrW(hw, -20, n);
+                SetWindowPos(hw, std::ptr::null_mut(), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);
+            }
         }
     }
     pub fn window_rect(h: usize) -> (i32, i32, i32, i32) {

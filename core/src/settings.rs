@@ -30,7 +30,7 @@ impl Default for Settings {
         Settings {
             lat: -6.9175, lon: 107.6191, city: "Bandung".into(),
             dock: Dock::Right, edge_pct: 0.5, theme: ThemeMode::Dark, scheme: "ocean".into(), accent: String::new(),
-            hover: false, mascot: true, renderer: "software".into(),
+            hover: false, mascot: true, renderer: "gpu".into(),
             sfx: true, sfx_vol: 60,
             adzan: true, adzan_file: String::new(), adzan_vol: 80,
             focus_min: 25, break_min: 5, long_break_min: 15, rounds: 4, auto_next: true,
