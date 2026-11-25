@@ -11,8 +11,8 @@ component NavItem inherits Rectangle {
     in property <string> d;
     in property <int> index;
     in property <int> badge: 0;
-    horizontal-stretch: 1;
-    max-width: 44px;
+    in property <length> item-w: 44px;
+    width: root.item-w;
     height: 44px;
     border-radius: 16px;
     background: AppState.page == root.index ? @linear-gradient(145deg, Theme.accent.with-alpha(0.32) 0%, Theme.accent2.with-alpha(0.18) 100%) : (ta.has-hover ? Theme.surface2 : transparent);
@@ -337,7 +337,8 @@ export component MainWindow inherits Window {
                         if AppState.page == 7 : ClipPage { }
                         if AppState.page == 8 : SettingsPage { }
                     }
-                    Rectangle {
+                    dock := Rectangle {
+                        property <length> nav-w: Math.min(44px, Math.max(32px, (self.width - 16px) / 9));
                         height: 62px;
                         border-radius: 31px;
                         background: Theme.dock-fill;
@@ -346,15 +347,15 @@ export component MainWindow inherits Window {
                         HorizontalLayout {
                             padding: 8px;
                             alignment: space-around;
-                            NavItem { d: Icons.home; index: 0; }
-                            NavItem { d: Icons.ai; index: 1; badge: AppState.badge; }
-                            NavItem { d: Icons.music; index: 2; }
-                            NavItem { d: Icons.clock; index: 3; }
-                            NavItem { d: Icons.calendar; index: 4; }
-                            NavItem { d: Icons.github; index: 5; }
-                            NavItem { d: Icons.system; index: 6; }
-                            NavItem { d: Icons.tray; index: 7; }
-                            NavItem { d: Icons.settings; index: 8; }
+                            NavItem { item-w: dock.nav-w; d: Icons.home; index: 0; }
+                            NavItem { item-w: dock.nav-w; d: Icons.ai; index: 1; badge: AppState.badge; }
+                            NavItem { item-w: dock.nav-w; d: Icons.music; index: 2; }
+                            NavItem { item-w: dock.nav-w; d: Icons.clock; index: 3; }
+                            NavItem { item-w: dock.nav-w; d: Icons.calendar; index: 4; }
+                            NavItem { item-w: dock.nav-w; d: Icons.github; index: 5; }
+                            NavItem { item-w: dock.nav-w; d: Icons.system; index: 6; }
+                            NavItem { item-w: dock.nav-w; d: Icons.tray; index: 7; }
+                            NavItem { item-w: dock.nav-w; d: Icons.settings; index: 8; }
                         }
                     }
                 }
