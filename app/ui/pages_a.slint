@@ -1,7 +1,7 @@
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { AppState } from "state.slint";
-import { Icon, Icons, Card, Label, Muted, SectionTitle, Btn, IconBtn, Toggle, Seg, Stepper, SliderLite, Ring, Badge, Field, Wave, Sparkle, Heading } from "widgets.slint";
+import { Icon, Icons, Card, Label, Muted, SectionTitle, Btn, IconBtn, Toggle, Seg, Stepper, SliderLite, Ring, Badge, Field, Wave, Sparkle, Heading, AiLogo } from "widgets.slint";
 
 // baris pengaturan dengan ikon (Pomodoro)
 component SetRow inherits Rectangle {
@@ -246,11 +246,7 @@ export component AiPage inherits Rectangle {
                     spacing: 8px;
                     HorizontalLayout {
                         spacing: 10px;
-                        Rectangle {
-                            width: 38px; height: 38px; border-radius: 19px;
-                            background: a.tint.with-alpha(0.25);
-                            Text { text: a.mark; color: a.tint; font-size: 12px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
-                        }
+                        VerticalLayout { alignment: center; AiLogo { provider: a.src; tint: a.tint; size: 38px; running: false; } }
                         VerticalLayout {
                             alignment: center;
                             horizontal-stretch: 1;
@@ -302,11 +298,7 @@ export component AiPage inherits Rectangle {
                                 spacing: 12px;
                                 VerticalLayout {
                                     alignment: center;
-                                    Rectangle {
-                                        width: 32px; height: 32px; border-radius: 16px;
-                                        background: s.tint.with-alpha(0.25);
-                                        Text { text: s.mark; color: s.tint; font-size: 11px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
-                                    }
+                                    AiLogo { provider: s.provider; tint: s.tint; size: 34px; running: s.running; }
                                 }
                                 VerticalLayout {
                                     alignment: center;
@@ -339,11 +331,7 @@ export component AiPage inherits Rectangle {
                     spacing: 12px;
                     VerticalLayout {
                         alignment: center;
-                        Rectangle {
-                            width: 44px; height: 44px; border-radius: 14px;
-                            background: @linear-gradient(160deg, s.tint 0%, s.tint.darker(0.45) 100%);
-                            Text { text: s.mark; color: #ffffff; font-size: 15px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
-                        }
+                        AiLogo { provider: s.provider; tint: s.tint; size: 42px; running: s.running; }
                     }
                     VerticalLayout {
                         alignment: center;

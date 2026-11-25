@@ -22,8 +22,8 @@ slint::include_modules!();
 
 const TITLE: &str = "Gravi Island";
 // ukuran logis (dp)
-const PILL_V: (i32, i32) = (76, 122);
-const PILL_H: (i32, i32) = (340, 62);
+const PILL_V: (i32, i32) = (78, 116);
+const PILL_H: (i32, i32) = (304, 58);
 const PANEL: (i32, i32) = (440, 660);
 const ALERT: (i32, i32) = (420, 290);
 const MARGIN: i32 = 12;
@@ -57,7 +57,7 @@ fn apply(ui: &MainWindow, v: &View, l: &View) {
         prayers => set_prayers(|x: &Vec<engine::PrayerRow>| model(x, |r| PrayerRow { name: s(&r.name), time: s(&r.time), next: r.next, past: r.past })),
         agenda => set_agenda(|x: &Vec<engine::EventRow>| model(x, ev_item)),
         hits => set_hits(|x: &Vec<engine::HitRow>| model(x, |r| SearchHit { title: s(&r.title), sub: s(&r.sub), kind: s(&r.kind) })),
-        sessions => set_sessions(|x: &Vec<engine::SessionRow>| model(x, |r| SessionItem { id: s(&r.id), title: s(&r.title), sub: s(&r.sub), meta: s(&r.meta), mark: s(&r.mark), tint: col(r.tint), running: r.running, action: r.action })),
+        sessions => set_sessions(|x: &Vec<engine::SessionRow>| model(x, |r| SessionItem { id: s(&r.id), provider: s(&r.provider), title: s(&r.title), sub: s(&r.sub), meta: s(&r.meta), mark: s(&r.mark), tint: col(r.tint), running: r.running, action: r.action })),
         approvals => set_approvals(|x: &Vec<engine::ApprovalRow>| model(x, |r| ApprovalItem { id: s(&r.id), tool: s(&r.tool), summary: s(&r.summary), cwd: s(&r.cwd), mark: s(&r.mark), tint: col(r.tint), src: s(&r.src) })),
         m_active => set_m_active(cp), m_playing => set_m_playing(cp), m_title => set_m_title(s), m_artist => set_m_artist(s), m_source => set_m_source(s),
         m_pos => set_m_pos(cp), m_pos_text => set_m_pos_text(s), m_pos_l => set_m_pos_l(s), m_pos_r => set_m_pos_r(s),

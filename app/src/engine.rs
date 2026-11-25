@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Rgb(pub u8, pub u8, pub u8);
 
-#[derive(Clone, Debug, PartialEq, Default)] pub struct SessionRow { pub id: String, pub title: String, pub sub: String, pub meta: String, pub mark: String, pub tint: Rgb, pub running: bool, pub action: bool }
+#[derive(Clone, Debug, PartialEq, Default)] pub struct SessionRow { pub id: String, pub provider: String, pub title: String, pub sub: String, pub meta: String, pub mark: String, pub tint: Rgb, pub running: bool, pub action: bool }
 #[derive(Clone, Debug, PartialEq, Default)] pub struct ApprovalRow { pub id: String, pub tool: String, pub summary: String, pub cwd: String, pub mark: String, pub tint: Rgb, pub src: String }
 #[derive(Clone, Debug, PartialEq, Default)] pub struct EventRow { pub title: String, pub time: String, pub sub: String, pub tint: Rgb, pub all_day: bool }
 #[derive(Clone, Debug, PartialEq, Default)] pub struct AlarmRow { pub id: i32, pub time: String, pub label: String, pub repeat: String, pub on: bool }
@@ -114,12 +114,11 @@ fn hex_rgb(h: &str) -> Rgb { theme::parse_hex(h).map(|(r, g, b)| Rgb(r, g, b)).u
 
 pub fn provider_style(p: &str) -> (&'static str, Rgb) {
     match p {
-        "agy" => ("A›", Rgb(0x6f, 0x9b, 0xff)),
-        "claude" => ("CC", Rgb(0xf0, 0x8a, 0x5d)),
-        "claudedesk" => ("Cd", Rgb(0xe8, 0xa8, 0x7c)),
+        "agy" | "agydesk" => ("A›", Rgb(0x6f, 0x9b, 0xff)),
+        "claude" | "claudedesk" => ("Cd", Rgb(0xd9, 0x77, 0x57)),
         "copilot" => ("Cp", Rgb(0x4f, 0xb3, 0xff)),
-        "chatgpt" => ("GP", Rgb(0x2f, 0xd2, 0x9a)),
-        "agydesk" => ("AD", Rgb(0x9b, 0x8c, 0xff)),
+        "chatgpt" => ("GP", Rgb(0x10, 0xa3, 0x7f)),
+        "gemini" => ("Gm", Rgb(0x42, 0x85, 0xf4)),
         _ => ("AI", Rgb(0x9b, 0x8c, 0xff)),
     }
 }
@@ -563,7 +562,7 @@ impl Engine {
         }
         self.view.ai_running = rows.iter().filter(|r| r.running).count() as i32;
         let log_action = rows.iter().any(|r| r.action);
-        if panel && (ui.page == 1 || ui.page == 0) { self.view.sessions = rows; }
+        self.view.sessions = rows;
 
         // ---- persetujuan dari hook ----
         let reqs = self.hook_srv.as_ref().map(|s| s.snapshot()).unwrap_or_default();
@@ -670,7 +669,7 @@ impl Engine {
             for (i, (prov, name)) in [("chatgpt", "ChatGPT Desktop"), ("claudedesk", "Claude (perkiraan)")].iter().enumerate() {
                 if self.busy[i].2 && !(i == 1 && has_claude_desk_log) {
                     let (mark, tint) = provider_style(prov);
-                    rows.push(SessionRow { id: format!("guess:{prov}"), title: if i == 1 { name.to_string() } else { format!("{name} (perkiraan)") }, sub: "aktif memproses".into(), meta: "berjalan".into(), mark: mark.into(), tint, running: true, action: false });
+                    rows.push(SessionRow { id: format!("guess:{prov}"), provider: (*prov).into(), title: if i == 1 { name.to_string() } else { format!("{name} (perkiraan)") }, sub: "aktif memproses".into(), meta: "berjalan".into(), mark: mark.into(), tint, running: true, action: false });
                 }
             }
         }
@@ -678,7 +677,7 @@ impl Engine {
             let (mark, tint) = provider_style(s.provider);
             let running = s.state == ses::State::Running;
             let sub = if !s.current.is_empty() && running { s.current.clone() } else { s.cwd.rsplit(['\\', '/']).next().unwrap_or("").to_string() };
-            rows.push(SessionRow { id: s.id.clone(), title: s.title.clone(), sub, meta: if running { "berjalan".into() } else { tu::ago(w.ms, s.updated_ms) }, mark: mark.into(), tint, running, action: s.state == ses::State::NeedsAction });
+            rows.push(SessionRow { id: s.id.clone(), provider: s.provider.into(), title: s.title.clone(), sub, meta: if running { "berjalan".into() } else { tu::ago(w.ms, s.updated_ms) }, mark: mark.into(), tint, running, action: s.state == ses::State::NeedsAction });
         }
         rows
     }
