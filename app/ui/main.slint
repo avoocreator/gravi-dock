@@ -11,7 +11,8 @@ component NavItem inherits Rectangle {
     in property <string> d;
     in property <int> index;
     in property <int> badge: 0;
-    width: 44px;
+    horizontal-stretch: 1;
+    max-width: 44px;
     height: 44px;
     border-radius: 16px;
     background: AppState.page == root.index ? @linear-gradient(145deg, Theme.accent.with-alpha(0.32) 0%, Theme.accent2.with-alpha(0.18) 100%) : (ta.has-hover ? Theme.surface2 : transparent);
@@ -100,11 +101,12 @@ export component MainWindow inherits Window {
         }
 
         island := Rectangle {
+            property <float> sc: Math.max(0.75, AppState.scale);
             x: AppState.isl-x;
             y: AppState.isl-y;
             width: AppState.isl-w;
             height: AppState.isl-h;
-            border-radius: AppState.mode == 0 ? (AppState.vertical ? 36px : self.height / 2) : 34px;
+            border-radius: AppState.mode == 0 ? (AppState.vertical ? 36px * self.sc : self.height / 2) : 34px;
             background: AppState.mode == 0 ? (Theme.dark ? #050506 : #101114) : Theme.bg;
             border-width: 1px;
             border-color: AppState.mode == 0 ? Theme.accent.with-alpha(0.35) : Theme.edge;
@@ -120,27 +122,27 @@ export component MainWindow inherits Window {
                 height: parent.height;
                 TouchArea { clicked => { AppState.toggle-island(); } mouse-cursor: pointer; }
                 VerticalLayout {
-                    padding: 8px;
-                    spacing: 3px;
+                    padding: 8px * island.sc;
+                    spacing: 3px * island.sc;
                     alignment: center;
                     if AppState.mascot-on : Mascot {
                         face: AppState.face;
-                        size: 58px;
+                        size: 58px * island.sc;
                         clicked => { AppState.toggle-island(); }
                     }
-                    Text { text: AppState.clock; color: #f4f6fa; font-size: 15px; font-weight: 800; horizontal-alignment: center; }
-                    if AppState.ai-running > 0 : Text { text: "AI ×" + AppState.ai-running; color: Theme.accent; font-size: 10px; font-weight: 800; horizontal-alignment: center; }
-                    if AppState.ai-running == 0 && AppState.pill-line != "" : Text { text: AppState.pill-line; color: #8d95a5; font-size: 9px; font-weight: 700; horizontal-alignment: center; overflow: elide; }
-                    HorizontalLayout { alignment: center; Icon { d: Icons.chev-down; size: 14px; tint: #8d95a5; } }
+                    Text { text: AppState.clock; color: #f4f6fa; font-size: 15px * island.sc; font-weight: 800; horizontal-alignment: center; }
+                    if AppState.ai-running > 0 : Text { text: "AI ×" + AppState.ai-running; color: Theme.accent; font-size: 10px * island.sc; font-weight: 800; horizontal-alignment: center; }
+                    if AppState.ai-running == 0 && AppState.pill-line != "" : Text { text: AppState.pill-line; color: #8d95a5; font-size: 9px * island.sc; font-weight: 700; horizontal-alignment: center; overflow: elide; }
+                    HorizontalLayout { alignment: center; Icon { d: Icons.chev-down; size: 14px * island.sc; tint: #8d95a5; } }
                 }
                 if AppState.badge > 0 : Rectangle {
-                    x: parent.width - 24px;
-                    y: 6px;
-                    width: 18px;
-                    height: 18px;
-                    border-radius: 9px;
+                    x: parent.width - 24px * island.sc;
+                    y: 6px * island.sc;
+                    width: 18px * island.sc;
+                    height: 18px * island.sc;
+                    border-radius: 9px * island.sc;
                     background: Theme.bad;
-                    Text { text: AppState.badge; color: #ffffff; font-size: 10px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                    Text { text: AppState.badge; color: #ffffff; font-size: 10px * island.sc; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
                 }
             }
 
@@ -150,16 +152,16 @@ export component MainWindow inherits Window {
                 height: parent.height;
                 TouchArea { clicked => { AppState.toggle-island(); } mouse-cursor: pointer; }
                 HorizontalLayout {
-                    padding-left: 8px;
-                    padding-right: 14px;
-                    spacing: 10px;
+                    padding-left: 8px * island.sc;
+                    padding-right: 14px * island.sc;
+                    spacing: 10px * island.sc;
                     alignment: center;
                     if AppState.mascot-on : Rectangle {
-                        width: 50px;
-                        height: 38px;
+                        width: 50px * island.sc;
+                        height: 38px * island.sc;
                         y: (parent.height - self.height) / 2;
                         Path {
-                            x: -1px; y: 15px; width: 52px; height: 20px; viewbox-width: 52; viewbox-height: 20;
+                            x: -1px * island.sc; y: 15px * island.sc; width: 52px * island.sc; height: 20px * island.sc; viewbox-width: 52; viewbox-height: 20;
                             commands: "M 2 8 C 2 1 44 1 50 7 C 53 12 26 19 4 14";
                             stroke: Theme.accent.with-alpha(0.85);
                             stroke-width: 1.8px;
@@ -167,8 +169,8 @@ export component MainWindow inherits Window {
                         }
                         Mascot {
                             face: AppState.face;
-                            size: 46px;
-                            x: 2px;
+                            size: 46px * island.sc;
+                            x: 2px * island.sc;
                             y: (parent.height - self.height) / 2;
                             clicked => { AppState.toggle-island(); }
                         }
@@ -176,32 +178,32 @@ export component MainWindow inherits Window {
                     VerticalLayout {
                         alignment: center;
                         Rectangle {
-                            width: 8px;
-                            height: 8px;
-                            border-radius: 4px;
+                            width: 8px * island.sc;
+                            height: 8px * island.sc;
+                            border-radius: 4px * island.sc;
                             background: Theme.good;
                         }
                     }
-                    Text { text: AppState.clock; color: #f4f6fa; font-size: 18px; font-weight: 800; vertical-alignment: center; }
-                    Text { text: AppState.ai-running > 0 ? "AI ×" + AppState.ai-running : AppState.pill-line; color: #9aa1b4; font-size: 13px; font-weight: 700; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
+                    Text { text: AppState.clock; color: #f4f6fa; font-size: 18px * island.sc; font-weight: 800; vertical-alignment: center; }
+                    Text { text: AppState.ai-running > 0 ? "AI ×" + AppState.ai-running : AppState.pill-line; color: #9aa1b4; font-size: 13px * island.sc; font-weight: 700; vertical-alignment: center; overflow: elide; horizontal-stretch: 1; }
                     if AppState.ai-running > 1 : Rectangle {
-                        width: 58px;
+                        width: 58px * island.sc;
                         clip: true;
                         HorizontalLayout {
                             spacing: 0px;
                             for s in AppState.sessions : Rectangle {
-                                width: s.running ? 28px : 0px;
+                                width: s.running ? 28px * island.sc : 0px;
                                 Rectangle {
-                                    x: 0px; y: (parent.height - 24px) / 2; width: 24px; height: 24px; border-radius: 12px;
+                                    x: 0px; y: (parent.height - 24px * island.sc) / 2; width: 24px * island.sc; height: 24px * island.sc; border-radius: 12px * island.sc;
                                     background: s.tint.with-alpha(0.35);
                                     border-width: 1px; border-color: s.tint;
-                                    Text { text: s.mark; color: #ffffff; font-size: 9px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+                                    Text { text: s.mark; color: #ffffff; font-size: 9px * island.sc; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
                                 }
                             }
                         }
                     }
                     if AppState.badge > 0 : VerticalLayout { alignment: center; Badge { text: AppState.badge + "!"; tint: Theme.bad; } }
-                    VerticalLayout { alignment: center; Icon { d: Icons.chev-down; size: 16px; tint: #8d95a5; } }
+                    VerticalLayout { alignment: center; Icon { d: Icons.chev-down; size: 16px * island.sc; tint: #8d95a5; } }
                 }
             }
 

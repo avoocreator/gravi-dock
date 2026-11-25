@@ -379,14 +379,16 @@ export component SliderLite inherits Rectangle {
     }
     TouchArea {
         pointer-event(e) => {
-            if (e.button == PointerEventButton.left && e.kind == PointerEventKind.down) {
+            if (e.button == PointerEventButton.left && e.kind == PointerEventKind.down && self.width > 0px) {
                 root.value = Math.clamp(self.mouse-x / self.width, 0, 1);
                 root.changed(root.value);
             }
         }
         moved => {
-            root.value = Math.clamp(self.mouse-x / self.width, 0, 1);
-            root.changed(root.value);
+            if (self.pressed && self.width > 0px) {
+                root.value = Math.clamp(self.mouse-x / self.width, 0, 1);
+                root.changed(root.value);
+            }
         }
     }
 }

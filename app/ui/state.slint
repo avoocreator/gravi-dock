@@ -26,6 +26,7 @@ export global AppState {
     in property <int> dock: 1;                 // 0 kiri, 1 kanan, 2 atas
     in property <bool> vertical: true;
     in property <bool> snap: false;            // true = lompat tanpa animasi
+    in property <float> scale: 1.0;            // skala ukuran pil (0.75..1.40)
     in property <length> isl-x: 0px;
     in property <length> isl-y: 0px;
     in property <length> isl-w: 72px;
@@ -130,6 +131,7 @@ export global AppState {
     in-out property <int> s-theme: 0;
     in-out property <int> s-scheme: 0;
     in-out property <float> s-edge: 0.5;
+    in-out property <float> s-scale: 0.385;    // 0..1 dipetakan ke 0.75..1.40 (default 1.0)
     in-out property <bool> s-hover: false;
     in-out property <bool> s-mascot: true;
     in-out property <bool> s-gpu: false;

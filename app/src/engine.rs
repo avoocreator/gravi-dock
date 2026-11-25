@@ -41,7 +41,7 @@ pub struct View {
     // umum
     pub clock: String, pub clock_sec: String, pub date_long: String, pub greeting: String, pub face: FaceV,
     pub badge: i32, pub ai_running: i32, pub toast: String, pub toast_kind: i32, pub mascot_on: bool,
-    pub dark: bool, pub accent: Rgb, pub accent2: Rgb,
+    pub scale: f32, pub dark: bool, pub accent: Rgb, pub accent2: Rgb,
     // beranda
     pub weather: String, pub weather_temp: String, pub weather_desc: String, pub weather_city: String, pub next_prayer: String, pub next_prayer_time: String, pub next_prayer_left: String,
     pub prayers: Vec<PrayerRow>, pub agenda: Vec<EventRow>, pub hits: Vec<HitRow>, pub pill_line: String,
@@ -340,7 +340,7 @@ impl Engine {
         if let Some((_, la, lo)) = prayer::CITIES.iter().find(|c| c.0.eq_ignore_ascii_case(new.city.trim())) { new.lat = *la; new.lon = *lo; }
         let old = self.cfg.lock().unwrap().clone();
         if old == new { return fx; }
-        if (old.dock, old.mascot) != (new.dock, new.mascot) || (old.edge_pct - new.edge_pct).abs() > 1e-9 { fx.push(Effect::Relayout); }
+        if (old.dock, old.mascot) != (new.dock, new.mascot) || (old.edge_pct - new.edge_pct).abs() > 1e-9 || (old.scale - new.scale).abs() > 1e-4 { fx.push(Effect::Relayout); }
         self.focus.configure(new.focus_min, new.break_min, new.long_break_min, new.rounds, new.auto_next);
         if self.focus.phase == island_core::focus::Phase::Idle { self.focus.focus_s = new.focus_min * 60; }
         if let Some(o) = &self.online {
@@ -389,6 +389,7 @@ impl Engine {
         self.view.date_long = format!("{}, {} {} {}", DAYS_ID[tu::weekday(day)], w.d, MONTHS_ID[(w.mo - 1).clamp(0, 11) as usize], w.y);
         self.view.greeting = match w.h { 4..=10 => "Selamat pagi", 11..=14 => "Selamat siang", 15..=17 => "Selamat sore", _ => "Selamat malam" }.into();
         self.view.mascot_on = cfg.mascot;
+        self.view.scale = cfg.scale as f32;
 
         // ---- tema ----
         if self.ticks % 30 == 1 { self.sys_dark = win::api::system_dark(); }

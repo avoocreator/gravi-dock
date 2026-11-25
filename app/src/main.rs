@@ -51,6 +51,7 @@ fn apply(ui: &MainWindow, v: &View, l: &View) {
     diff! {
         clock => set_clock(s), clock_sec => set_clock_sec(s), date_long => set_date_long(s), greeting => set_greeting(s),
         face => set_face(face_params), badge => set_badge(cp), ai_running => set_ai_running(cp), toast => set_toast(s), toast_kind => set_toast_kind(cp), mascot_on => set_mascot_on(cp),
+        scale => set_scale(cp),
         weather => set_weather(s), weather_temp => set_weather_temp(s), weather_desc => set_weather_desc(s), weather_city => set_weather_city(s), next_prayer => set_next_prayer(s), next_prayer_time => set_next_prayer_time(s),
         next_prayer_left => set_next_prayer_left(s), pill_line => set_pill_line(s),
         prayers => set_prayers(|x: &Vec<engine::PrayerRow>| model(x, |r| PrayerRow { name: s(&r.name), time: s(&r.time), next: r.next, past: r.past })),
@@ -93,7 +94,7 @@ fn ev_item(r: &engine::EventRow) -> EventItem { EventItem { title: s(&r.title), 
 fn push_settings(ui: &MainWindow, c: &Settings) {
     let a = ui.global::<AppState>();
     a.set_s_dock(c.dock.index()); a.set_s_theme(c.theme.index()); a.set_s_scheme(theme::scheme_index(&c.scheme));
-    a.set_s_edge(c.edge_pct as f32); a.set_s_hover(c.hover); a.set_s_mascot(c.mascot); a.set_s_gpu(c.renderer == "gpu");
+    a.set_s_edge(c.edge_pct as f32); a.set_s_scale((((c.scale - 0.75) / 0.65).clamp(0.0, 1.0)) as f32); a.set_s_hover(c.hover); a.set_s_mascot(c.mascot); a.set_s_gpu(c.renderer == "gpu");
     a.set_s_sfx(c.sfx); a.set_s_sfx_vol(c.sfx_vol as f32 / 100.0);
     a.set_s_adzan(c.adzan); a.set_s_adzan_vol(c.adzan_vol as f32 / 100.0); a.set_s_adzan_file(c.adzan_file.as_str().into());
     a.set_s_focus_min(c.focus_min as i32); a.set_s_break_min(c.break_min as i32); a.set_s_long_min(c.long_break_min as i32); a.set_s_rounds(c.rounds as i32); a.set_s_auto_next(c.auto_next);
@@ -110,7 +111,9 @@ fn pull_settings(ui: &MainWindow, base: &Settings) -> Settings {
     let mut c = base.clone();
     c.dock = Dock::from_index(a.get_s_dock()); c.theme = theme::ThemeMode::from_index(a.get_s_theme());
     c.scheme = theme::SCHEMES.get(a.get_s_scheme().max(0) as usize).map(|x| x.id).unwrap_or("catppuccin").to_string();
-    c.edge_pct = a.get_s_edge() as f64; c.hover = a.get_s_hover(); c.mascot = a.get_s_mascot();
+    c.edge_pct = a.get_s_edge() as f64;
+    c.scale = ((0.75 + (a.get_s_scale() as f64).clamp(0.0, 1.0) * 0.65) * 100.0).round() / 100.0;
+    c.hover = a.get_s_hover(); c.mascot = a.get_s_mascot();
     c.renderer = if a.get_s_gpu() { "gpu".into() } else { "software".into() };
     c.sfx = a.get_s_sfx(); c.sfx_vol = (a.get_s_sfx_vol() * 100.0).round() as i64;
     c.adzan = a.get_s_adzan(); c.adzan_vol = (a.get_s_adzan_vol() * 100.0).round() as i64; c.adzan_file = a.get_s_adzan_file().to_string();
@@ -128,10 +131,12 @@ struct Shell { mode: i32, abs: Rect, gen: u32, alert_seen: usize, inside: u32, o
 
 fn plan(cfg: &Settings, mode: i32, sf: f32) -> theme::Placement {
     let (x, y, w, h) = win::api::work_area();
-    let px = |v: i32| (v as f32 * sf).round() as i32;
-    let pill = if cfg.dock.vertical() { PILL_V } else { PILL_H };
-    let target = match mode { 0 => pill, 1 => ALERT, _ => PANEL };
-    theme::place(cfg.dock, Rect { x, y, w, h }, (px(pill.0), px(pill.1)), (px(target.0), px(target.1)), cfg.edge_pct, px(MARGIN), mode != 0)
+    let sc = cfg.scale.clamp(0.75, 1.40) as f32;
+    let p_sc = (1.0 + (sc - 1.0) * 0.45).clamp(0.90, 1.20);
+    let px = |v: i32, s: f32| (v as f32 * sf * s).round() as i32;
+    let pill = if cfg.dock.vertical() { (px(PILL_V.0, sc), px(PILL_V.1, sc)) } else { (px(PILL_H.0, sc), px(PILL_H.1, sc)) };
+    let target = match mode { 0 => pill, 1 => (px(ALERT.0, p_sc), px(ALERT.1, p_sc)), _ => (px(PANEL.0, p_sc), px(PANEL.1, p_sc)) };
+    theme::place(cfg.dock, Rect { x, y, w, h }, pill, target, cfg.edge_pct, (MARGIN as f32 * sf).round() as i32, mode != 0)
 }
 
 fn set_window(ui: &MainWindow, r: Rect) {
@@ -174,7 +179,7 @@ impl Ctl {
     fn effects(&self, fx: Vec<Effect>) {
         for e in fx {
             match e {
-                Effect::Relayout => self.go(self.sh.borrow().mode, true),
+                Effect::Relayout => { let m = self.sh.borrow().mode; self.go(m, true); }
                 Effect::OpenPanel { page, clock_tab } => {
                     if let Some(ui) = self.ui.upgrade() { let a = ui.global::<AppState>(); a.set_page(page); a.set_clock_tab(clock_tab); }
                     self.go(2, false);
@@ -237,6 +242,14 @@ impl Ctl {
 
         // ---- buka / ganti ukuran: jendela langsung ke ukuran tujuan, pulau beranimasi dari rect lama ----
         let p = plan(&cfg, target, sf);
+        let to = (0.0, 0.0, lg(p.win.w), lg(p.win.h));
+        if cur_mode == target && force {
+            a.set_mode(target);
+            set_window(&ui, p.win);
+            set_isl(&ui, true, to);
+            { let mut s = self.sh.borrow_mut(); s.mode = target; s.abs = p.win; }
+            return;
+        }
         let from = if cur_mode == 0 && !force { (lg(p.pill_x), lg(p.pill_y), lg(plan(&cfg, 0, sf).win.w), lg(plan(&cfg, 0, sf).win.h)) }
                    else { (lg(cur_abs.x - p.win.x), lg(cur_abs.y - p.win.y), lg(cur_abs.w), lg(cur_abs.h)) };
         set_isl(&ui, true, from);
@@ -246,7 +259,6 @@ impl Ctl {
         if target == 2 { win::api::focus(hw); }
         { let mut s = self.sh.borrow_mut(); s.mode = target; s.abs = p.win; }
         let me = self.clone();
-        let to = (0.0, 0.0, lg(p.win.w), lg(p.win.h));
         Timer::single_shot(Duration::from_millis(40), move || {
             if me.sh.borrow().gen != gen { return; }
             if let Some(ui) = me.ui.upgrade() { set_isl(&ui, false, to); }

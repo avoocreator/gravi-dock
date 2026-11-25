@@ -504,6 +504,11 @@ export component SettingsPage inherits Rectangle {
                     Seg { items: ["Kiri", "Kanan", "Atas"]; current: AppState.s-dock; picked(i) => { AppState.s-dock = i; AppState.settings-changed(); } }
                     Label { text: AppState.s-dock == 2 ? "Geser horizontal" : "Geser vertikal"; }
                     SliderLite { value: AppState.s-edge; changed(v) => { AppState.s-edge = v; AppState.settings-changed(); } }
+                    HorizontalLayout {
+                        Label { text: "Ukuran island"; horizontal-stretch: 1; vertical-alignment: center; }
+                        Muted { text: Math.round(AppState.scale * 100) + "%"; vertical-alignment: center; }
+                    }
+                    SliderLite { value: AppState.s-scale; changed(v) => { AppState.s-scale = v; AppState.settings-changed(); } }
                     Row { text: "Buka saat kursor di atas island"; Toggle { on: AppState.s-hover; toggled(v) => { AppState.s-hover = v; AppState.settings-changed(); } } }
                     Row { text: "Tampilkan maskot Gravi"; Toggle { on: AppState.s-mascot; toggled(v) => { AppState.s-mascot = v; AppState.settings-changed(); } } }
                     Row { text: "Render GPU (butuh restart, lebih boros memori)"; Toggle { on: AppState.s-gpu; toggled(v) => { AppState.s-gpu = v; AppState.settings-changed(); } } }

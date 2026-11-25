@@ -7,7 +7,7 @@ pub struct Settings {
     // lokasi (cuaca + waktu sholat)
     pub lat: f64, pub lon: f64, pub city: String,
     // tampilan
-    pub dock: Dock, pub edge_pct: f64, pub theme: ThemeMode, pub scheme: String,
+    pub dock: Dock, pub edge_pct: f64, pub scale: f64, pub theme: ThemeMode, pub scheme: String,
     pub accent: String,        // "" = ikut skema; "#rrggbb" = aksen kustom
     pub hover: bool, pub mascot: bool,
     pub renderer: String,      // "software" (hemat memori) | "gpu"
@@ -29,7 +29,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             lat: -6.9175, lon: 107.6191, city: "Bandung".into(),
-            dock: Dock::Right, edge_pct: 0.5, theme: ThemeMode::Dark, scheme: "catppuccin".into(), accent: String::new(),
+            dock: Dock::Right, edge_pct: 0.5, scale: 1.0, theme: ThemeMode::Dark, scheme: "catppuccin".into(), accent: String::new(),
             hover: false, mascot: true, renderer: "software".into(),
             sfx: true, sfx_vol: 60,
             adzan: true, adzan_file: String::new(), adzan_vol: 80,
@@ -50,6 +50,7 @@ impl Settings {
         if let Some(x) = v.get("lat").num() { s.lat = x.clamp(-90.0, 90.0) }
         if let Some(x) = v.get("lon").num() { s.lon = x.clamp(-180.0, 180.0) }
         if let Some(x) = v.get("edgePct").num().or(v.get("topPct").num()) { s.edge_pct = x.clamp(0.0, 1.0) }
+        if let Some(x) = v.get("scale").num() { s.scale = x.clamp(0.75, 1.40) }
         if let Some(x) = v.get("sfxVol").num() { s.sfx_vol = (x as i64).clamp(0, 100) }
         if let Some(x) = v.get("adzanVol").num() { s.adzan_vol = (x as i64).clamp(0, 100) }
         if let Some(x) = v.get("focusMin").num() { s.focus_min = (x as i64).clamp(1, 180) }
@@ -73,7 +74,7 @@ impl Settings {
     pub fn to_json(&self) -> String {
         Value::obj(vec![
             ("lat", Value::n(self.lat)), ("lon", Value::n(self.lon)), ("city", Value::s(&self.city)),
-            ("dock", Value::s(self.dock.as_str())), ("edgePct", Value::n(self.edge_pct)),
+            ("dock", Value::s(self.dock.as_str())), ("edgePct", Value::n(self.edge_pct)), ("scale", Value::n(self.scale)),
             ("theme", Value::s(self.theme.as_str())), ("scheme", Value::s(&self.scheme)), ("accent", Value::s(&self.accent)),
             ("hover", Value::b(self.hover)), ("mascot", Value::b(self.mascot)), ("renderer", Value::s(&self.renderer)),
             ("sfx", Value::b(self.sfx)), ("sfxVol", Value::n(self.sfx_vol as f64)),
@@ -99,7 +100,7 @@ mod tests {
     fn roundtrip() {
         let mut s = Settings::default();
         s.city = "Jakarta \"Pusat\"".into(); s.hover = true; s.src_agy = false; s.ical = "https://x/y.ics".into();
-        s.dock = Dock::Top; s.theme = ThemeMode::Auto; s.scheme = "mint".into(); s.sfx_vol = 33; s.gh_user = "avoo".into();
+        s.dock = Dock::Top; s.theme = ThemeMode::Auto; s.scheme = "catppuccin".into(); s.scale = 1.25; s.sfx_vol = 33; s.gh_user = "avoo".into();
         assert_eq!(Settings::parse(&s.to_json()), s);
         assert_eq!(Settings::parse("rusak{"), Settings::default());
     }
@@ -109,14 +110,15 @@ mod tests {
         let s = Settings::parse(old);
         assert_eq!(s.theme, ThemeMode::Light);
         assert_eq!(s.edge_pct, 0.25);
+        assert_eq!(s.scale, 1.0);
         assert_eq!(s.adzan_file, "C:\\a.wav");
         assert_eq!(s.focus_min, 50);
         assert_eq!(s.dock, Dock::Right);
     }
     #[test]
     fn clamps_bad_values() {
-        let s = Settings::parse(r#"{"sfxVol": 900, "focusMin": -5, "renderer": "weird", "edgePct": 4}"#);
-        assert_eq!((s.sfx_vol, s.focus_min, s.edge_pct), (100, 1, 1.0));
+        let s = Settings::parse(r#"{"sfxVol": 900, "focusMin": -5, "renderer": "weird", "edgePct": 4, "scale": 5}"#);
+        assert_eq!((s.sfx_vol, s.focus_min, s.edge_pct, s.scale), (100, 1, 1.0, 1.40));
         assert_eq!(s.renderer, "software");
     }
 }
