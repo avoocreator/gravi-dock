@@ -168,7 +168,7 @@ pub struct Engine {
     temp: Arc<Mutex<Option<f32>>>, temp_started_ms: i64,
     search_targets: Vec<String>,
     prev_running: HashSet<String>,
-    cpu_prev: (i64, Vec<u64>), busy: [(u8, u8, bool); 3],
+    cpu_prev: (i64, Vec<u64>), busy: [(u8, u8, bool); 2],
     media_idle: u32, ticks: u64, sys_dark: bool,
     refresh_only: bool, last_cpu: f32, last_rows: Vec<SessionRow>,
     toast_until: i64, done_until: i64, click_until: i64, ring_until: i64, prayer_until: i64, search_until: i64, last_interaction: i64,
@@ -194,7 +194,7 @@ impl Engine {
             media: media::Media::new(data), online: None, hook_srv: None,
             sessions: Arc::new(Mutex::new(vec![])), apps: Arc::new(Mutex::new(vec![])), temp: Arc::new(Mutex::new(None)), temp_started_ms: 0,
             search_targets: vec![], prev_running: HashSet::new(),
-            cpu_prev: (0, vec![0; 3]), busy: [(0, 0, false); 3], media_idle: 0, ticks: 0, sys_dark: true, refresh_only: false, last_cpu: 0.0, last_rows: vec![],
+            cpu_prev: (0, vec![0; 2]), busy: [(0, 0, false); 2], media_idle: 0, ticks: 0, sys_dark: true, refresh_only: false, last_cpu: 0.0, last_rows: vec![],
             toast_until: 0, done_until: 0, click_until: 0, ring_until: 0, prayer_until: 0, search_until: 0, last_interaction: 0, preview: None,
             last_adzan_key: -1, cached_disk: (0.0, 0, 0), cached_batt: (false, 1.0, false), view: View::default(),
         }
@@ -649,28 +649,31 @@ impl Engine {
 
     fn build_sessions(&mut self, cfg: &Settings, w: &Wall) -> Vec<SessionRow> {
         let mut rows: Vec<SessionRow> = vec![];
-        // aplikasi desktop tanpa berkas sesi: perkiraan dari CPU proses ([chatgpt, claude, antigravity])
+        let sessions = self.sessions.lock().unwrap();
+        let has_claude_desk_log = sessions.iter().any(|s| s.provider == "claudedesk" && s.state == ses::State::Running);
+        // aplikasi desktop tanpa berkas sesi: perkiraan dari CPU proses ([chatgpt, claude]).
+        // antigravity.exe dikecualikan karena proses IDE Electron-nya sering spike saat idle/edit; antigravity dilacak dari transcript.jsonl.
         if cfg.src_desk {
-            let names = ["chatgpt.exe", "claude.exe", "antigravity.exe"];
+            let names = ["chatgpt.exe", "claude.exe"];
             let cur = win::api::proc_cpu(&names);
             let el = ((w.ms - self.cpu_prev.0).max(1) as f64) / 1000.0;
-            if self.cpu_prev.0 != 0 {
-                for i in 0..3 {
+            if self.cpu_prev.0 != 0 && self.cpu_prev.1.len() == 2 {
+                for i in 0..2 {
                     let frac = cur[i].saturating_sub(self.cpu_prev.1[i]) as f64 / 1e7 / el;
                     let b = &mut self.busy[i];
-                    if frac > 0.08 { b.0 = b.0.saturating_add(1); b.1 = 0; } else { b.1 = b.1.saturating_add(1); b.0 = 0; }
-                    if b.0 >= 2 { b.2 = true } else if b.1 >= 3 { b.2 = false }
+                    if frac > 0.30 { b.0 = b.0.saturating_add(1); b.1 = 0; } else { b.1 = b.1.saturating_add(1); b.0 = 0; }
+                    if b.0 >= 4 { b.2 = true } else if b.1 >= 2 { b.2 = false }
                 }
             }
             self.cpu_prev = (w.ms, cur);
-            for (i, (prov, name)) in [("chatgpt", "ChatGPT Desktop"), ("claudedesk", "Claude (perkiraan)"), ("agydesk", "Antigravity Desktop")].iter().enumerate() {
-                if self.busy[i].2 {
+            for (i, (prov, name)) in [("chatgpt", "ChatGPT Desktop"), ("claudedesk", "Claude (perkiraan)")].iter().enumerate() {
+                if self.busy[i].2 && !(i == 1 && has_claude_desk_log) {
                     let (mark, tint) = provider_style(prov);
                     rows.push(SessionRow { id: format!("guess:{prov}"), title: if i == 1 { name.to_string() } else { format!("{name} (perkiraan)") }, sub: "aktif memproses".into(), meta: "berjalan".into(), mark: mark.into(), tint, running: true, action: false });
                 }
             }
         }
-        for s in self.sessions.lock().unwrap().iter() {
+        for s in sessions.iter() {
             let (mark, tint) = provider_style(s.provider);
             let running = s.state == ses::State::Running;
             let sub = if !s.current.is_empty() && running { s.current.clone() } else { s.cwd.rsplit(['\\', '/']).next().unwrap_or("").to_string() };

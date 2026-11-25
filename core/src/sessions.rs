@@ -9,8 +9,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const RECENT_MS: i64 = 36 * 3600 * 1000;
 const KEEP_IDLE_MS: i64 = 24 * 3600 * 1000;
-const MID_TURN_MS: i64 = 180_000; // giliran belum selesai tapi berkas diam selama ini -> berhenti
-const QUIET_RUN_MS: i64 = 10_000; // format tak dikenal: berjalan bila ditulis dalam 10 dtk terakhir
+const MID_TURN_MS: i64 = 45_000; // giliran belum selesai tapi berkas diam selama ini -> berhenti
+const QUIET_RUN_MS: i64 = 6_000; // format tak dikenal: berjalan bila ditulis dalam 6 dtk terakhir
 const MAX_PER_PROVIDER: usize = 30;
 const HEAD: u64 = 64 * 1024;
 const TAIL: u64 = 96 * 1024;
@@ -140,7 +140,16 @@ fn parse_claude(head: &[Value], tail: &[Value]) -> Parsed {
                 }
                 break;
             }
-            "user" if !e.get("isMeta").truthy() => { final_ = Some(false); current = "Berpikir…".into(); break; }
+            "user" if !e.get("isMeta").truthy() => {
+                let txt = text_of(e.get("message").get("content"));
+                if txt.trim_start().starts_with("[Request interrupted") {
+                    final_ = Some(true);
+                } else {
+                    final_ = Some(false);
+                    current = "Berpikir…".into();
+                }
+                break;
+            }
             _ => {}
         }
     }
@@ -190,19 +199,24 @@ fn parse_agy(head: &[Value], tail: &[Value]) -> Parsed {
         .map(|e| strip_tags(e.get("content").text())).unwrap_or_default();
     let (mut final_, mut current, mut action) = (None, String::new(), false);
     for e in tail.iter().rev() {
-        if e.get("type").text().is_empty() { continue; }
+        let ty = e.get("type").text();
+        if ty.is_empty() { continue; }
         let st = e.get("status").text();
-        if !st.is_empty() && !matches!(st.to_uppercase().as_str(), "DONE" | "COMPLETE" | "COMPLETED" | "SUCCESS") {
+        let up = st.to_uppercase();
+        if ["ERROR", "FAIL", "CANCEL", "ABORT", "INTERRUPT"].iter().any(|k| up.contains(k)) {
+            final_ = Some(true);
+            break;
+        }
+        if !st.is_empty() && !matches!(up.as_str(), "DONE" | "COMPLETE" | "COMPLETED" | "SUCCESS") {
             final_ = Some(false);
-            let up = st.to_uppercase();
             action = ["WAIT", "BLOCK", "APPROV", "PERMISSION", "CONFIRM", "PENDING_USER", "NEED"].iter().any(|k| up.contains(k));
             current = if action { "Menunggu persetujuanmu".into() } else { "Bekerja…".into() };
             break;
         }
         let calls = e.get("tool_calls").arr();
-        if e.get("type").text() == "PLANNER_RESPONSE" && calls.is_empty() { final_ = Some(true); break; }
+        if ty == "PLANNER_RESPONSE" && calls.is_empty() { final_ = Some(true); break; }
         final_ = Some(false);
-        current = if let Some(c) = calls.first() { clean(&c.get("name").text().replace('_', " "), 40) } else if e.get("type").text() == "USER_INPUT" { "Berpikir…".into() } else { "Bekerja…".into() };
+        current = if let Some(c) = calls.first() { clean(&c.get("name").text().replace('_', " "), 40) } else if ty == "USER_INPUT" { "Berpikir…".into() } else { "Bekerja…".into() };
         break;
     }
     Parsed { final_, title: clean(&first, 80), cwd: String::new(), current, action }
@@ -213,7 +227,7 @@ fn strip_tags(s: &str) -> String {
     out
 }
 
-fn parse_desk(dir: &Path) -> Parsed {
+fn parse_desk(file: &Path, size: u64, dir: &Path) -> Parsed {
     let base = dir.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let cands = [dir.parent().map(|p| p.join(format!("{base}.json"))), Some(dir.join("session.json"))];
     let mut title = String::new();
@@ -225,7 +239,22 @@ fn parse_desk(dir: &Path) -> Parsed {
             }
         }
     }
-    Parsed { final_: None, title: clean(&title, 80), cwd: String::new(), current: "Bekerja…".into(), action: false }
+    let (_, tail) = head_tail(file, size);
+    let mut final_ = None;
+    for e in tail.iter().rev() {
+        let ty = e.get("type").text();
+        let sr = e.get("stop_reason").text();
+        let msr = e.get("message").get("stop_reason").text();
+        if matches!(ty, "result" | "turn_end" | "error")
+            || matches!(sr, "end_turn" | "stop_sequence" | "max_tokens")
+            || matches!(msr, "end_turn" | "stop_sequence" | "max_tokens")
+        {
+            final_ = Some(true);
+            break;
+        }
+        if !ty.is_empty() { break; }
+    }
+    Parsed { final_, title: clean(&title, 80), cwd: String::new(), current: "Bekerja…".into(), action: false }
 }
 
 /* ---------------------------------------------------------------- pemindai */
@@ -253,11 +282,12 @@ impl Scanner {
         let claude = claude_dir.map(Path::to_path_buf).unwrap_or_else(|| home.join(".claude"));
         let copilot = copilot_dir.map(Path::to_path_buf).unwrap_or_else(|| home.join(".copilot"));
         let agy = home.join(".gemini").join("antigravity-cli");
+        let agy_ide = home.join(".gemini").join("antigravity");
         Scanner { provs: vec![
             Provider { id: "claude", kind: Kind::Claude, roots: vec![claude.join("projects")], depth: 1 },
             Provider { id: "copilot", kind: Kind::Copilot, roots: vec![copilot.join("session-state")], depth: 2 },
-            Provider { id: "agy", kind: Kind::AgyTranscript, roots: vec![agy.join("brain")], depth: 4 },
-            Provider { id: "agy", kind: Kind::AgyLight, roots: vec![agy.join("conversations")], depth: 1 },
+            Provider { id: "agy", kind: Kind::AgyTranscript, roots: vec![agy.join("brain"), agy_ide.join("brain")], depth: 4 },
+            Provider { id: "agy", kind: Kind::AgyLight, roots: vec![agy.join("conversations"), agy_ide.join("conversations")], depth: 1 },
             Provider { id: "claudedesk", kind: Kind::Desk, roots: desk, depth: 5 },
         ] }
     }
@@ -300,8 +330,8 @@ impl Scanner {
                     Kind::Claude => { let (h, t) = head_tail(&f, size); parse_claude(&h, &t) }
                     Kind::Copilot => { let (h, t) = head_tail(&f, size); parse_copilot(&h, &t, dir) }
                     Kind::AgyTranscript => { let (h, t) = head_tail(&f, size); parse_agy(&h, &t) }
-                    Kind::AgyLight => Parsed { current: "Bekerja…".into(), ..Default::default() },
-                    Kind::Desk => parse_desk(dir),
+                    Kind::AgyLight => Parsed { final_: Some(true), ..Default::default() },
+                    Kind::Desk => parse_desk(&f, size, dir),
                 };
                 let age = now - mt;
                 let mut state = State::Idle;
@@ -359,7 +389,9 @@ mod tests {
             r#"{"type":"summary","summary":"Refactor modul"}"#, "\n",
             r#"{"type":"user","message":{"content":"halo"}}"#, "\n",
             r#"{"type":"assistant","message":{"stop_reason":"end_turn","content":[{"type":"text","text":"ok"}]}}"#, "\n"), 1000);
-        write(&h, ".claude/projects/p1/stale.jsonl", "{\"type\":\"user\",\"message\":{\"content\":\"macet\"}}\n", 400_000);
+        write(&h, ".claude/projects/p1/stale.jsonl", "{\"type\":\"user\",\"message\":{\"content\":\"macet\"}}\n", 60_000);
+        write(&h, ".claude/projects/p1/interrupted.jsonl", concat!(
+            r#"{"type":"user","message":{"role":"user","content":"[Request interrupted by user]"}}"#, "\n"), 1000);
         let r = scan(&h, &[]);
         let run = find(&r, "claude:run");
         assert_eq!(run.state, State::Running);
@@ -369,6 +401,7 @@ mod tests {
         assert_eq!(find(&r, "claude:done").state, State::Idle);
         assert_eq!(find(&r, "claude:done").title, "Refactor modul");
         assert_eq!(find(&r, "claude:stale").state, State::Idle);
+        assert_eq!(find(&r, "claude:interrupted").state, State::Idle);
         assert_eq!(r[0].id, "claude:run", "yang berjalan harus di atas");
     }
 
@@ -390,14 +423,16 @@ mod tests {
         let h = tmp();
         let t = ".gemini/antigravity-cli/brain/3b4a/.system_generated/logs/transcript.jsonl";
         write(&h, t, concat!(r#"{"step_index":0,"type":"USER_INPUT","status":"DONE","content":"Riset algoritma"}"#, "\n", r#"{"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE","tool_calls":[{"name":"search_web"}]}"#, "\n"), 1000);
+        write(&h, ".gemini/antigravity/brain/5c5c/.system_generated/logs/transcript.jsonl", concat!(r#"{"step_index":0,"type":"USER_INPUT","status":"DONE","content":"Buka IDE"}"#, "\n", r#"{"step_index":1,"type":"PLANNER_RESPONSE","status":"ERROR","content":"batal"}"#, "\n"), 1000);
         write(&h, ".gemini/antigravity-cli/brain/9f9f/.system_generated/logs/transcript.jsonl", concat!(r#"{"type":"USER_INPUT","status":"DONE","content":"Selesai"}"#, "\n", r#"{"type":"PLANNER_RESPONSE","status":"DONE","content":"jawaban"}"#, "\n"), 1000);
         write(&h, ".gemini/antigravity-cli/conversations/aaaa-1111.db-wal", "x", 2000);
         let r = scan(&h, &[]);
         assert_eq!(find(&r, "agy:3b4a").state, State::Running);
         assert_eq!(find(&r, "agy:3b4a").title, "Riset algoritma");
         assert_eq!(find(&r, "agy:3b4a").current, "search web");
+        assert_eq!(find(&r, "agy:5c5c").state, State::Idle);
         assert_eq!(find(&r, "agy:9f9f").state, State::Idle);
-        assert_eq!(find(&r, "agy:aaaa-1111").state, State::Running);
+        assert_eq!(find(&r, "agy:aaaa-1111").state, State::Idle);
     }
 
     #[test]
@@ -405,11 +440,13 @@ mod tests {
         let h = tmp();
         write(&h, "AppData/Roaming/Claude/local-agent-mode-sessions/org/dev/local_1/audit.jsonl", "{\"e\":1}\n", 2000);
         write(&h, "AppData/Roaming/Claude/local-agent-mode-sessions/org/dev/local_1.json", r#"{"title":"Rapikan laporan"}"#, 2000);
+        write(&h, "AppData/Roaming/Claude/local-agent-mode-sessions/org/dev/local_2/audit.jsonl", "{\"type\":\"result\",\"stop_reason\":\"end_turn\"}\n", 1000);
         let r = scan(&h, &[]);
-        assert_eq!(r.len(), 1);
-        assert_eq!(r[0].provider, "claudedesk");
-        assert_eq!(r[0].state, State::Running);
-        assert_eq!(r[0].title, "Rapikan laporan");
+        assert_eq!(r.len(), 2);
+        assert_eq!(find(&r, "claudedesk:local_1").provider, "claudedesk");
+        assert_eq!(find(&r, "claudedesk:local_1").state, State::Running);
+        assert_eq!(find(&r, "claudedesk:local_1").title, "Rapikan laporan");
+        assert_eq!(find(&r, "claudedesk:local_2").state, State::Idle);
         assert!(scan(&h, &["claudedesk"]).is_empty());
     }
 
