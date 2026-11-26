@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Bot,
   CalendarDays,
@@ -64,12 +64,60 @@ export const IslandShell: React.FC = () => {
   } = useIslandStore();
 
   const [clock, setClock] = useState(() => formatClock(settings.clock_24h));
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const lastBoundsRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
   useEffect(() => {
     setClock(formatClock(settings.clock_24h));
     const id = setInterval(() => setClock(formatClock(settings.clock_24h)), 5000);
     return () => clearInterval(id);
   }, [settings.clock_24h]);
+
+  // Fit Tauri overlay window tightly to the visible island pill so the rest of the screen stays clickable
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    const el = shellRef.current;
+    if (!el) return;
+
+    let shrinkTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const pushBounds = (force = false) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const targetW = Math.ceil(rect.width) + 12;
+      const targetH = Math.ceil(rect.height) + 12;
+      const prev = lastBoundsRef.current;
+
+      if (!force && prev.w === targetW && prev.h === targetH) return;
+
+      const isGrowing = targetW > prev.w || targetH > prev.h;
+      const commit = () => {
+        lastBoundsRef.current = { w: targetW, h: targetH };
+        void tauriApi.syncIslandBounds(targetW, targetH, settings.island_position);
+      };
+
+      if (shrinkTimer) {
+        clearTimeout(shrinkTimer);
+        shrinkTimer = null;
+      }
+
+      if (force || prev.w === 0 || isGrowing) {
+        commit();
+      } else {
+        shrinkTimer = setTimeout(commit, 420);
+      }
+    };
+
+    pushBounds(true);
+    const observer = new ResizeObserver(() => pushBounds(false));
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+      if (shrinkTimer) clearTimeout(shrinkTimer);
+    };
+  }, [mode, settings.island_position]);
 
   // Deduplicate active/waiting AI sessions by provider for the compact pill badges
   const runningSessions = aiSessions.filter(
@@ -106,6 +154,7 @@ export const IslandShell: React.FC = () => {
   if (mode === "hidden") {
     return (
       <div
+        ref={shellRef}
         onMouseEnter={() => setMode("compact")}
         onClick={() => setMode("compact")}
         className="spring-shell macos-island w-28 h-2.5 rounded-b-full cursor-pointer hover:h-3.5 flex items-center justify-center"
@@ -118,13 +167,14 @@ export const IslandShell: React.FC = () => {
 
   return (
     <div
+      ref={shellRef}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`spring-shell macos-island relative text-zinc-100 ${
         mode === "compact"
           ? "w-fit min-w-[138px] rounded-full px-3.5 py-1.5 cursor-pointer hover:border-white/25"
-          : "w-[500px] rounded-[26px] p-3"
+          : "w-[500px] max-h-[736px] overflow-y-auto nobi-scroll rounded-[26px] p-3"
       }`}
       onClick={() => {
         if (mode === "compact") setMode("expanded");

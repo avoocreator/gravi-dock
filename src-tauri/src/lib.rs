@@ -80,6 +80,37 @@ fn recenter_island(window: tauri::WebviewWindow, position: Option<String>) {
 }
 
 #[tauri::command]
+fn sync_island_bounds(
+    window: tauri::WebviewWindow,
+    width: f64,
+    height: f64,
+    position: Option<String>,
+) -> Result<(), String> {
+    let w = width.clamp(110.0, 640.0);
+    let h = height.clamp(24.0, 760.0);
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let phys_w = (w * scale).round() as i32;
+
+    window
+        .set_size(tauri::LogicalSize::new(w, h))
+        .map_err(|e| e.to_string())?;
+
+    let align = position.as_deref().unwrap_or("top-center");
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let mon_size = monitor.size();
+        let mon_pos = monitor.position();
+        let x = match align {
+            "top-left" => mon_pos.x + 16,
+            "top-right" => mon_pos.x + (mon_size.width as i32 - phys_w) - 16,
+            _ => mon_pos.x + ((mon_size.width as i32 - phys_w) / 2),
+        };
+        let y = mon_pos.y + 8;
+        let _ = window.set_position(PhysicalPosition::new(x, y));
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn get_ipc_info(state: tauri::State<'_, AppState>) -> ipc_server::IpcInfo {
     state.ipc.info()
 }
@@ -163,6 +194,7 @@ pub fn run() {
             open_settings_window,
             set_click_through,
             recenter_island,
+            sync_island_bounds,
             get_ipc_info,
             settings::get_settings,
             settings::save_settings,

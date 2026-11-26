@@ -45,6 +45,8 @@ export const tauriApi = {
   setClickThrough: (ignore: boolean) => safeInvoke<void>("set_click_through", { ignore }),
   openSettingsWindow: () => safeInvoke<void>("open_settings_window"),
   recenterIsland: (position?: string) => safeInvoke<void>("recenter_island", { position }),
+  syncIslandBounds: (width: number, height: number, position?: string) =>
+    safeInvoke<void>("sync_island_bounds", { width, height, position }),
   getSettings: () => safeInvoke<AppSettings>("get_settings"),
   saveSettings: (settings: AppSettings) => safeInvoke<AppSettings>("save_settings", { settings }),
   resetSettings: () => safeInvoke<AppSettings>("reset_settings"),
