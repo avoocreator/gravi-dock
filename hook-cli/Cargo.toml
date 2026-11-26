@@ -1,0 +1,9 @@
+[package]
+name = "nobi-hook"
+version = "0.1.0"
+edition = "2021"
+description = "Lightweight fail-open CLI hook relay for Nobi Dynamic Island (Antigravity CLI, Copilot CLI, etc.)"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

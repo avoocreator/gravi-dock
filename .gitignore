@@ -1,16 +1,6 @@
-# Rust build artifacts
-/target/
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# IDEs & Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS / temporary files
-*.tmp
-*.zip
+node_modules
+dist
+src-tauri/target
+hook-cli/target
+*.local
+.DS_Store
