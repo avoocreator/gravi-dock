@@ -1,0 +1,6 @@
+node_modules
+dist
+src-tauri/target
+hook-cli/target
+*.local
+.DS_Store

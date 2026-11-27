@@ -1,0 +1,42 @@
+[package]
+name = "nobi-island"
+version = "0.1.0"
+description = "Nobi Dynamic Island — AI desktop & CLI monitor, GitHub, Google Calendar, Local Drop, Media, Per-App Mixer, System HUD & Notifications for Windows and Linux"
+authors = ["Nobi Island Contributors"]
+edition = "2021"
+
+[lib]
+name = "nobi_island_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-opener = "2"
+tauri-plugin-global-shortcut = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+sysinfo = "0.33"
+keyring = { version = "3", features = ["windows-native", "apple-native", "linux-native-sync-persistent", "crypto-rust"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "ApplicationModel",
+    "Foundation",
+    "Foundation_Collections",
+    "Media_Control",
+    "Storage_Streams",
+    "UI_Notifications",
+    "UI_Notifications_Management",
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+    "Win32_System_Com",
+    "Win32_System_Power",
+    "Win32_UI_Input_KeyboardAndMouse",
+] }
