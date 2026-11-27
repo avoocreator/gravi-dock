@@ -11,6 +11,8 @@ use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
 const MID_TURN_MS: i64 = 60_000;
+const ACTIVE_TURN_MS: i64 = 25_000;
+const CONCURRENT_TURN_MS: i64 = 10_000;
 const QUIET_RUN_MS: i64 = 10_000;
 const TAIL_BYTES: u64 = 64 * 1024;
 
@@ -106,30 +108,109 @@ fn has_token(cmdline: &str, token: &str) -> bool {
     cmdline.split_whitespace().any(|w| w == token)
 }
 
-fn is_noise_subprocess(cmdline: &str) -> bool {
+fn is_noise_subprocess(cmdline: &str, exe_path: &str) -> bool {
     cmdline.contains("crashpad")
+        || cmdline.contains("crash_reporter")
+        || cmdline.contains("crashreporter")
         || cmdline.contains("sidecars/")
         || cmdline.contains("sidecars\\")
+        || cmdline.contains("sidecar_sdk")
+        || cmdline.contains("--import=")
         || cmdline.contains("--type=utility")
+        || cmdline.contains("--type=zygote")
+        || cmdline.contains("--type=crashpad-handler")
+        || cmdline.contains("--type=broker")
+        || cmdline.contains("--headless")
+        || exe_path.contains("crashpad")
+        || exe_path.contains("launcher")
+        || exe_path.contains("updater")
+        || exe_path.contains("uninstall")
+}
+
+fn is_electron_child(cmdline: &str) -> bool {
+    cmdline.contains("--type=")
 }
 
 fn is_ui_process(cmdline: &str) -> bool {
     cmdline.contains("--type=gpu-process") || cmdline.contains("--type=renderer")
 }
 
-fn matches_rule(rule: &TargetRule, pname: &str, cmdline: &str) -> bool {
-    if is_noise_subprocess(cmdline) {
+fn is_cli_binary_path(exe_path: &str) -> bool {
+    exe_path.contains("\\.local\\bin\\")
+        || exe_path.contains("/.local/bin/")
+        || exe_path.contains("\\.claude\\")
+        || exe_path.contains("/.claude/")
+        || exe_path.contains("\\hermes\\bin\\")
+        || exe_path.contains("/hermes/bin/")
+        || exe_path.contains("\\npm\\")
+        || exe_path.contains("/npm/")
+}
+
+fn is_utility_cli_invocation(cmdline: &str) -> bool {
+    let mut args = cmdline.split_whitespace().skip(1);
+    let Some(first) = args.next() else {
+        return false;
+    };
+    matches!(
+        first,
+        "--version"
+            | "-v"
+            | "--help"
+            | "-h"
+            | "help"
+            | "version"
+            | "status"
+            | "auth"
+            | "login"
+            | "logout"
+            | "mcp"
+            | "serve"
+            | "update"
+            | "upgrade"
+            | "doctor"
+            | "config"
+            | "completion"
+    )
+}
+
+fn is_antigravity_ide_app_data(cmdline: &str) -> bool {
+    // Antigravity Desktop hub passes `--app_data_dir=antigravity`; the standalone CLI uses `antigravity-cli`.
+    has_token(cmdline, "--app_data_dir=antigravity")
+        || cmdline.contains("--app_data_dir antigravity ")
+        || cmdline.ends_with("--app_data_dir antigravity")
+}
+
+fn matches_rule(rule: &TargetRule, pname: &str, cmdline: &str, exe_path: &str) -> bool {
+    if is_noise_subprocess(cmdline, exe_path) {
         return false;
     }
 
     if rule.id == "antigravity-cli" {
-        if cmdline.contains("--hub") {
+        if !rule.patterns.iter().any(|pat| pname == *pat) {
             return false;
         }
-        return rule.patterns.iter().any(|pat| pname == *pat);
+        // On Windows, `sysinfo` can return an empty cmdline during spawn/teardown or cross-elevation;
+        // never guess `agy.exe` is an interactive CLI session without reading its args.
+        if cmdline.trim().is_empty()
+            || cmdline.contains("--hub")
+            || cmdline.contains("--hub-port")
+            || is_antigravity_ide_app_data(cmdline)
+            || is_utility_cli_invocation(cmdline)
+        {
+            return false;
+        }
+        let from_ide_bin =
+            exe_path.contains("\\.gemini\\bin\\") || exe_path.contains("/.gemini/bin/");
+        if from_ide_bin && !cmdline.contains("antigravity-cli") && !has_token(cmdline, "chat") {
+            return false;
+        }
+        return true;
     }
 
     if rule.id == "copilot-cli" {
+        if is_utility_cli_invocation(cmdline) {
+            return false;
+        }
         if rule.patterns.iter().any(|pat| pname == *pat) {
             return true;
         }
@@ -145,6 +226,11 @@ fn matches_rule(rule: &TargetRule, pname: &str, cmdline: &str) -> bool {
     }
 
     if rule.id == "antigravity-desktop" && (cmdline.contains("--hub") || cmdline.contains("antigravity-cli")) {
+        return false;
+    }
+
+    if (rule.id == "claude-desktop" || rule.id == "hermes-desktop") && is_cli_binary_path(exe_path)
+    {
         return false;
     }
 
@@ -236,6 +322,13 @@ fn eval_agy_tail(tail: &[serde_json::Value]) -> TranscriptState {
         }
         let status = ev["status"].as_str().unwrap_or("");
         let up = status.to_uppercase();
+        let ty_up = ty.to_uppercase();
+        if matches!(up.as_str(), "CANCELLED" | "CANCELED" | "FAILED" | "ERROR" | "ABORTED")
+            || ty_up.contains("CANCEL")
+            || ty_up.contains("ABORT")
+        {
+            return TranscriptState::Idle;
+        }
         if !status.is_empty() && !matches!(up.as_str(), "DONE" | "COMPLETE" | "COMPLETED" | "SUCCESS")
         {
             let waiting = ["WAIT", "BLOCK", "APPROV", "PERMISSION", "CONFIRM", "PENDING_USER", "NEED"]
@@ -280,11 +373,21 @@ fn eval_agy_roots(roots: &[PathBuf], now: i64) -> TranscriptState {
         }
     }
     files.sort_by(|a, b| b.1.cmp(&a.1));
-    for (path, _, size) in files.into_iter().take(4) {
+    for (idx, (path, mt, size)) in files.into_iter().take(3).enumerate() {
+        let age_ms = now.saturating_sub(mt);
+        // If the newest conversation is already Idle, ignore older conversations unless they were written very recently.
+        if idx > 0 && age_ms > CONCURRENT_TURN_MS {
+            break;
+        }
         let tail = read_tail_json_lines(&path, size);
         match eval_agy_tail(&tail) {
             TranscriptState::Idle => continue,
-            other => return other,
+            TranscriptState::Waiting(msg) => return TranscriptState::Waiting(msg),
+            TranscriptState::Active(msg) => {
+                if age_ms <= ACTIVE_TURN_MS {
+                    return TranscriptState::Active(msg);
+                }
+            }
         }
     }
     TranscriptState::Idle
@@ -423,10 +526,52 @@ fn detect_transcript_states(now: i64) -> HashMap<&'static str, TranscriptState> 
     map
 }
 
-pub fn scan_processes(sys: &mut System) -> Vec<AiSession> {
+#[cfg(target_os = "windows")]
+fn collect_visible_window_pids() -> HashSet<u32> {
+    use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        EnumWindows, GetWindowTextLengthW, GetWindowThreadProcessId, IsWindowVisible,
+    };
+
+    unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+        if IsWindowVisible(hwnd).as_bool() && GetWindowTextLengthW(hwnd) > 0 {
+            let mut pid: u32 = 0;
+            GetWindowThreadProcessId(hwnd, Some(&mut pid));
+            if pid != 0 {
+                let set = &mut *(lparam.0 as *mut HashSet<u32>);
+                set.insert(pid);
+            }
+        }
+        BOOL(1)
+    }
+
+    let mut pids = HashSet::new();
+    unsafe {
+        let _ = EnumWindows(Some(enum_proc), LPARAM(&mut pids as *mut _ as isize));
+    }
+    pids
+}
+
+#[cfg(not(target_os = "windows"))]
+fn collect_visible_window_pids() -> HashSet<u32> {
+    HashSet::new()
+}
+
+struct MatchedAccum {
+    session: AiSession,
+    has_main_process: bool,
+    has_visible_window: bool,
+}
+
+fn scan_processes_detailed(
+    sys: &mut System,
+    transcripts: &HashMap<&'static str, TranscriptState>,
+) -> (Vec<AiSession>, HashSet<String>) {
     sys.refresh_processes(ProcessesToUpdate::All, true);
     let cores = sys.cpus().len().max(1) as f32;
-    let mut matched: HashMap<&'static str, AiSession> = HashMap::new();
+    let visible_pids = collect_visible_window_pids();
+    let check_windows = cfg!(target_os = "windows") && !visible_pids.is_empty();
+    let mut matched: HashMap<&'static str, MatchedAccum> = HashMap::new();
 
     for (pid, proc_) in sys.processes() {
         let pname = proc_.name().to_string_lossy().to_lowercase();
@@ -436,9 +581,14 @@ pub fn scan_processes(sys: &mut System) -> Vec<AiSession> {
             .map(|s| s.to_string_lossy().to_lowercase())
             .collect::<Vec<_>>()
             .join(" ");
+        let exe_path = proc_
+            .exe()
+            .map(|p| p.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
 
         for rule in RULES {
-            if matches_rule(rule, &pname, &cmdline) {
+            if matches_rule(rule, &pname, &cmdline, &exe_path) {
+                let is_child = is_electron_child(&cmdline);
                 let cpu = if is_ui_process(&cmdline) {
                     0.0
                 } else {
@@ -446,33 +596,68 @@ pub fn scan_processes(sys: &mut System) -> Vec<AiSession> {
                 };
                 let mem_mb = proc_.memory() / (1024 * 1024);
                 let run_time = proc_.run_time();
-                let entry = matched.entry(rule.id).or_insert_with(|| AiSession {
-                    id: rule.id.to_string(),
-                    name: rule.name.to_string(),
-                    kind: rule.kind.to_string(),
-                    provider: rule.provider.to_string(),
-                    status: "idle".into(),
-                    pid: pid.as_u32(),
-                    cpu_usage: 0.0,
-                    memory_mb: 0,
-                    detail: if rule.kind == "cli" {
-                        "Sesi CLI terbuka".into()
-                    } else {
-                        "Aplikasi desktop terbuka".into()
+                let pid_u32 = pid.as_u32();
+                let win_visible = visible_pids.contains(&pid_u32);
+
+                let entry = matched.entry(rule.id).or_insert_with(|| MatchedAccum {
+                    session: AiSession {
+                        id: rule.id.to_string(),
+                        name: rule.name.to_string(),
+                        kind: rule.kind.to_string(),
+                        provider: rule.provider.to_string(),
+                        status: "idle".into(),
+                        pid: pid_u32,
+                        cpu_usage: 0.0,
+                        memory_mb: 0,
+                        detail: if rule.kind == "cli" {
+                            "Sesi CLI terbuka".into()
+                        } else {
+                            "Aplikasi desktop terbuka".into()
+                        },
+                        started_secs: run_time,
                     },
-                    started_secs: run_time,
+                    has_main_process: false,
+                    has_visible_window: false,
                 });
 
-                entry.cpu_usage += cpu;
-                entry.memory_mb += mem_mb;
+                if !is_child {
+                    entry.has_main_process = true;
+                    entry.session.pid = pid_u32;
+                }
+                if win_visible {
+                    entry.has_visible_window = true;
+                }
+                entry.session.cpu_usage += cpu;
+                entry.session.memory_mb += mem_mb;
                 break;
             }
         }
     }
 
-    let mut sessions: Vec<AiSession> = matched.into_values().collect();
+    let mut visible_sessions = HashSet::new();
+    let mut sessions: Vec<AiSession> = matched
+        .into_iter()
+        .filter_map(|(id, acc)| {
+            if acc.session.kind == "desktop" {
+                if !acc.has_main_process {
+                    return None;
+                }
+                let has_live_transcript = matches!(
+                    transcripts.get(id),
+                    Some(TranscriptState::Active(_) | TranscriptState::Waiting(_))
+                );
+                if check_windows && !acc.has_visible_window && !has_live_transcript {
+                    return None;
+                }
+            }
+            if acc.has_visible_window {
+                visible_sessions.insert(id.to_string());
+            }
+            Some(acc.session)
+        })
+        .collect();
     sessions.sort_by(|a, b| a.kind.cmp(&b.kind).then(a.name.cmp(&b.name)));
-    sessions
+    (sessions, visible_sessions)
 }
 
 #[derive(Default)]
@@ -487,6 +672,7 @@ impl ActivityTracker {
         &mut self,
         sessions: &mut [AiSession],
         transcripts: &HashMap<&'static str, TranscriptState>,
+        visible_sessions: &HashSet<String>,
     ) {
         let mut seen = HashSet::with_capacity(sessions.len());
         for s in sessions.iter_mut() {
@@ -515,10 +701,24 @@ impl ActivityTracker {
                 continue;
             }
 
-            let (enter_thresh, exit_thresh) = if s.kind == "cli" {
-                (2.0_f32, 0.5_f32)
+            // On Windows, non-transcript desktop apps (e.g. Gemini) without a visible window
+            // must not trigger CPU-based "active" spikes from background telemetry/tray work.
+            if cfg!(target_os = "windows")
+                && s.kind == "desktop"
+                && !visible_sessions.is_empty()
+                && !visible_sessions.contains(&s.id)
+            {
+                self.is_active.insert(s.id.clone(), false);
+                self.active_streak.insert(s.id.clone(), 0);
+                s.status = "idle".into();
+                s.detail = "Aplikasi desktop terbuka".into();
+                continue;
+            }
+
+            let (enter_thresh, exit_thresh, required_ticks) = if s.kind == "cli" {
+                (2.0_f32, 0.5_f32, 2_u8)
             } else {
-                (5.0_f32, 1.5_f32)
+                (12.0_f32, 2.5_f32, 3_u8)
             };
 
             let currently_active = *self.is_active.get(&s.id).unwrap_or(&false);
@@ -536,7 +736,7 @@ impl ActivityTracker {
             } else if s.cpu_usage >= enter_thresh {
                 let count = self.active_streak.entry(s.id.clone()).or_insert(0);
                 *count = count.saturating_add(1);
-                if *count >= 2 {
+                if *count >= required_ticks {
                     self.is_active.insert(s.id.clone(), true);
                     *count = 0;
                 }
@@ -569,9 +769,9 @@ pub async fn start_watcher(app: AppHandle, cache: Arc<Mutex<Vec<AiSession>>>) {
     let mut tracker = ActivityTracker::default();
     let mut prev_statuses: HashMap<String, String> = HashMap::new();
     loop {
-        let mut sessions = scan_processes(&mut sys);
         let transcripts = detect_transcript_states(now_ms());
-        tracker.apply(&mut sessions, &transcripts);
+        let (mut sessions, visible_sessions) = scan_processes_detailed(&mut sys, &transcripts);
+        tracker.apply(&mut sessions, &transcripts, &visible_sessions);
 
         let cfg = crate::settings::get_settings(app.clone());
         if cfg.hud_enabled && cfg.hud_ai_done {
@@ -686,31 +886,90 @@ mod tests {
         assert!(!matches_rule(
             copilot_cli,
             "copilot-runtime.exe",
-            r#""c:\program files\microsoft vs code\copilot-runtime.exe""#
+            r#""c:\program files\microsoft vs code\copilot-runtime.exe""#,
+            r"c:\program files\microsoft vs code\copilot-runtime.exe"
         ));
         assert!(matches_rule(
             copilot_cli,
             "gh.exe",
-            "gh.exe copilot suggest"
+            "gh.exe copilot suggest",
+            r"c:\program files\github cli\gh.exe"
         ));
 
         let agy_cli = rule_by_id("antigravity-cli");
         assert!(!matches_rule(
             agy_cli,
             "agy.exe",
-            r"c:\users\kira\.gemini\bin\agy.exe --hub --hub-port=56544"
+            r"c:\users\kira\.gemini\bin\agy.exe --hub --hub-port=56544",
+            r"c:\users\kira\.gemini\bin\agy.exe"
+        ));
+        // Empty cmdline (Windows spawn/teardown or privilege edge) must never guess CLI
+        assert!(!matches_rule(
+            agy_cli,
+            "agy.exe",
+            "",
+            r"c:\users\kira\.gemini\bin\agy.exe"
+        ));
+        // IDE binary without explicit CLI arg/subcommand or with desktop app_data_dir must not match CLI
+        assert!(!matches_rule(
+            agy_cli,
+            "agy.exe",
+            r"c:\users\kira\.gemini\bin\agy.exe --app_data_dir=antigravity",
+            r"c:\users\kira\.gemini\bin\agy.exe"
+        ));
+        assert!(!matches_rule(
+            agy_cli,
+            "agy.exe",
+            r"c:\users\kira\appdata\local\agy\bin\agy.exe --version",
+            r"c:\users\kira\appdata\local\agy\bin\agy.exe"
         ));
         assert!(matches_rule(
             agy_cli,
             "agy.exe",
-            r"c:\users\kira\.gemini\bin\agy.exe chat"
+            r"c:\users\kira\.gemini\bin\agy.exe chat",
+            r"c:\users\kira\.gemini\bin\agy.exe"
+        ));
+        assert!(matches_rule(
+            agy_cli,
+            "agy.exe",
+            r"c:\users\kira\appdata\local\agy\bin\agy.exe",
+            r"c:\users\kira\appdata\local\agy\bin\agy.exe"
         ));
 
         let agy_desktop = rule_by_id("antigravity-desktop");
         assert!(!matches_rule(
             agy_desktop,
             "antigravity.exe",
-            "antigravity.exe sidecars/biomolecular_structure_viewer/dist/mcp_entry.cjs"
+            "antigravity.exe sidecars/biomolecular_structure_viewer/dist/mcp_entry.cjs",
+            r"c:\users\kira\appdata\local\programs\antigravity\antigravity.exe"
+        ));
+        assert!(!matches_rule(
+            agy_desktop,
+            "antigravity.exe",
+            "antigravity.exe --import=file:///c:/sidecar_sdk/register_loader.js dist/server.cjs",
+            r"c:\users\kira\appdata\local\programs\antigravity\antigravity.exe"
+        ));
+
+        let claude_desktop = rule_by_id("claude-desktop");
+        assert!(!matches_rule(
+            claude_desktop,
+            "claude.exe",
+            "claude.exe",
+            r"c:\users\kira\.local\bin\claude.exe"
+        ));
+        assert!(matches_rule(
+            claude_desktop,
+            "claude.exe",
+            "claude.exe",
+            r"c:\users\kira\appdata\local\anthropicclaude\claude.exe"
+        ));
+
+        let hermes_desktop = rule_by_id("hermes-desktop");
+        assert!(!matches_rule(
+            hermes_desktop,
+            "hermes.exe",
+            "hermes.exe",
+            r"c:\users\kira\appdata\local\hermes\bin\hermes.exe"
         ));
     }
 
@@ -719,24 +978,37 @@ mod tests {
         let mut tracker = ActivityTracker::default();
         let mut transcripts = HashMap::new();
         transcripts.insert("antigravity-desktop", TranscriptState::Idle);
+        let mut visible = HashSet::new();
+        visible.insert("antigravity-desktop".to_string());
+        visible.insert("openbot-desktop".to_string());
 
-        // Even with high CPU, transcript Idle keeps Antigravity Desktop idle
-        let mut tick1 = vec![
-            dummy_session("antigravity-desktop", "desktop", 18.0),
-            dummy_session("openbot-desktop", "desktop", 7.0),
-        ];
-        tracker.apply(&mut tick1, &transcripts);
-        assert_eq!(tick1[0].status, "idle");
-        assert_eq!(tick1[1].status, "idle");
+        // Even with high CPU, transcript Idle keeps Antigravity Desktop idle;
+        // non-transcript desktop needs 3 ticks >= 12% CPU to enter active.
+        for _ in 0..2 {
+            let mut tick = vec![
+                dummy_session("antigravity-desktop", "desktop", 18.0),
+                dummy_session("openbot-desktop", "desktop", 14.0),
+                dummy_session("gemini-desktop", "desktop", 18.0),
+            ];
+            tracker.apply(&mut tick, &transcripts, &visible);
+            assert_eq!(tick[0].status, "idle");
+            assert_eq!(tick[1].status, "idle");
+            assert_eq!(tick[2].status, "idle");
+        }
 
-        // Second consecutive high-CPU sample flips non-transcript provider active
-        let mut tick2 = vec![
+        // Third consecutive >= 12% CPU sample flips visible non-transcript desktop active,
+        // while invisible desktop (gemini-desktop not in `visible`) stays idle.
+        let mut tick3 = vec![
             dummy_session("antigravity-desktop", "desktop", 18.0),
-            dummy_session("openbot-desktop", "desktop", 6.2),
+            dummy_session("openbot-desktop", "desktop", 13.5),
+            dummy_session("gemini-desktop", "desktop", 18.0),
         ];
-        tracker.apply(&mut tick2, &transcripts);
-        assert_eq!(tick2[0].status, "idle");
-        assert_eq!(tick2[1].status, "active");
+        tracker.apply(&mut tick3, &transcripts, &visible);
+        assert_eq!(tick3[0].status, "idle");
+        assert_eq!(tick3[1].status, "active");
+        if cfg!(target_os = "windows") {
+            assert_eq!(tick3[2].status, "idle");
+        }
 
         // Completed PLANNER_RESPONSE (even with trailing GENERIC telemetry) stays Idle
         let done_tail = vec![
@@ -745,6 +1017,12 @@ mod tests {
             serde_json::json!({"type":"GENERIC","status":"DONE"}),
         ];
         assert_eq!(eval_agy_tail(&done_tail), TranscriptState::Idle);
+
+        // Cancelled turn stays Idle
+        let cancelled_tail = vec![
+            serde_json::json!({"type":"USER_INPUT","status":"CANCELLED","content":"hi"}),
+        ];
+        assert_eq!(eval_agy_tail(&cancelled_tail), TranscriptState::Idle);
 
         // Tool call turn is Active
         let run_tail = vec![
