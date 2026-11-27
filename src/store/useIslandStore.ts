@@ -112,7 +112,6 @@ function saveTodayHabits(items: FocusHabitItem[]) {
       JSON.stringify(items)
     );
   } catch {
-    // ignore storage errors
   }
 }
 
@@ -177,7 +176,7 @@ interface IslandStore {
   activeTab: PillTab;
   mood: NobiMood;
 
-  // AI monitor, detected providers & approvals
+  // AI
   aiSessions: AiSession[];
   detectedProviders: DetectedAiProvider[];
   providersLoading: boolean;
@@ -190,10 +189,10 @@ interface IslandStore {
   githubLoading: boolean;
   githubError: string | null;
 
-  // Google Calendar & Calendar AI
+  // Calendar
   calYear: number;
-  calMonth: number; // 1..12
-  selectedDate: string; // YYYY-MM-DD
+  calMonth: number;
+  selectedDate: string;
   calendarEvents: CalendarEventItem[];
   calendarLoading: boolean;
   calendarError: string | null;
@@ -217,7 +216,7 @@ interface IslandStore {
   pomoRunning: boolean;
   pomoSecondsLeft: number;
 
-  // Chat & File Drop
+  // Chat
   chatProvider: string;
   chatModel: string;
   chatMessages: ChatMessage[];
@@ -225,7 +224,7 @@ interface IslandStore {
   droppedFiles: string[];
   isDraggingFile: boolean;
 
-  // Local Drop & Hardware (BT + Net Quick) & Focus Habits
+  // Local Drop
   localDrop: LocalDropStatus;
   localDropLoading: boolean;
   hardwareStatus: HardwareStatus;
@@ -233,7 +232,7 @@ interface IslandStore {
   focusHabits: FocusHabitItem[];
   focusHabitAlarmFiredDate: string | null;
 
-  // System & Settings
+  // System
   systemStats: SystemStats;
   cpuHistory: number[];
   settings: AppSettings;
@@ -485,7 +484,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
         return models;
       }
     } catch {
-      // ignore
     }
     return get().detectedProviders.find((p) => p.id === provider)?.models ?? [];
   },
@@ -562,7 +560,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
     set({ githubLoading: true, githubError: null });
     try {
       const data = await tauriApi.fetchGitHubSummary(targetRange);
-      // Ignore stale responses if user clicked another range while this request was in flight
       if (data && get().githubRange === targetRange) {
         set({ githubData: data, githubLoading: false });
       } else {
@@ -654,7 +651,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
     if (!settings.hud_enabled || !settings.hud_windows_notif) return;
     const nowTs = Date.now();
 
-    // Anti-Spam Layer 1: Coalesce rapid messages from the same app into the active banner
     if (
       activeNotif &&
       activeNotif.app_name.toLowerCase() === item.app_name.toLowerCase() &&
@@ -672,7 +668,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
       return;
     }
 
-    // Anti-Spam Layer 2: Queue & coalesce if another notification is active or within 5s cooldown
     if (activeNotif || nowTs - lastNotifPopAt < 5000) {
       const existingIdx = notifQueue.findIndex(
         (q) => q.app_name.toLowerCase() === item.app_name.toLowerCase()
@@ -916,7 +911,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
         set({ media: state, mood: nextMood });
       }
     } catch {
-      // keep existing state when OS media query fails
     }
   },
 
@@ -1106,7 +1100,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
         return st;
       }
     } catch {
-      // ignore
     }
     return null;
   },
@@ -1117,7 +1110,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
       const loaded = await tauriApi.getSettings();
       if (loaded) get().applySettings({ ...DEFAULT_SETTINGS, ...loaded });
     } catch {
-      // keep defaults
     }
   },
 
@@ -1160,7 +1152,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
       const st = await tauriApi.getLocalDropStatus();
       if (st) set({ localDrop: st });
     } catch {
-      // ignore
     }
   },
 
@@ -1183,7 +1174,6 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
       const st = await tauriApi.removeLocalDropFile(id);
       if (st) set({ localDrop: st });
     } catch {
-      // ignore
     }
   },
 

@@ -5,12 +5,12 @@ use serde::{Deserialize, Serialize};
 pub struct CalendarEventItem {
     pub id: String,
     pub title: String,
-    pub date: String,       // YYYY-MM-DD
-    pub start_time: String, // HH:MM or "Sepanjang hari"
+    pub date: String,
+    pub start_time: String,
     pub end_time: String,
     pub location: Option<String>,
     pub meeting_url: Option<String>,
-    pub source: String,     // "google-api" | "ical"
+    pub source: String,
 }
 
 fn parse_ics_datetime(raw: &str) -> Option<(String, String)> {
@@ -72,7 +72,6 @@ fn parse_ics_events(ics_text: &str, year: i32, month: u32) -> Vec<CalendarEventI
     let mut dtend = String::new();
     let mut location: Option<String> = None;
 
-    // Unfold RFC 5545 folded lines
     let unfolded = ics_text.replace("\r\n ", "").replace("\n ", "");
 
     for line in unfolded.lines() {
@@ -155,7 +154,7 @@ pub async fn fetch_calendar_events(
 
     let client = reqwest::Client::new();
 
-    // Priority 1: Google Calendar API v3 OAuth Access Token
+    // Google API
     if let Some(access_token) = crate::secrets::read_secret_internal("google_access_token") {
         let next_month = if target_month == 12 {
             (target_year + 1, 1)
@@ -213,7 +212,7 @@ pub async fn fetch_calendar_events(
         }
     }
 
-    // Priority 2: Secret Google Calendar iCal (.ics) URL
+    // iCal
     if let Some(ical_url) = crate::secrets::read_secret_internal("google_ical_url") {
         let resp = client
             .get(&ical_url)

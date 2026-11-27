@@ -20,9 +20,9 @@ const TAIL_BYTES: u64 = 64 * 1024;
 pub struct AiSession {
     pub id: String,
     pub name: String,
-    pub kind: String,     // "desktop" | "cli"
-    pub provider: String, // "claude" | "gemini" | "chatgpt" | "antigravity" | "copilot" | "hermes" | "openbot"
-    pub status: String,   // "active" | "idle" | "waiting"
+    pub kind: String,
+    pub provider: String,
+    pub status: String,
     pub pid: u32,
     pub cpu_usage: f32,
     pub memory_mb: u64,
@@ -174,7 +174,6 @@ fn is_utility_cli_invocation(cmdline: &str) -> bool {
 }
 
 fn is_antigravity_ide_app_data(cmdline: &str) -> bool {
-    // Antigravity Desktop hub passes `--app_data_dir=antigravity`; the standalone CLI uses `antigravity-cli`.
     has_token(cmdline, "--app_data_dir=antigravity")
         || cmdline.contains("--app_data_dir antigravity ")
         || cmdline.ends_with("--app_data_dir antigravity")
@@ -189,8 +188,6 @@ fn matches_rule(rule: &TargetRule, pname: &str, cmdline: &str, exe_path: &str) -
         if !rule.patterns.iter().any(|pat| pname == *pat) {
             return false;
         }
-        // On Windows, `sysinfo` can return an empty cmdline during spawn/teardown or cross-elevation;
-        // never guess `agy.exe` is an interactive CLI session without reading its args.
         if cmdline.trim().is_empty()
             || cmdline.contains("--hub")
             || cmdline.contains("--hub-port")
@@ -375,7 +372,6 @@ fn eval_agy_roots(roots: &[PathBuf], now: i64) -> TranscriptState {
     files.sort_by(|a, b| b.1.cmp(&a.1));
     for (idx, (path, mt, size)) in files.into_iter().take(3).enumerate() {
         let age_ms = now.saturating_sub(mt);
-        // If the newest conversation is already Idle, ignore older conversations unless they were written very recently.
         if idx > 0 && age_ms > CONCURRENT_TURN_MS {
             break;
         }
@@ -678,7 +674,6 @@ impl ActivityTracker {
         for s in sessions.iter_mut() {
             seen.insert(s.id.clone());
 
-            // Providers with local session transcripts use ground-truth turn state, not CPU heuristics
             if let Some(tstate) = transcripts.get(s.id.as_str()) {
                 match tstate {
                     TranscriptState::Waiting(msg) => {
@@ -701,8 +696,6 @@ impl ActivityTracker {
                 continue;
             }
 
-            // On Windows, non-transcript desktop apps (e.g. Gemini) without a visible window
-            // must not trigger CPU-based "active" spikes from background telemetry/tray work.
             if cfg!(target_os = "windows")
                 && s.kind == "desktop"
                 && !visible_sessions.is_empty()
@@ -903,14 +896,12 @@ mod tests {
             r"c:\users\kira\.gemini\bin\agy.exe --hub --hub-port=56544",
             r"c:\users\kira\.gemini\bin\agy.exe"
         ));
-        // Empty cmdline (Windows spawn/teardown or privilege edge) must never guess CLI
         assert!(!matches_rule(
             agy_cli,
             "agy.exe",
             "",
             r"c:\users\kira\.gemini\bin\agy.exe"
         ));
-        // IDE binary without explicit CLI arg/subcommand or with desktop app_data_dir must not match CLI
         assert!(!matches_rule(
             agy_cli,
             "agy.exe",
@@ -982,8 +973,6 @@ mod tests {
         visible.insert("antigravity-desktop".to_string());
         visible.insert("openbot-desktop".to_string());
 
-        // Even with high CPU, transcript Idle keeps Antigravity Desktop idle;
-        // non-transcript desktop needs 3 ticks >= 12% CPU to enter active.
         for _ in 0..2 {
             let mut tick = vec![
                 dummy_session("antigravity-desktop", "desktop", 18.0),
@@ -996,8 +985,6 @@ mod tests {
             assert_eq!(tick[2].status, "idle");
         }
 
-        // Third consecutive >= 12% CPU sample flips visible non-transcript desktop active,
-        // while invisible desktop (gemini-desktop not in `visible`) stays idle.
         let mut tick3 = vec![
             dummy_session("antigravity-desktop", "desktop", 18.0),
             dummy_session("openbot-desktop", "desktop", 13.5),
@@ -1010,7 +997,6 @@ mod tests {
             assert_eq!(tick3[2].status, "idle");
         }
 
-        // Completed PLANNER_RESPONSE (even with trailing GENERIC telemetry) stays Idle
         let done_tail = vec![
             serde_json::json!({"type":"USER_INPUT","status":"DONE","content":"hi"}),
             serde_json::json!({"type":"PLANNER_RESPONSE","status":"DONE","tool_calls":[]}),
@@ -1018,13 +1004,11 @@ mod tests {
         ];
         assert_eq!(eval_agy_tail(&done_tail), TranscriptState::Idle);
 
-        // Cancelled turn stays Idle
         let cancelled_tail = vec![
             serde_json::json!({"type":"USER_INPUT","status":"CANCELLED","content":"hi"}),
         ];
         assert_eq!(eval_agy_tail(&cancelled_tail), TranscriptState::Idle);
 
-        // Tool call turn is Active
         let run_tail = vec![
             serde_json::json!({"type":"PLANNER_RESPONSE","status":"DONE","tool_calls":[{"name":"run_command"}]}),
         ];

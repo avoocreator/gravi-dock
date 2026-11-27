@@ -34,7 +34,7 @@ pub struct SystemStats {
 }
 
 fn query_gpu() -> GpuInfo {
-    // 1. Try nvidia-smi (works on both Windows & Linux with NVIDIA drivers)
+    // NVIDIA
     #[cfg(target_os = "windows")]
     let nv = {
         use std::os::windows::process::CommandExt;
@@ -77,7 +77,7 @@ fn query_gpu() -> GpuInfo {
         }
     }
 
-    // 2. Linux sysfs AMD/Intel GPU busy percent fallback
+    // Linux DRM
     #[cfg(target_os = "linux")]
     {
         for card in ["card0", "card1"] {

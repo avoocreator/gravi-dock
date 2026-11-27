@@ -27,13 +27,6 @@ const CYCLE_MOODS: NobiMood[] = [
   "idle",
 ];
 
-/**
- * Procedural 60 fps Canvas 2D Robot-Cat Companion (Nobi)
- * - Global desktop eye-tracking via Tauri `nobi:cursor-pos` + local `mousemove` fallback
- * - 24 distinct animated expressions matched to every feature & HUD event
- * - Interactive reactions: click, double-click (love), triple-click (dizzy),
- *   petting/stroking cursor over Nobi (blush/love), and right-click expression cycler.
- */
 export const NobiCanvas: React.FC<NobiCanvasProps> = ({
   size = 44,
   mood,
@@ -68,7 +61,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
     };
   }, []);
 
-  // Unified global + local cursor eye-tracking
+  // Eye tracking
   useEffect(() => {
     const updatePointerFromClient = (clientX: number, clientY: number) => {
       if (!settingsRef.current.eye_tracking) {
@@ -198,7 +191,6 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       const activeMood = moodRef.current;
       const cfg = settingsRef.current;
 
-      // Blink state machine
       blinkTimer -= dt;
       if (blinkTimer <= 0) {
         blinkProgress += dt * 11.5;
@@ -225,7 +217,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       const cy = size * 0.56;
       const s = size / 100;
 
-      // Body motion by mood
+      // Body motion
       let bobY = Math.sin(t * 2.6) * 1.5 * s;
       let rot = cfg.eye_tracking ? smoothEyeX * 0.055 : 0;
       let scaleX = 1 + squishRef.current * 0.2;
@@ -263,7 +255,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       ctx.rotate(rot);
       ctx.scale(scaleX, scaleY);
 
-      // Drop-zone box mode
+      // Drop mode
       if (activeMood === "drop") {
         ctx.save();
         const bx = -30 * s;
@@ -316,7 +308,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
           ? 0.55 + 0.45 * Math.sin(t * 10)
           : 1;
 
-      // === LEFT CAT EAR ===
+      // Left ear
       ctx.save();
       ctx.translate(-22 * s, -16 * s);
       ctx.rotate(-0.18 - earWiggle);
@@ -353,7 +345,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       ctx.restore();
       ctx.restore();
 
-      // === RIGHT CAT EAR ===
+      // Right ear
       ctx.save();
       ctx.translate(22 * s, -16 * s);
       ctx.rotate(0.18 + earWiggle);
@@ -390,7 +382,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       ctx.restore();
       ctx.restore();
 
-      // === MAIN HELMET BODY ===
+      // Helmet body
       ctx.beginPath();
       ctx.moveTo(0, -32 * s);
       ctx.bezierCurveTo(28 * s, -32 * s, 42 * s, -10 * s, 40 * s, 12 * s);
@@ -406,7 +398,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       ctx.fillStyle = bodyGrad;
       ctx.fill();
 
-      // === GLOSSY DARK VISOR ===
+      // Dark visor
       ctx.beginPath();
       ctx.moveTo(0, -21 * s);
       ctx.bezierCurveTo(21 * s, -21 * s, 31 * s, -5 * s, 30 * s, 10 * s);
@@ -421,7 +413,6 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       ctx.fillStyle = visorGrad;
       ctx.fill();
 
-      // Specular highlight
       ctx.save();
       ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
       ctx.lineWidth = 3.2 * s;
@@ -432,7 +423,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       ctx.stroke();
       ctx.restore();
 
-      // === GLOWING LED EYES & FEATURE EXPRESSIONS ===
+      // LED eyes
       const eyeOffsetX = smoothEyeX * 6.0 * s;
       const eyeOffsetY = smoothEyeY * 4.2 * s;
       const leftEyeX = -11.5 * s + eyeOffsetX;
@@ -499,7 +490,6 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
       ctx.strokeStyle = ledColor;
 
       if (activeMood === "panic") {
-        // Wide frantic panicked eyes + animated cyan sweat drop
         ctx.lineWidth = 3.0 * s;
         for (const ex of [leftEyeX, rightEyeX]) {
           ctx.beginPath();
@@ -509,7 +499,6 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
           ctx.arc(ex + Math.sin(t * 20) * 1.4 * s, eyeY, 2.0 * s, 0, Math.PI * 2);
           ctx.fill();
         }
-        // Sweat drop sliding on visor edge
         const dropY = -12 * s + ((t * 16) % 10) * s;
         ctx.fillStyle = "#38BDF8";
         ctx.shadowColor = "rgba(56, 189, 248, 0.9)";
@@ -519,24 +508,19 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
         ctx.quadraticCurveTo(17.5 * s, dropY + 1 * s, 21 * s, dropY - 4 * s);
         ctx.fill();
       } else if (activeMood === "charging") {
-        // Glowing emerald lightning bolt in visor center + happy arc eyes
         const pulse = 1 + Math.sin(t * 9) * 0.12;
         drawBolt(0 + eyeOffsetX * 0.35, 2 * s + eyeOffsetY * 0.3, s * 1.45 * pulse);
       } else if (activeMood === "low_battery") {
-        // Blinking red low-battery indicator inside visor
         const blinkOn = Math.sin(t * 7.5) > -0.35;
         ctx.globalAlpha = blinkOn ? 1 : 0.35;
         ctx.lineWidth = 2.6 * s;
         drawRoundedRect(-17 * s, -6 * s, 31 * s, 16 * s, 4 * s);
         ctx.stroke();
-        // Battery terminal nub
         drawRoundedRect(14.5 * s, -2 * s, 3.5 * s, 8 * s, 1.5 * s);
         ctx.fill();
-        // Single red low bar inside
         drawRoundedRect(-13.5 * s, -2.5 * s, 6.5 * s, 9 * s, 2 * s);
         ctx.fill();
       } else if (activeMood === "battery_full") {
-        // Bright emerald full battery + sparkle eyes
         ctx.lineWidth = 2.4 * s;
         drawRoundedRect(-17 * s, -6 * s, 31 * s, 16 * s, 4 * s);
         ctx.stroke();
@@ -545,7 +529,6 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
         drawRoundedRect(-13.5 * s, -2.5 * s, 24 * s, 9 * s, 2 * s);
         ctx.fill();
       } else if (activeMood === "wifi") {
-        // Animated expanding cyan Wi-Fi signal waves
         ctx.lineWidth = 2.8 * s;
         ctx.lineCap = "round";
         const wy = 11 * s;
@@ -560,7 +543,6 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
           ctx.stroke();
         }
       } else if (activeMood === "wifi_off") {
-        // Disconnected X eyes
         ctx.lineWidth = 3.1 * s;
         ctx.lineCap = "round";
         for (const ex of [leftEyeX, rightEyeX]) {
@@ -572,11 +554,9 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
           ctx.stroke();
         }
       } else if (activeMood === "capslock") {
-        // Crisp glowing uppercase "A" + up arrow
         ctx.lineWidth = 3.0 * s;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        // Up arrow left
         ctx.beginPath();
         ctx.moveTo(-12 * s, 9 * s);
         ctx.lineTo(-12 * s, -6 * s);
@@ -584,13 +564,11 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
         ctx.lineTo(-12 * s, -6 * s);
         ctx.lineTo(-7 * s, -1 * s);
         ctx.stroke();
-        // Bold A right
         ctx.font = `bold ${Math.round(21 * s)}px system-ui, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("A", 9 * s, 3 * s);
       } else if (activeMood === "celebrate") {
-        // Joyful star eyes + floating confetti sparks
         const pulse = 1 + Math.sin(t * 11) * 0.16;
         drawStar(leftEyeX, eyeY, 7.2 * s * pulse, 2.8 * s * pulse);
         drawStar(rightEyeX, eyeY, 7.2 * s * pulse, 2.8 * s * pulse);
@@ -605,7 +583,6 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
           ctx.fill();
         }
       } else if (activeMood === "notif") {
-        // Bright curious pill eyes + pulsing notification badge dot
         const eyeW = 7.4 * s;
         const eyeH = 14.2 * s * blinkScaleY;
         drawRoundedRect(leftEyeX - eyeW / 2, eyeY - eyeH / 2, eyeW, Math.max(2 * s, eyeH), eyeW / 2);

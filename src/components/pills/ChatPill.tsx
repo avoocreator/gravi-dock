@@ -46,7 +46,7 @@ export const ChatPill: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[275px] gap-2">
-      {/* Auto-Detected Provider & Model bar */}
+      {/* Provider bar */}
       <div className="flex items-center gap-1.5">
         <select
           value={chatProvider}
@@ -133,7 +133,6 @@ export const ChatPill: React.FC = () => {
         ))}
       </div>
 
-      {/* Dropped files attachment bar */}
       {droppedFiles.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {droppedFiles.map((path) => (

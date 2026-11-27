@@ -205,7 +205,7 @@ pub fn run() {
                 network_bt::start_bt_watcher(bt_handle).await;
             });
 
-            // Unified cursor hit-test & global desktop eye-tracking emitter (~40 Hz)
+            // Cursor tracker
             let hit_handle = handle.clone();
             let hit_rect = hit_rect_state.clone();
             tauri::async_runtime::spawn(async move {

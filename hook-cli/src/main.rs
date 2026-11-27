@@ -59,7 +59,7 @@ fn main() {
         .map(|p| p.to_string_lossy().to_string());
 
     let addr: SocketAddr = IPC_ADDR.parse().unwrap();
-    // Fail-open immediately if Nobi Island is not running
+    // Fail-open
     let Ok(mut stream) = TcpStream::connect_timeout(&addr, Duration::from_millis(250)) else {
         println!("{{\"decision\":\"allow\"}}");
         return;

@@ -4,11 +4,11 @@ use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HudEventPayload {
-    pub kind: String, // "capslock" | "battery_charging" | "battery_unplugged" | "battery_low" | "battery_full" | "wifi_connected" | "wifi_disconnected" | "ai_done"
+    pub kind: String,
     pub title: String,
     pub subtitle: String,
     pub mood: String,
-    pub accent: String, // "emerald" | "amber" | "rose" | "sky" | "violet"
+    pub accent: String,
     pub badge: Option<String>,
     pub provider: Option<String>,
     pub app_name: Option<String>,
@@ -167,7 +167,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
             continue;
         }
 
-        // 1. CapsLock check every 200ms (zero-cost Win32 call)
+        // CapsLock
         if cfg.hud_capslock {
             let cur_caps = read_capslock();
             if let (Some(prev), Some(curr)) = (last_caps, cur_caps) {
@@ -196,7 +196,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
             }
         }
 
-        // 2. Battery check every ~1.2s (6 ticks)
+        // Battery
         if tick % 6 == 0 {
             if let Some(curr) = read_battery() {
                 if let Some(prev) = last_bat {
@@ -273,7 +273,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
             }
         }
 
-        // 3. Wi-Fi check every ~3s (15 ticks)
+        // Wi-Fi
         if tick % 15 == 0 && cfg.hud_wifi {
             let cur_wifi = tokio::task::spawn_blocking(read_wifi_ssid)
                 .await

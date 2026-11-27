@@ -6,48 +6,48 @@ use tauri::{AppHandle, Emitter, Manager};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppSettings {
-    // 1. Umum & Island
-    pub island_position: String, // "top-center" | "top-left" | "top-right"
-    pub island_style: String,    // "floating" | "attached"
+    // Umum
+    pub island_position: String,
+    pub island_style: String,
     pub open_on_hover: bool,
     pub hover_close_delay_ms: u32,
     pub auto_hide_idle: bool,
     pub clock_24h: bool,
     pub show_seconds: bool,
     pub start_on_boot: bool,
-    pub island_opacity: u8, // 75..100
+    pub island_opacity: u8,
 
-    // 2. Karakter & Suara
+    // Karakter
     pub eye_tracking: bool,
     pub ear_animations: bool,
     pub squish_dizzy: bool,
     pub sound_enabled: bool,
-    pub sound_volume: u8, // 0..100
+    pub sound_volume: u8,
 
-    // 3. AI Monitor & Hooks
+    // AI Monitor
     pub monitored_ais: Vec<String>,
-    pub max_compact_logos: u8, // 1..6
+    pub max_compact_logos: u8,
     pub poll_interval_secs: u8,
 
-    // 4. GitHub
-    pub github_default_range: u32, // 3 | 6 | 12
-    pub github_default_items: u8,  // 3 | 5 | 10
+    // GitHub
+    pub github_default_range: u32,
+    pub github_default_items: u8,
     pub github_refresh_mins: u8,
 
-    // 5. Google Calendar & Calendar AI
+    // Calendar
     pub calendar_reminder_mins: u8,
-    pub calendar_week_start: String, // "monday" | "sunday"
+    pub calendar_week_start: String,
     pub calendar_ai_provider: String,
     pub calendar_ai_model: String,
 
-    // 6. Mini Chat & File Drop
+    // Chat
     pub chat_default_provider: String,
     pub chat_default_model: String,
     pub ollama_endpoint: String,
     pub chat_system_prompt: String,
     pub max_drop_file_kb: u32,
 
-    // 7. Media, Fokus & Pintasan
+    // Utilities
     pub pomo_focus_mins: u16,
     pub pomo_break_mins: u16,
     pub media_sync_enabled: bool,
@@ -55,7 +55,7 @@ pub struct AppSettings {
     pub shortcut_toggle_island: String,
     pub shortcut_open_chat: String,
 
-    // 8. HUD & Notifikasi Windows
+    // HUD
     pub hud_enabled: bool,
     pub hud_capslock: bool,
     pub hud_battery_charging: bool,

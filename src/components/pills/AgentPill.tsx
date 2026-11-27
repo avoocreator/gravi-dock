@@ -80,7 +80,7 @@ export const AgentPill: React.FC = () => {
         </div>
       )}
 
-      {/* AI CLI Sessions */}
+      {/* CLI sessions */}
       <div className="macos-card rounded-2xl p-2.5 space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
@@ -116,7 +116,7 @@ export const AgentPill: React.FC = () => {
         )}
       </div>
 
-      {/* Live CLI Hook Activity Feed (nobi:agent-event) */}
+      {/* Activity feed */}
       {agentEvents.length > 0 && (
         <div className="macos-card rounded-2xl p-2.5 space-y-1.5">
           <div className="flex items-center justify-between">
@@ -161,7 +161,7 @@ export const AgentPill: React.FC = () => {
         </div>
       )}
 
-      {/* AI Desktop Apps with Official Logos */}
+      {/* Desktop apps */}
       <div className="space-y-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 px-1">
           <Monitor className="w-3 h-3" />

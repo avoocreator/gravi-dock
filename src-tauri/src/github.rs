@@ -8,7 +8,7 @@ pub struct ContributionDay {
     pub date: String,
     pub count: u32,
     pub level: u8,
-    pub weekday: u8, // 0 = Sun .. 6 = Sat
+    pub weekday: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +73,6 @@ pub async fn fetch_github_summary(range_months: Option<u32>) -> Result<GitHubSum
         .ok_or_else(|| "GitHub Personal Access Token belum diatur di Pengaturan.".to_string())?;
 
     let now = Utc::now();
-    // Stay strictly under GitHub's 1-year span limit (364 days avoids leap/ms overflow error)
     let days_back = match months {
         3 => 90,
         6 => 180,
@@ -84,7 +83,6 @@ pub async fn fetch_github_summary(range_months: Option<u32>) -> Result<GitHubSum
         .to_string();
     let to = now.format("%Y-%m-%dT23:59:59Z").to_string();
 
-    // Only request fields covered by standard `read:user` + `repo` scopes (no `email` scope needed!)
     let query = r#"
     query($from: DateTime!, $to: DateTime!) {
       viewer {
@@ -177,7 +175,6 @@ pub async fn fetch_github_summary(range_months: Option<u32>) -> Result<GitHubSum
     let body: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
     let viewer = &body["data"]["viewer"];
 
-    // Only fail on GraphQL errors if viewer data itself is missing
     if viewer.is_null() {
         if let Some(err_msg) = body["errors"]
             .as_array()

@@ -69,7 +69,7 @@ export const SettingsPill: React.FC = () => {
         </div>
       )}
 
-      {/* OS Keyring Credentials */}
+      {/* Credentials */}
       <div className="space-y-2">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
           <KeyRound className="w-3.5 h-3.5" /> Kredensial (OS Keyring)

@@ -51,7 +51,7 @@ export const PomodoroPill: React.FC = () => {
 
   return (
     <div className="space-y-2.5">
-      {/* Compact Pomodoro Timer Card */}
+      {/* Timer */}
       <div className="macos-card rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -123,7 +123,7 @@ export const PomodoroPill: React.FC = () => {
         </div>
       </div>
 
-      {/* Focus Habit — Daily To-Do List with Deadline Alarm */}
+      {/* Focus habit */}
       <div className="macos-card rounded-2xl p-2.5 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">

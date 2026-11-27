@@ -75,8 +75,6 @@ fn is_browser_app(app_name: &str) -> bool {
         .any(|b| low.contains(b))
 }
 
-/// Detects whether a notification is from a real messaging app (Desktop OR Web via browser)
-/// and returns `(is_messaging, normalized_app_name)`.
 fn classify_notification(app_name: &str, title: &str, body: &str) -> (bool, String) {
     if is_excluded_system_app(app_name) {
         return (false, app_name.to_string());
@@ -89,7 +87,7 @@ fn classify_notification(app_name: &str, title: &str, body: &str) -> (bool, Stri
         }
     }
 
-    // Browser web-push notification (e.g., Chrome/Edge delivering WhatsApp Web, Telegram Web, Discord Web)
+    // Browser push
     if is_browser_app(app_name) {
         let combined = format!("{} {}", title, body).to_lowercase();
         for (needle, pretty) in KNOWN_MESSAGING_APPS {
@@ -97,7 +95,6 @@ fn classify_notification(app_name: &str, title: &str, body: &str) -> (bool, Stri
                 return (true, (*pretty).to_string());
             }
         }
-        // Check common web domains in Chrome/Edge toast text
         if combined.contains("web.whatsapp.com") {
             return (true, "WhatsApp".to_string());
         }
@@ -270,15 +267,7 @@ pub async fn reply_os_notification(
             let safe_sender = sender_clone.replace('\'', "''");
             let safe_txt = txt_clone.replace('\'', "''");
 
-            // Supports BOTH Desktop apps (WhatsApp Desktop, Telegram, Discord, Slack, Teams, etc.)
-            // AND Web apps in Chrome/Edge/Brave/Opera/Firefox (WhatsApp Web, Telegram Web, Discord Web):
-            // 1. Always copies reply to clipboard first.
-            // 2. Tier 1: Look for a dedicated desktop app or PWA window matching `app_name`.
-            // 3. Tier 2: Look inside open browser windows for a TabItem matching `app_name` (e.g., "WhatsApp")
-            //    and SELECT that tab via UI Automation so we switch AWAY from Google Docs / other tabs!
-            // 4. Verify the active foreground window title actually matches `app_name` (and NEVER Google Docs/Sheets/Code).
-            // 5. Locate the actual chat message input box (Edit/Document control, excluding Search/Address bar),
-            //    focus it via UI Automation, paste (Ctrl+V), and press Enter.
+            // Reply automation
             let ps = format!(
                 r#"
 $ErrorActionPreference = 'SilentlyContinue'

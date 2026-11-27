@@ -123,7 +123,7 @@ export const CalendarPill: React.FC = () => {
 
   return (
     <div className="space-y-2">
-      {/* Compact Mini Calendar Card */}
+      {/* Mini calendar */}
       <div className="macos-card rounded-2xl p-2.5 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
@@ -207,7 +207,7 @@ export const CalendarPill: React.FC = () => {
         </div>
       </div>
 
-      {/* Selected-Date Agenda Card */}
+      {/* Selected agenda */}
       <div className="macos-card rounded-2xl p-2.5 flex items-start gap-3">
         <div className="w-11 shrink-0 text-center pt-0.5">
           <div className="text-lg font-bold leading-none text-white tabular-nums">{selDayNum}</div>
@@ -242,7 +242,7 @@ export const CalendarPill: React.FC = () => {
         </div>
       </div>
 
-      {/* Auto-Detected AI Calendar Assistant */}
+      {/* AI assistant */}
       <div className="macos-card rounded-2xl p-2.5 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
@@ -259,7 +259,6 @@ export const CalendarPill: React.FC = () => {
           </button>
         </div>
 
-        {/* Detected Provider & Account Model Selectors */}
         <div className="grid grid-cols-2 gap-1.5">
           <select
             value={calendarAiProvider}
@@ -326,7 +325,6 @@ export const CalendarPill: React.FC = () => {
           </div>
         )}
 
-        {/* Quick AI Calendar Chips */}
         <div className="flex flex-wrap gap-1">
           {[
             { label: "Ringkas hari ini", prompt: "Ringkas agenda tanggal yang dipilih dan prioritas utamanya." },
@@ -344,7 +342,6 @@ export const CalendarPill: React.FC = () => {
           ))}
         </div>
 
-        {/* Custom AI Calendar Prompt */}
         <form onSubmit={handleAiSubmit} className="flex items-center gap-1.5">
           <input
             value={aiQuestion}

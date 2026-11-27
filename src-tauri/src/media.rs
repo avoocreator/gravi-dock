@@ -251,7 +251,7 @@ mod win_media {
             }
         }
 
-        // Native Win32 media-key fallback if no GSMTC session accepted the command
+        // Win32 fallback
         match action {
             "play_pause" => send_vk(VK_MEDIA_PLAY_PAUSE),
             "next" => send_vk(VK_MEDIA_NEXT_TRACK),

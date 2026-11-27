@@ -110,7 +110,7 @@ export const SystemPill: React.FC = () => {
 
   return (
     <div className="space-y-2">
-      {/* Sub-Tabs: Performa | Baterai & BT | Net Quick */}
+      {/* Sub tabs */}
       <div className="flex items-center gap-1 bg-white/[0.03] p-0.5 rounded-xl border border-white/[0.06]">
         {[
           { id: "perf" as const, label: "Performa" },
@@ -133,7 +133,7 @@ export const SystemPill: React.FC = () => {
 
       {subTab === "perf" && (
         <div className="space-y-2.5">
-          {/* Row 1: CPU Sparkline + RAM Circular Gauge */}
+          {/* CPU & RAM */}
           <div className="grid grid-cols-2 gap-2">
             <div className="macos-card rounded-2xl p-2.5 flex flex-col justify-between gap-1.5">
               <div className="flex items-center justify-between">
@@ -196,7 +196,7 @@ export const SystemPill: React.FC = () => {
             </div>
           </div>
 
-          {/* Row 2: GPU + System Runtime */}
+          {/* GPU & Runtime */}
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2 macos-card rounded-2xl p-2.5 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
@@ -235,7 +235,7 @@ export const SystemPill: React.FC = () => {
             </div>
           </div>
 
-          {/* Row 3: Top Processes */}
+          {/* Top processes */}
           <div className="macos-card rounded-2xl p-2.5 space-y-1.5">
             <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
               <span className="flex items-center gap-1">
@@ -263,7 +263,7 @@ export const SystemPill: React.FC = () => {
 
       {subTab === "bt" && (
         <div className="space-y-2.5">
-          {/* Laptop Battery Card */}
+          {/* Battery */}
           <div className="macos-card rounded-2xl p-3 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -303,7 +303,7 @@ export const SystemPill: React.FC = () => {
             </div>
           </div>
 
-          {/* Bluetooth Devices Dock */}
+          {/* Bluetooth */}
           <div className="macos-card rounded-2xl p-2.5 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
@@ -380,7 +380,7 @@ export const SystemPill: React.FC = () => {
 
       {subTab === "net" && (
         <div className="space-y-2.5">
-          {/* Live Speed + Ping Card */}
+          {/* Network */}
           <div className="macos-card rounded-2xl p-3 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
@@ -430,7 +430,7 @@ export const SystemPill: React.FC = () => {
             </div>
           </div>
 
-          {/* Wi-Fi Password & Instant QR Sharing */}
+          {/* Wi-Fi QR */}
           <div className="macos-card rounded-2xl p-2.5 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">

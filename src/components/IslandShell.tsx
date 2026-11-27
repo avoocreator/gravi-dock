@@ -192,7 +192,6 @@ export const IslandShell: React.FC = () => {
     if (!settings.open_on_hover) clearHoverTimers();
   }, [settings.open_on_hover]);
 
-  // Clock updater
   useEffect(() => {
     setClock(formatClock(settings.clock_24h, settings.show_seconds));
     const interval = settings.show_seconds ? 1000 : 5000;
@@ -203,7 +202,6 @@ export const IslandShell: React.FC = () => {
     return () => clearInterval(id);
   }, [settings.clock_24h, settings.show_seconds]);
 
-  // Auto-dismiss HUD mini-expand (pauses when hovering)
   useEffect(() => {
     if (hudAutoDismissRef.current) {
       clearTimeout(hudAutoDismissRef.current);
@@ -219,7 +217,6 @@ export const IslandShell: React.FC = () => {
     };
   }, [activeHud, isHoveringPopup, settings.hud_duration_ms, dismissHud]);
 
-  // Auto-dismiss Windows notification popup (pauses while hovering or typing a reply)
   useEffect(() => {
     if (notifAutoDismissRef.current) {
       clearTimeout(notifAutoDismissRef.current);
@@ -235,7 +232,6 @@ export const IslandShell: React.FC = () => {
     };
   }, [activeNotif, isHoveringPopup, replyText, settings.hud_duration_ms, dismissOsNotification]);
 
-  // Keep expanded DOM mounted briefly during collapse
   useLayoutEffect(() => {
     if (collapseUnmountTimerRef.current) {
       clearTimeout(collapseUnmountTimerRef.current);
@@ -252,7 +248,6 @@ export const IslandShell: React.FC = () => {
     }
   }, [mode]);
 
-  // Measure compact pill size
   useEffect(() => {
     const el = compactMeasureRef.current;
     if (!el) return;
@@ -270,7 +265,6 @@ export const IslandShell: React.FC = () => {
     return () => ro.disconnect();
   }, [clock, pomoRunning, pomoActiveInCompact, pomoLabel, aiSessions.length, settings.max_compact_logos, media.is_playing]);
 
-  // Measure expanded panel height
   useEffect(() => {
     if (!renderExpandedDom) return;
     const el = expandedInnerRef.current;
@@ -287,7 +281,6 @@ export const IslandShell: React.FC = () => {
     return () => ro.disconnect();
   }, [renderExpandedDom, activeTab, activeReminder]);
 
-  // Measure notification popup height
   useEffect(() => {
     if (!showNotifPopup) return;
     const el = notifInnerRef.current;
@@ -304,7 +297,6 @@ export const IslandShell: React.FC = () => {
     return () => ro.disconnect();
   }, [showNotifPopup, activeNotif, replyStatus]);
 
-  // Auto-hide when idle
   useEffect(() => {
     if (idleHideTimerRef.current) {
       clearTimeout(idleHideTimerRef.current);
@@ -346,7 +338,7 @@ export const IslandShell: React.FC = () => {
     activeNotif,
   ]);
 
-  // Sync Rust click-through hit-box
+  // Hitbox sync
   useEffect(() => {
     const el = shellRef.current;
     if (!el) return;
@@ -490,7 +482,6 @@ export const IslandShell: React.FC = () => {
       clearTimeout(hoverCloseTimerRef.current);
       hoverCloseTimerRef.current = null;
     }
-    // Don't auto-expand to full 500px panel while user is reading/replying to a HUD or Notification popup
     if (showHudPopup || showNotifPopup) return;
     if (!settings.open_on_hover || mode !== "compact" || suppressHoverUntilLeaveRef.current) {
       return;
@@ -613,7 +604,7 @@ export const IslandShell: React.FC = () => {
         }
       }}
     >
-      {/* File Drop Overlay */}
+      {/* Drop overlay */}
       {isDraggingFile && (
         <div
           className={`absolute inset-0 z-30 ${
@@ -627,7 +618,7 @@ export const IslandShell: React.FC = () => {
         </div>
       )}
 
-      {/* Compact Pill Layer */}
+      {/* Compact pill */}
       <div
         className={`absolute inset-x-0 top-0 flex items-center justify-center island-layer-fade ${
           isExpanded || showHudPopup || showNotifPopup
@@ -708,7 +699,7 @@ export const IslandShell: React.FC = () => {
         </div>
       </div>
 
-      {/* Mini-Expanded HUD Popup Layer (CapsLock, Battery, Wi-Fi, AI Selesai) */}
+      {/* HUD popup */}
       {showHudPopup && activeHud && (
         <div
           onClick={(e) => {
@@ -748,7 +739,7 @@ export const IslandShell: React.FC = () => {
         </div>
       )}
 
-      {/* Mini-Expanded Anti-Spam Windows Notification + Quick Reply Layer */}
+      {/* Notification popup */}
       {showNotifPopup && activeNotif && (
         <div ref={notifInnerRef} className="w-[376px] p-3 space-y-2 tab-reveal">
           <div className="flex items-start justify-between gap-2">
@@ -821,7 +812,7 @@ export const IslandShell: React.FC = () => {
         </div>
       )}
 
-      {/* Expanded Full Panel Layer */}
+      {/* Expanded panel */}
       {renderExpandedDom && (
         <div
           className={`w-[500px] max-h-[724px] overflow-y-auto nobi-scroll island-layer-fade ${
@@ -831,7 +822,7 @@ export const IslandShell: React.FC = () => {
           }`}
         >
           <div ref={expandedInnerRef} className="p-3 space-y-2.5">
-            {/* Minimalist macOS Notch Header */}
+            {/* Header */}
             <div className="flex items-center justify-between gap-2 px-0.5">
               <div className="flex items-center gap-2.5">
                 <NobiCanvas size={38} mood={mood} onMoodChange={setMood} />
@@ -884,7 +875,6 @@ export const IslandShell: React.FC = () => {
               </div>
             </div>
 
-            {/* Calendar Upcoming Reminder Banner */}
             {activeReminder && (
               <div className="rounded-xl bg-amber-500/15 border border-amber-400/30 px-2.5 py-1.5 flex items-center justify-between gap-2 text-[11px]">
                 <button
@@ -911,7 +901,7 @@ export const IslandShell: React.FC = () => {
               </div>
             )}
 
-            {/* Sleek macOS Segmented Pill Bar */}
+            {/* Tab bar */}
             <div className="flex items-center gap-0.5 bg-white/[0.04] p-1 rounded-2xl border border-white/[0.06]">
               {TABS.map((t) => {
                 const active = activeTab === t.id;
@@ -932,7 +922,7 @@ export const IslandShell: React.FC = () => {
               })}
             </div>
 
-            {/* Active Pill Content */}
+            {/* Tab content */}
             <div key={activeTab} className="tab-reveal">
               {activeTab === "agents" && <AgentPill />}
               {activeTab === "github" && <GitHubPill />}

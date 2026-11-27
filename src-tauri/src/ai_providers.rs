@@ -10,7 +10,7 @@ pub struct DetectedAiProvider {
     pub installed: bool,
     pub running: bool,
     pub has_account: bool,
-    pub source: String, // "local-server" | "app" | "cli" | "api-key"
+    pub source: String,
     pub status_label: String,
     pub models: Vec<String>,
     pub default_model: String,
@@ -71,7 +71,7 @@ fn app_installed_paths(app: &str) -> bool {
             PathBuf::from("/Applications/Claude.app"),
         ]),
         "chatgpt" => path_exists_any(&[
-            local.join("Packages"), // fallback checked via process/config below
+            local.join("Packages"),
             roam.join("OpenAI"),
             home.join(".codex"),
             PathBuf::from("/Applications/ChatGPT.app"),
@@ -308,7 +308,7 @@ pub async fn detect_ai_providers(
 
     let mut providers = Vec::new();
 
-    // 1. Ollama (Local)
+    // Ollama
     let ollama_running = is_process_running(&sys, &["ollama"]);
     let ollama_bin = command_exists("ollama");
     let ollama_models_res = fetch_ollama_models(&client, &ollama_url).await;
@@ -337,7 +337,7 @@ pub async fn detect_ai_providers(
         default_model: ollama_default,
     });
 
-    // 2. LM Studio (Local)
+    // LM Studio
     let lms_running = is_process_running(&sys, &["lm studio", "lmstudio", "lms"]);
     let lms_models_res = fetch_lmstudio_models(&client).await;
     let lms_reachable = lms_models_res.is_ok();
@@ -365,7 +365,7 @@ pub async fn detect_ai_providers(
         });
     }
 
-    // 3. Google Gemini (API / Desktop / Antigravity)
+    // Gemini
     let gemini_key = read_api_key_or_env("gemini_api_key", "GEMINI_API_KEY");
     let gemini_running = is_process_running(&sys, &["gemini", "antigravity"]);
     let gemini_installed = gemini_running || app_installed_paths("gemini") || command_exists("gemini");
@@ -402,7 +402,7 @@ pub async fn detect_ai_providers(
         default_model: gemini_default,
     });
 
-    // 4. Gemini CLI (if installed locally)
+    // Gemini CLI
     if command_exists("gemini") {
         let cli_models = fallback_models("gemini-cli");
         providers.push(DetectedAiProvider {
@@ -418,7 +418,7 @@ pub async fn detect_ai_providers(
         });
     }
 
-    // 5. Anthropic Claude (API / Desktop)
+    // Claude
     let claude_key = read_api_key_or_env("anthropic_api_key", "ANTHROPIC_API_KEY");
     let claude_running = is_process_running(&sys, &["claude"]);
     let claude_installed = claude_running || app_installed_paths("claude") || command_exists("claude");
@@ -453,7 +453,7 @@ pub async fn detect_ai_providers(
         default_model: claude_default,
     });
 
-    // 6. Claude Code CLI (if installed locally)
+    // Claude CLI
     if command_exists("claude") {
         let cli_models = fallback_models("claude-cli");
         providers.push(DetectedAiProvider {
@@ -469,7 +469,7 @@ pub async fn detect_ai_providers(
         });
     }
 
-    // 7. OpenAI / ChatGPT
+    // OpenAI
     let openai_key = read_api_key_or_env("openai_api_key", "OPENAI_API_KEY");
     let chatgpt_running = is_process_running(&sys, &["chatgpt", "codex"]);
     let chatgpt_installed = chatgpt_running || app_installed_paths("chatgpt") || command_exists("codex");
@@ -506,7 +506,7 @@ pub async fn detect_ai_providers(
         default_model: openai_default,
     });
 
-    // 8. GitHub Models (uses existing GitHub PAT if configured!)
+    // GitHub Models
     let gh_token = crate::secrets::read_secret_internal("github_token");
     let gh_cli = command_exists("gh");
     if gh_token.is_some() || gh_cli {
@@ -528,7 +528,6 @@ pub async fn detect_ai_providers(
         });
     }
 
-    // Sort: ready (has_account) first, then installed/running, then rest
     providers.sort_by(|a, b| {
         b.has_account
             .cmp(&a.has_account)

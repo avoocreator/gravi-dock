@@ -1,9 +1,3 @@
-/**
- * Spec-compliant QR Code Matrix Generator (ISO/IEC 18004)
- * Supports Byte Mode, Error Correction Level L, Versions 1..6 (up to 134 UTF-8 bytes)
- * Zero external dependencies — renders crisp SVG QR codes for Local Drop & Wi-Fi sharing.
- */
-
 const VERSION_SPECS: Array<{
   version: number;
   size: number;
@@ -19,7 +13,6 @@ const VERSION_SPECS: Array<{
   { version: 6, size: 41, dataCodewords: 136, ecCodewords: 18, alignCenters: [6, 34] },
 ];
 
-// Version 6 Level L has 2 blocks of (68 data, 18 ec); Versions 1..5 have 1 block
 const GF_EXP = new Uint8Array(512);
 const GF_LOG = new Uint8Array(256);
 (() => {
@@ -71,8 +64,6 @@ function rsRemainder(data: Uint8Array, ecCount: number): Uint8Array {
 }
 
 function formatBitsLevelLMask0(): number {
-  // Format info for EC Level L (01) + Mask 0 (000) -> 5-bit data = 01000 (8)
-  // BCH(15,5) + XOR mask 101010000010010 = 0b111011111000100 (0x77C4)
   return 0x77c4;
 }
 
@@ -90,7 +81,6 @@ export function generateQrMatrix(text: string): boolean[][] {
     }
   };
 
-  // Mode indicator: Byte (0100) + 8-bit length
   pushBits(0b0100, 4);
   pushBits(payload.length, 8);
   for (const b of payload) pushBits(b, 8);
@@ -113,7 +103,7 @@ export function generateQrMatrix(text: string): boolean[][] {
     dataBytes[byteIdx++] = padBytes[padIdx++ % 2];
   }
 
-  // Interleave blocks (Version 6 Level L has 2 blocks; Versions 1..5 have 1 block)
+  // Interleave blocks
   let codewords: Uint8Array;
   if (spec.version === 6) {
     const b1 = dataBytes.slice(0, 68);
@@ -189,7 +179,7 @@ export function generateQrMatrix(text: string): boolean[][] {
     }
   }
 
-  // Reserve format info & dark module
+  // Format info
   const fmt = formatBitsLevelLMask0();
   for (let i = 0; i <= 5; i++) setFunc(8, i, ((fmt >> (14 - i)) & 1) === 1);
   setFunc(8, 7, ((fmt >> 8) & 1) === 1);
@@ -198,10 +188,10 @@ export function generateQrMatrix(text: string): boolean[][] {
   for (let i = 0; i < 6; i++) setFunc(5 - i, 8, ((fmt >> (5 - i)) & 1) === 1);
 
   for (let i = 0; i < 7; i++) setFunc(size - 1 - i, 8, ((fmt >> (14 - i)) & 1) === 1);
-  setFunc(size - 8, 8, true); // Dark module
+  setFunc(size - 8, 8, true);
   for (let i = 0; i < 8; i++) setFunc(8, size - 8 + i, ((fmt >> (7 - i)) & 1) === 1);
 
-  // Place data bits in zig-zag columns with Mask 0: (r + c) % 2 === 0
+  // Data placement
   let bitIndex = 0;
   const totalBits = codewords.length * 8;
   let upward = true;

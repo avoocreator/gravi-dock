@@ -67,7 +67,7 @@ export const LocalDropPill: React.FC = () => {
 
   return (
     <div className="space-y-2.5">
-      {/* Server Control & QR Card */}
+      {/* Server & QR */}
       <div className="macos-card rounded-2xl p-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -142,7 +142,7 @@ export const LocalDropPill: React.FC = () => {
         )}
       </div>
 
-      {/* Shared Files from Laptop */}
+      {/* Shared files */}
       <div className="macos-card rounded-2xl p-2.5 space-y-1.5">
         <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
           <span className="flex items-center gap-1.5">
@@ -184,7 +184,7 @@ export const LocalDropPill: React.FC = () => {
         )}
       </div>
 
-      {/* Received Files & Texts from Phone */}
+      {/* Received items */}
       {localDrop.received_items.length > 0 && (
         <div className="macos-card rounded-2xl p-2.5 space-y-1.5">
           <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-zinc-400">

@@ -65,7 +65,6 @@ export function playNobiSound(kind: SoundEffectKind, enabled: boolean, volumePer
     osc.start(now);
     osc.stop(now + 0.26);
   } else {
-    // chime (Pomodoro complete)
     osc.type = "sine";
     osc.frequency.setValueAtTime(523.25, now);
     osc.frequency.setValueAtTime(659.25, now + 0.1);

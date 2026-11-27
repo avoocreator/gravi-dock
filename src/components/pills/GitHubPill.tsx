@@ -15,7 +15,6 @@ import { useIslandStore } from "../../store/useIslandStore";
 import { isTauriRuntime, openExternalUrl, tauriApi } from "../../lib/tauriBridge";
 import { ContributionDay } from "../../types/island";
 
-// Authentic GitHub Dark Dimmed/Default contribution palette
 const CELL_STYLES: Record<number, string> = {
   0: "bg-[#161b22] border-[#21262d]",
   1: "bg-[#0e4429] border-[#0e4429]",
@@ -178,7 +177,7 @@ export const GitHubPill: React.FC = () => {
 
   return (
     <div className="space-y-2.5">
-      {/* Authentic GitHub Dark Contribution Graph Card */}
+      {/* Contribution graph */}
       <div className="rounded-2xl bg-[#0d1117] border border-[#30363d] p-2.5 space-y-2 shadow-inner">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -226,7 +225,6 @@ export const GitHubPill: React.FC = () => {
           </div>
         </div>
 
-        {/* Authentic GitHub Hover Tooltip & Today Counter Strip */}
         {githubData && (
           <div
             className={`flex items-center justify-between rounded-lg px-2.5 py-1 text-[10px] border transition-colors ${
@@ -275,7 +273,6 @@ export const GitHubPill: React.FC = () => {
           <div className="space-y-1.5">
             <div className="overflow-x-auto nobi-scroll pb-0.5">
               <div className="inline-flex flex-col gap-1">
-                {/* Month Headers */}
                 <div className="relative h-3 ml-6">
                   {monthLabels.map((m) => (
                     <span
@@ -288,7 +285,6 @@ export const GitHubPill: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Weekday labels + Authentic Square Matrix */}
                 <div className="flex items-start gap-1.5">
                   <div className="flex flex-col justify-between text-[8px] text-[#8b949e] pt-0.5 select-none w-4 shrink-0 self-stretch">
                     <span className="opacity-0">Min</span>
@@ -338,7 +334,6 @@ export const GitHubPill: React.FC = () => {
               </div>
             </div>
 
-            {/* Authentic GitHub Less -> More Legend */}
             <div className="flex items-center justify-between text-[9px] text-[#8b949e]">
               <span>{githubLoading ? `Memuat ${githubRange === 12 ? "1 Tahun" : `${githubRange} Bulan`}...` : spanLabel}</span>
               <div className="flex items-center gap-1">
@@ -356,7 +351,7 @@ export const GitHubPill: React.FC = () => {
         )}
       </div>
 
-      {/* Recent Repositories */}
+      {/* Recent repos */}
       {githubData && githubData.repos.length > 0 && (
         <div className="macos-card rounded-2xl p-2.5 space-y-1.5">
           <div className="flex items-center justify-between">
@@ -417,7 +412,7 @@ export const GitHubPill: React.FC = () => {
         </div>
       )}
 
-      {/* Recent Viewer-Authored Commits */}
+      {/* Recent commits */}
       {githubData && githubData.commits.length > 0 && (
         <div className="macos-card rounded-2xl p-2.5 space-y-1.5">
           <div className="flex items-center justify-between">

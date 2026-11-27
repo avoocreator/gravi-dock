@@ -22,8 +22,8 @@ pub struct PermissionRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HookEvent {
-    pub event_type: String, // "permission" | "activity" | "diff" | "done"
-    pub agent: String,      // "antigravity-cli" | "copilot-cli" | "claude-code" | etc.
+    pub event_type: String,
+    pub agent: String,
     pub tool: Option<String>,
     pub command: Option<String>,
     pub summary: Option<String>,

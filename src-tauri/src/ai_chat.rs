@@ -18,7 +18,7 @@ fn http_client() -> &'static reqwest::Client {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatPayload {
-    pub provider: String, // "ollama" | "lmstudio" | "openai" | "anthropic" | "gemini" | "github-models" | "claude-cli" | "gemini-cli"
+    pub provider: String,
     pub model: String,
     pub prompt: String,
     pub attached_files: Vec<String>,
@@ -97,7 +97,7 @@ async fn stream_sse_response(
     app: &AppHandle,
     req_id: Option<&str>,
     mut resp: reqwest::Response,
-    mode: &str, // "openai" | "anthropic" | "gemini"
+    mode: &str,
 ) -> Result<String, String> {
     let mut full = String::new();
     let mut buf = String::new();

@@ -21,7 +21,7 @@ pub struct SharedDropFile {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReceivedDropItem {
     pub id: String,
-    pub kind: String, // "file" | "text"
+    pub kind: String,
     pub name: String,
     pub content_or_path: String,
     pub size_bytes: u64,
@@ -303,7 +303,7 @@ async fn handle_http_connection(
         .unwrap_or(0);
     let leftover = &header_buf[header_end..];
 
-    // Live SSE channel for instant iDrop auto-push to connected phone
+    // SSE stream
     if method == "GET" && target == "/events" {
         let sse_hdr = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\n\r\n: connected\n\n";
         if stream.write_all(sse_hdr.as_bytes()).await.is_err() {
@@ -349,7 +349,7 @@ async fn handle_http_connection(
         );
         let _ = stream.write_all(resp.as_bytes()).await;
     } else if method == "GET" && target.starts_with("/download/") {
-        // High-speed 256 KB chunked disk-to-socket streaming (zero full-file RAM buffering!)
+        // File download
         let id = target.trim_start_matches("/download/");
         let found = {
             let files = state.shared_files.lock().await;
@@ -384,7 +384,7 @@ async fn handle_http_connection(
             .write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\nConnection: close\r\n\r\nNot Found")
             .await;
     } else if method == "POST" && target.starts_with("/upload") {
-        // Direct 256 KB streaming write straight to Downloads/NobiDrop storage!
+        // File upload
         let raw_name = target
             .split("name=")
             .nth(1)
@@ -599,7 +599,6 @@ pub async fn add_local_drop_files(
                 path,
                 size_bytes,
             };
-            // Push immediately over SSE to connected phone (iDrop auto-save!)
             if let Ok(evt) = serde_json::to_string(&serde_json::json!({
                 "type": "new_file",
                 "file": &item

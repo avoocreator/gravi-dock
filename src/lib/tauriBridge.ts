@@ -40,7 +40,6 @@ export async function openExternalUrl(url: string): Promise<void> {
       await openUrl(url);
       return;
     } catch {
-      // fallback
     }
   }
   window.open(url, "_blank", "noopener,noreferrer");

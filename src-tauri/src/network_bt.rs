@@ -19,7 +19,7 @@ pub struct BluetoothDeviceInfo {
     pub name: String,
     pub connected: bool,
     pub battery_percent: Option<u8>,
-    pub category: String, // "audio" | "input" | "other"
+    pub category: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -359,7 +359,7 @@ pub fn open_bluetooth_settings() -> Result<(), String> {
     Ok(())
 }
 
-/// Background watcher: alerts via HUD whenever a connected Bluetooth device battery drops <= 20%
+// Bluetooth watcher
 pub async fn start_bt_watcher(app: AppHandle) {
     let mut warned_devices: HashSet<String> = HashSet::new();
 

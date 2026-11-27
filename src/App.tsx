@@ -46,7 +46,7 @@ export default function App() {
     void loadSettings();
   }, [loadSettings]);
 
-  // Real-time multi-window settings sync listener
+  // Settings sync
   useEffect(() => {
     if (!isTauriRuntime()) return;
     let unlisten: (() => void) | undefined;
@@ -60,7 +60,6 @@ export default function App() {
     };
   }, [applySettings]);
 
-  // 30-second Calendar reminder checker (main island only)
   useEffect(() => {
     if (isSettingsWindow) return;
     const id = setInterval(() => {
@@ -70,7 +69,6 @@ export default function App() {
     return () => clearInterval(id);
   }, [checkCalendarReminders, checkFocusHabitAlarm, isSettingsWindow]);
 
-  // 1-second Pomodoro + Media progress ticker (main island only)
   useEffect(() => {
     if (isSettingsWindow) return;
     const id = setInterval(() => {
@@ -80,7 +78,7 @@ export default function App() {
     return () => clearInterval(id);
   }, [tickPomodoro, tickMediaProgress, isSettingsWindow]);
 
-  // Global keyboard shortcuts (main island only)
+  // Global shortcuts
   useEffect(() => {
     if (isSettingsWindow || !isTauriRuntime()) return;
     let cancelled = false;
@@ -110,7 +108,6 @@ export default function App() {
           }).catch(() => {});
         }
       } catch {
-        // ignore unsupported shortcut strings
       }
     };
 
@@ -120,7 +117,7 @@ export default function App() {
     };
   }, [isSettingsWindow, settings.shortcut_toggle_island, settings.shortcut_open_chat]);
 
-  // Tauri 2 native event listeners & initial live hydration (main island only)
+  // Event listeners
   useEffect(() => {
     if (isSettingsWindow || !isTauriRuntime()) return;
 
@@ -236,14 +233,12 @@ export default function App() {
     refreshMedia,
   ]);
 
-  // Periodic live OS media polling (every 3.5s)
   useEffect(() => {
     if (isSettingsWindow || !isTauriRuntime() || !settings.media_sync_enabled) return;
     const id = setInterval(() => void refreshMedia(), 3500);
     return () => clearInterval(id);
   }, [isSettingsWindow, settings.media_sync_enabled, refreshMedia]);
 
-  // Periodic live GitHub refresh
   useEffect(() => {
     if (isSettingsWindow || !isTauriRuntime()) return;
     const mins = Math.max(1, settings.github_refresh_mins || 10);

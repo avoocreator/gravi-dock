@@ -127,7 +127,7 @@ export const SettingsWindow: React.FC = () => {
 
   return (
     <div className="w-screen h-screen bg-[#0B0B0F] text-zinc-100 flex overflow-hidden select-none">
-      {/* macOS System Settings Sidebar */}
+      {/* Sidebar */}
       <aside className="w-60 bg-[#111117] border-r border-white/[0.08] p-3 flex flex-col gap-3 shrink-0">
         <div className="px-1">
           <div className="text-sm font-bold tracking-tight text-white">Pengaturan Nobi</div>
@@ -173,7 +173,7 @@ export const SettingsWindow: React.FC = () => {
         </button>
       </aside>
 
-      {/* Content Pane */}
+      {/* Content */}
       <main className="flex-1 p-5 overflow-y-auto nobi-scroll space-y-4">
         {statusBanner && (
           <div className="rounded-xl bg-emerald-500/15 border border-emerald-400/30 px-3 py-2 text-xs text-emerald-200 flex items-center gap-2">
@@ -186,7 +186,6 @@ export const SettingsWindow: React.FC = () => {
           <div className="space-y-3">
             <h2 className="text-base font-semibold text-white">Umum &amp; Tampilan Island</h2>
             <div className="macos-card rounded-2xl p-4 space-y-4 text-xs">
-              {/* Floating vs Attached Pill Style Selector */}
               <div className="space-y-2">
                 <div>
                   <div className="font-medium text-white">Gaya Pil Dynamic Island</div>
@@ -645,7 +644,6 @@ export const SettingsWindow: React.FC = () => {
                 </select>
               </div>
 
-              {/* Calendar AI Provider & Model */}
               <div className="pt-2 border-t border-white/[0.06] space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div>

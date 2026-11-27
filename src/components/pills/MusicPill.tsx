@@ -42,7 +42,6 @@ export const MusicPill: React.FC = () => {
       const list = await tauriApi.listAudioSessions();
       if (list) setSessions(list);
     } catch {
-      // ignore
     } finally {
       setMixerLoading(false);
     }
@@ -85,7 +84,7 @@ export const MusicPill: React.FC = () => {
 
   return (
     <div className="space-y-2">
-      {/* Segmented Sub-Tab: Pemutar Media vs Mixer Aplikasi */}
+      {/* Sub tabs */}
       <div className="flex items-center gap-1 bg-white/[0.03] p-0.5 rounded-xl border border-white/[0.06]">
         <button
           onClick={() => setSubTab("player")}
@@ -112,7 +111,6 @@ export const MusicPill: React.FC = () => {
 
       {subTab === "player" ? (
         <div className="macos-card rounded-2xl p-3 space-y-3">
-          {/* Top Row: Album Art + Track Info + Player Badge */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               {media.artwork_url ? (
@@ -167,7 +165,6 @@ export const MusicPill: React.FC = () => {
             </button>
           </div>
 
-          {/* Interactive Timeline Seek Bar */}
           <div className="space-y-1">
             <div
               onClick={handleSeekClick}
@@ -189,7 +186,7 @@ export const MusicPill: React.FC = () => {
             </div>
           </div>
 
-          {/* Transport + Master Volume Controls */}
+          {/* Controls */}
           <div className="flex items-center justify-between gap-2 pt-0.5">
             <div className="flex items-center gap-1">
               <button
@@ -247,7 +244,7 @@ export const MusicPill: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* Native Windows WASAPI Per-App Volume Mixer */
+        /* App mixer */
         <div className="macos-card rounded-2xl p-3 space-y-2.5">
           <div className="flex items-center justify-between">
             <div>
