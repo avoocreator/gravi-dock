@@ -34,15 +34,16 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "avoocreator",
+    "copyright": "Copyright (c) 2026 avoocreator",
+    "shortDescription": "Floating Dynamic Island dock for Windows",
+    "longDescription": "Compact interactive Dynamic Island dock for Windows with media controls, AI session tracking, LocalDrop file sharing, clipboard history, and system status.",
+    "licenseFile": "../LICENSE",
     "resources": [
       "resources/*"
     ],
     "targets": [
-      "msi",
-      "nsis",
-      "appimage",
-      "deb",
-      "rpm"
+      "nsis"
     ],
     "icon": [
       "icons/32x32.png",
@@ -50,6 +51,13 @@
       "icons/128x128@2x.png",
       "icons/icon.ico",
       "icons/icon.png"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico"
+      }
+    }
   }
 }
