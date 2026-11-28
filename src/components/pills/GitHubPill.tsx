@@ -271,7 +271,7 @@ export const GitHubPill: React.FC = () => {
 
         {githubData && weeks.length > 0 && (
           <div className="space-y-1.5">
-            <div className="overflow-x-auto nobi-scroll pb-0.5">
+            <div className="overflow-x-auto gravi-scroll pb-0.5">
               <div className="inline-flex flex-col gap-1">
                 <div className="relative h-3 ml-6">
                   {monthLabels.map((m) => (

@@ -382,7 +382,7 @@ pub async fn start_bt_watcher(app: AppHandle) {
                 if pct <= 20 {
                     if warned_devices.insert(dev.name.clone()) {
                         let _ = app.emit(
-                            "nobi:hud-event",
+                            "gravi:hud-event",
                             crate::system_hud::HudEventPayload {
                                 kind: "battery_low".into(),
                                 title: format!("Baterai {} Lemah", dev.name),

@@ -1,12 +1,12 @@
 [package]
-name = "nobi-island"
+name = "gravi"
 version = "0.1.0"
-description = "Nobi Dynamic Island — AI desktop & CLI monitor, GitHub, Google Calendar, Local Drop, Media, Per-App Mixer, System HUD & Notifications for Windows and Linux"
-authors = ["Nobi Island Contributors"]
+description = "Gravi — AI desktop & CLI monitor, GitHub, Google Calendar, Local Drop, Media, Per-App Mixer, System HUD & Notifications for Windows and Linux"
+authors = ["Gravi Contributors"]
 edition = "2021"
 
 [lib]
-name = "nobi_island_lib"
+name = "gravi_lib"
 crate-type = ["rlib"]
 
 [build-dependencies]

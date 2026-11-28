@@ -115,7 +115,7 @@ impl Default for AppSettings {
             chat_default_provider: "ollama".into(),
             chat_default_model: "llama3.2".into(),
             ollama_endpoint: "http://127.0.0.1:11434".into(),
-            chat_system_prompt: "Kamu adalah Nobi, asisten developer yang ringkas dan membantu.".into(),
+            chat_system_prompt: "Kamu adalah Gravi, asisten developer yang ringkas dan membantu.".into(),
             max_drop_file_kb: 256,
 
             pomo_focus_mins: 25,
@@ -156,12 +156,12 @@ fn apply_autostart(enabled: bool) {
         if enabled {
             let quoted = format!("\"{}\"", exe_str);
             let _ = std::process::Command::new("reg")
-                .args(["add", run_key, "/v", "NobiIsland", "/t", "REG_SZ", "/d", &quoted, "/f"])
+                .args(["add", run_key, "/v", "Gravi", "/t", "REG_SZ", "/d", &quoted, "/f"])
                 .creation_flags(CREATE_NO_WINDOW)
                 .output();
         } else {
             let _ = std::process::Command::new("reg")
-                .args(["delete", run_key, "/v", "NobiIsland", "/f"])
+                .args(["delete", run_key, "/v", "Gravi", "/f"])
                 .creation_flags(CREATE_NO_WINDOW)
                 .output();
         }
@@ -171,11 +171,11 @@ fn apply_autostart(enabled: bool) {
     {
         if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
             let dir = home.join(".config").join("autostart");
-            let file = dir.join("nobi-island.desktop");
+            let file = dir.join("gravi.desktop");
             if enabled {
                 if fs::create_dir_all(&dir).is_ok() {
                     let desktop = format!(
-                        "[Desktop Entry]\nType=Application\nName=Nobi Island\nExec=\"{}\"\nX-GNOME-Autostart-enabled=true\n",
+                        "[Desktop Entry]\nType=Application\nName=Gravi\nExec=\"{}\"\nX-GNOME-Autostart-enabled=true\n",
                         exe_str
                     );
                     let _ = fs::write(file, desktop);
@@ -190,14 +190,14 @@ fn apply_autostart(enabled: bool) {
     {
         if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
             let dir = home.join("Library").join("LaunchAgents");
-            let file = dir.join("app.nobi.island.plist");
+            let file = dir.join("app.gravi.plist");
             if enabled {
                 if fs::create_dir_all(&dir).is_ok() {
                     let plist = format!(
                         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>Label</key><string>app.nobi.island</string>
+<key>Label</key><string>app.gravi</string>
 <key>ProgramArguments</key><array><string>{}</string></array>
 <key>RunAtLoad</key><true/>
 </dict></plist>
@@ -244,7 +244,7 @@ pub fn save_settings(app: AppHandle, settings: AppSettings) -> Result<AppSetting
     if let Some(w) = app.get_webview_window("main") {
         crate::position_island(&w, &settings.island_position, &settings.island_style);
     }
-    let _ = app.emit("nobi:settings-updated", &settings);
+    let _ = app.emit("gravi:settings-updated", &settings);
     Ok(settings)
 }
 

@@ -331,7 +331,7 @@ export const SystemPill: React.FC = () => {
                 Tidak ada perangkat Bluetooth terdeteksi. Notifikasi baterai lemah (≤20%) aktif otomatis saat perangkat tersambung.
               </div>
             ) : (
-              <div className="space-y-1 max-h-36 overflow-y-auto nobi-scroll">
+              <div className="space-y-1 max-h-36 overflow-y-auto gravi-scroll">
                 {hardwareStatus.bluetooth_devices.map((dev) => {
                   const isLow = dev.battery_percent != null && dev.battery_percent <= 20;
                   return (

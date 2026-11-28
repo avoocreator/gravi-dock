@@ -1601,6 +1601,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "gravi"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "keyring",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-opener",
+ "tokio",
+ "uuid",
+ "windows 0.58.0",
+]
+
+[[package]]
 name = "gtk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2627,25 +2646,6 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "memoffset",
-]
-
-[[package]]
-name = "nobi-island"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "keyring",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-opener",
- "tokio",
- "uuid",
- "windows 0.58.0",
 ]
 
 [[package]]

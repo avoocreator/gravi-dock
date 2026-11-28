@@ -10,7 +10,7 @@ export type PillTab =
   | "system"
   | "settings";
 
-export type NobiMood =
+export type GraviMood =
   | "idle"
   | "happy"
   | "love"

@@ -1,4 +1,4 @@
-# Nobi Dynamic Island (Tauri 2 — Windows & Linux)
+# Gravi (Tauri 2 — Windows & Linux)
 
 Aplikasi *Dynamic Island* lintas platform (Windows 10/11 & Linux) dibangun dengan **Tauri 2 (Rust + React + TypeScript + Tailwind CSS)** dan karakter pendamping robot-kucing prosedural 60 fps di Canvas 2D.
 
@@ -7,7 +7,7 @@ Aplikasi *Dynamic Island* lintas platform (Windows 10/11 & Linux) dibangun denga
 1. **Karakter Robot-Kucing Interaktif (Canvas 2D, 60 fps):** Helm putih-lavender, visor gelap mengilap, telinga kucing bergradien biru–hijau & oranye–kuning, *eye-tracking* kursor, kedip otomatis, *squish* saat diklik, *dizzy* saat diklik 3x cepat, menari saat musik main, dan berubah menjadi kotak penerima saat file diseret ke *island*.
 2. **Monitor AI Desktop & AI CLI + Kartu Approve/Deny:**
    - **AI Desktop:** Deteksi proses otomatis untuk **Claude Desktop**, **Gemini Desktop**, **ChatGPT Desktop**, dan **Antigravity Desktop** lengkap dengan tombol *Focus Window*.
-   - **AI CLI:** Deteksi proses & integrasi *hook* lokal (`nobi-hook`) untuk **Antigravity CLI** dan **GitHub Copilot CLI** lengkap dengan kartu persetujuan **Allow / Always / Deny**.
+   - **AI CLI:** Deteksi proses & integrasi *hook* lokal (`gravi-hook`) untuk **Antigravity CLI** dan **GitHub Copilot CLI** lengkap dengan kartu persetujuan **Allow / Always / Deny**.
 3. **GitHub Pill:** Grafik kontribusi (*Contribution Graph*) dengan filter **3 Bulan (default)**, **6 Bulan**, dan **1 Tahun**, daftar **Repo Terbaru**, serta daftar **Commit Terbaru** (`short SHA` + pesan commit).
 4. **Google Calendar Pill:** Mini kalender bulanan interaktif dengan penanda jadwal; klik tanggal mana saja untuk melihat daftar agenda di tanggal tersebut. Mendukung **Secret iCal URL** (paling cepat) maupun **Google Calendar API v3 OAuth Token**.
 5. **Mini Chat AI:** Mendukung Ollama (lokal), Anthropic, Gemini, dan OpenAI dengan konteks otomatis dari file yang di-*drag-and-drop* ke *island*.
@@ -40,7 +40,7 @@ sudo apt install -y build-essential pkg-config \
 
 ```bash
 # 1. Masuk ke folder proyek & install dependensi frontend
-cd nobi-island
+cd gravi-dock
 npm install
 
 # 2. Jalankan mode development (otomatis membuka overlay Dynamic Island)
@@ -54,14 +54,14 @@ Hasil *installer* akan tersimpan di `src-tauri/target/release/bundle/`.
 
 ---
 
-## Build & Pasang `nobi-hook` (Untuk AI CLI)
+## Build & Pasang `gravi-hook` (Untuk AI CLI)
 
 ```bash
 cd hook-cli
 cargo build --release
 ```
 
-Binary akan tersedia di `hook-cli/target/release/nobi-hook` (atau `nobi-hook.exe` di Windows). Binary ini bersifat **fail-open** (langsung mengizinkan dalam 250 ms jika Nobi Island sedang tidak dijalankan agar CLI tidak pernah macet).
+Binary akan tersedia di `hook-cli/target/release/gravi-hook` (atau `gravi-hook.exe` di Windows). Binary ini bersifat **fail-open** (langsung mengizinkan dalam 250 ms jika Gravi sedang tidak dijalankan agar CLI tidak pernah macet).
 
 ### Contoh Hook Antigravity CLI (`~/.gemini/config/hooks.json`)
 ```json
@@ -72,7 +72,7 @@ Binary akan tersedia di `hook-cli/target/release/nobi-hook` (atau `nobi-hook.exe
       "hooks": [
         {
           "type": "command",
-          "command": "/path/to/nobi-hook --agent antigravity-cli --event permission"
+          "command": "/path/to/gravi-hook --agent antigravity-cli --event permission"
         }
       ]
     }
@@ -82,7 +82,7 @@ Binary akan tersedia di `hook-cli/target/release/nobi-hook` (atau `nobi-hook.exe
 
 ### Contoh Pengujian Manual Hook dari Terminal
 ```bash
-echo '{"tool_name":"shell","tool_input":{"command":"cargo test"}}' | ./hook-cli/target/release/nobi-hook --agent copilot-cli --event permission
+echo '{"tool_name":"shell","tool_input":{"command":"cargo test"}}' | ./hook-cli/target/release/gravi-hook --agent copilot-cli --event permission
 ```
 
 ---

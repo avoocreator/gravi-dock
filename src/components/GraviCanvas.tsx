@@ -1,18 +1,18 @@
 import React, { useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { NobiMood } from "../types/island";
+import { GraviMood } from "../types/island";
 import { useIslandStore } from "../store/useIslandStore";
 import { isTauriRuntime } from "../lib/tauriBridge";
-import { playNobiSound } from "../lib/soundEffects";
+import { playGraviSound } from "../lib/soundEffects";
 
-interface NobiCanvasProps {
+interface GraviCanvasProps {
   size?: number;
-  mood: NobiMood;
-  onMoodChange?: (mood: NobiMood) => void;
+  mood: GraviMood;
+  onMoodChange?: (mood: GraviMood) => void;
   onClick?: () => void;
 }
 
-const CYCLE_MOODS: NobiMood[] = [
+const CYCLE_MOODS: GraviMood[] = [
   "happy",
   "love",
   "wink",
@@ -27,7 +27,7 @@ const CYCLE_MOODS: NobiMood[] = [
   "idle",
 ];
 
-export const NobiCanvas: React.FC<NobiCanvasProps> = ({
+export const GraviCanvas: React.FC<GraviCanvasProps> = ({
   size = 44,
   mood,
   onMoodChange,
@@ -39,7 +39,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
   const clickTimesRef = useRef<number[]>([]);
   const squishRef = useRef(0);
   const hoverRef = useRef(false);
-  const moodRef = useRef<NobiMood>(mood);
+  const moodRef = useRef<GraviMood>(mood);
   const settingsRef = useRef(settings);
   const petScoreRef = useRef(0);
   const lastPetXRef = useRef<number | null>(null);
@@ -98,7 +98,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
 
     let unlistenCursor: (() => void) | undefined;
     if (isTauriRuntime()) {
-      void listen<{ x: number; y: number }>("nobi:cursor-pos", (e) => {
+      void listen<{ x: number; y: number }>("gravi:cursor-pos", (e) => {
         updatePointerFromClient(e.payload.x, e.payload.y);
       }).then((u) => {
         unlistenCursor = u;
@@ -751,7 +751,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
     return () => cancelAnimationFrame(rafId);
   }, [size]);
 
-  const setTempMood = (next: NobiMood, durationMs: number) => {
+  const setTempMood = (next: GraviMood, durationMs: number) => {
     if (tempMoodTimerRef.current) clearTimeout(tempMoodTimerRef.current);
     onMoodChange?.(next);
     tempMoodTimerRef.current = setTimeout(() => {
@@ -765,7 +765,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
     squishRef.current = 1;
 
     if (!cfg.squish_dizzy) {
-      playNobiSound("pop", cfg.sound_enabled, cfg.sound_volume);
+      playGraviSound("pop", cfg.sound_enabled, cfg.sound_volume);
       onClick?.();
       return;
     }
@@ -775,14 +775,14 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
 
     if (clickTimesRef.current.length >= 3) {
       clickTimesRef.current = [];
-      playNobiSound("dizzy", cfg.sound_enabled, cfg.sound_volume);
+      playGraviSound("dizzy", cfg.sound_enabled, cfg.sound_volume);
       setTempMood("dizzy", 2500);
     } else if (clickTimesRef.current.length === 2) {
-      playNobiSound("happy", cfg.sound_enabled, cfg.sound_volume);
+      playGraviSound("happy", cfg.sound_enabled, cfg.sound_volume);
       setTempMood("love", 1800);
     } else {
-      playNobiSound("pop", cfg.sound_enabled, cfg.sound_volume);
-      const reactive: NobiMood[] = ["squish", "wink", "happy", "surprised"];
+      playGraviSound("pop", cfg.sound_enabled, cfg.sound_volume);
+      const reactive: GraviMood[] = ["squish", "wink", "happy", "surprised"];
       const pick = reactive[Math.floor(Math.random() * reactive.length)];
       setTempMood(pick, 850);
     }
@@ -793,7 +793,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
     e.preventDefault();
     e.stopPropagation();
     const cfg = settingsRef.current;
-    playNobiSound("pop", cfg.sound_enabled, cfg.sound_volume);
+    playGraviSound("pop", cfg.sound_enabled, cfg.sound_volume);
     const next = CYCLE_MOODS[cycleIdxRef.current % CYCLE_MOODS.length];
     cycleIdxRef.current += 1;
     squishRef.current = 0.7;
@@ -812,7 +812,7 @@ export const NobiCanvas: React.FC<NobiCanvasProps> = ({
           if (petScoreRef.current >= 3 && moodRef.current === "idle") {
             petScoreRef.current = 0;
             const cfg = settingsRef.current;
-            playNobiSound("happy", cfg.sound_enabled, cfg.sound_volume);
+            playGraviSound("happy", cfg.sound_enabled, cfg.sound_volume);
             setTempMood(Math.random() > 0.45 ? "love" : "shy", 1800);
           }
         }

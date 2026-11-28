@@ -135,7 +135,7 @@ export const LocalDropPill: React.FC = () => {
               </div>
               <div className="text-[10px] text-zinc-400 leading-relaxed">
                 Tarik &amp; lepaskan file ke Island untuk langsung dibagikan ke HP. File masuk tersimpan di{" "}
-                <span className="font-mono text-zinc-300">Downloads/NobiDrop</span>.
+                <span className="font-mono text-zinc-300">Downloads/GraviDrop</span>.
               </div>
             </div>
           </div>
@@ -156,10 +156,10 @@ export const LocalDropPill: React.FC = () => {
 
         {localDrop.shared_files.length === 0 ? (
           <div className="text-[11px] text-zinc-500 px-1 py-1">
-            Belum ada file. Tarik file apa saja ke Nobi Island untuk dibagikan ke HP.
+            Belum ada file. Tarik file apa saja ke Gravi untuk dibagikan ke HP.
           </div>
         ) : (
-          <div className="space-y-1 max-h-24 overflow-y-auto nobi-scroll">
+          <div className="space-y-1 max-h-24 overflow-y-auto gravi-scroll">
             {localDrop.shared_files.map((f) => (
               <div
                 key={f.id}
@@ -201,7 +201,7 @@ export const LocalDropPill: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="space-y-1 max-h-24 overflow-y-auto nobi-scroll">
+          <div className="space-y-1 max-h-24 overflow-y-auto gravi-scroll">
             {localDrop.received_items.slice(0, 6).map((item) => (
               <div
                 key={item.id}

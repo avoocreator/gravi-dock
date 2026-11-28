@@ -17,7 +17,7 @@ function getCtx(): AudioContext | null {
   return audioCtx;
 }
 
-export function playNobiSound(kind: SoundEffectKind, enabled: boolean, volumePercent: number): void {
+export function playGraviSound(kind: SoundEffectKind, enabled: boolean, volumePercent: number): void {
   if (!enabled || volumePercent <= 0) return;
   const ctx = getCtx();
   if (!ctx) return;

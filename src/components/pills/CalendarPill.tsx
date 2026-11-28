@@ -371,7 +371,7 @@ export const CalendarPill: React.FC = () => {
         )}
 
         {calendarAiReply && (
-          <div className="relative rounded-xl bg-black/40 border border-sky-400/20 px-2.5 py-2 text-[11px] text-zinc-200 whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto nobi-scroll">
+          <div className="relative rounded-xl bg-black/40 border border-sky-400/20 px-2.5 py-2 text-[11px] text-zinc-200 whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto gravi-scroll">
             <button
               onClick={clearCalendarAiReply}
               className="absolute top-1.5 right-1.5 p-0.5 rounded hover:bg-white/10 text-zinc-400 hover:text-white"

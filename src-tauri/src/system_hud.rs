@@ -173,7 +173,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
             if let (Some(prev), Some(curr)) = (last_caps, cur_caps) {
                 if prev != curr {
                     let _ = app.emit(
-                        "nobi:hud-event",
+                        "gravi:hud-event",
                         HudEventPayload {
                             kind: "capslock".into(),
                             title: "Caps Lock".into(),
@@ -203,7 +203,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
                     if !prev.charging && curr.charging && cfg.hud_battery_charging {
                         low_bat_warned = false;
                         let _ = app.emit(
-                            "nobi:hud-event",
+                            "gravi:hud-event",
                             HudEventPayload {
                                 kind: "battery_charging".into(),
                                 title: "Mengisi Daya".into(),
@@ -218,7 +218,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
                     } else if prev.charging && !curr.charging && cfg.hud_battery_charging {
                         full_bat_warned = false;
                         let _ = app.emit(
-                            "nobi:hud-event",
+                            "gravi:hud-event",
                             HudEventPayload {
                                 kind: "battery_unplugged".into(),
                                 title: "Mode Baterai".into(),
@@ -236,7 +236,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
                 if curr.charging && curr.percent >= 100 && !full_bat_warned && cfg.hud_battery_charging {
                     full_bat_warned = true;
                     let _ = app.emit(
-                        "nobi:hud-event",
+                        "gravi:hud-event",
                         HudEventPayload {
                             kind: "battery_full".into(),
                             title: "Baterai Penuh".into(),
@@ -253,7 +253,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
                 if !curr.charging && curr.percent <= 20 && !low_bat_warned && cfg.hud_battery_low {
                     low_bat_warned = true;
                     let _ = app.emit(
-                        "nobi:hud-event",
+                        "gravi:hud-event",
                         HudEventPayload {
                             kind: "battery_low".into(),
                             title: "Baterai Lemah".into(),
@@ -284,7 +284,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
                     match curr {
                         Some(ssid) => {
                             let _ = app.emit(
-                                "nobi:hud-event",
+                                "gravi:hud-event",
                                 HudEventPayload {
                                     kind: "wifi_connected".into(),
                                     title: "Wi-Fi Terhubung".into(),
@@ -299,7 +299,7 @@ pub async fn start_hud_watcher(app: AppHandle) {
                         }
                         None => {
                             let _ = app.emit(
-                                "nobi:hud-event",
+                                "gravi:hud-event",
                                 HudEventPayload {
                                     kind: "wifi_disconnected".into(),
                                     title: "Wi-Fi Terputus".into(),
@@ -361,7 +361,7 @@ pub fn trigger_test_hud(app: AppHandle, kind: String) {
         "wifi_connected" => HudEventPayload {
             kind: "wifi_connected".into(),
             title: "Wi-Fi Terhubung".into(),
-            subtitle: "Nobi-Fiber-5G".into(),
+            subtitle: "Gravi-Fiber-5G".into(),
             mood: "wifi".into(),
             accent: "sky".into(),
             badge: Some("Wi-Fi".into()),
@@ -379,5 +379,5 @@ pub fn trigger_test_hud(app: AppHandle, kind: String) {
             app_name: Some("Claude".into()),
         },
     };
-    let _ = app.emit("nobi:hud-event", payload);
+    let _ = app.emit("gravi:hud-event", payload);
 }

@@ -104,7 +104,7 @@ export const ChatPill: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto nobi-scroll space-y-2 pr-1">
+      <div className="flex-1 overflow-y-auto gravi-scroll space-y-2 pr-1">
         {chatMessages.map((m) => (
           <div
             key={m.id}
@@ -155,7 +155,7 @@ export const ChatPill: React.FC = () => {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Tanya Nobi atau drop file ke island..."
+          placeholder="Tanya Gravi atau drop file ke island..."
           className="flex-1 bg-white/[0.06] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-400/50"
         />
         <button

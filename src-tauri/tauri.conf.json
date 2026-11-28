@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Nobi Island",
+  "productName": "Gravi",
   "version": "0.1.0",
-  "identifier": "app.nobi.island",
+  "identifier": "app.gravi",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Nobi Island",
+        "title": "Gravi",
         "width": 540,
         "height": 760,
         "resizable": false,

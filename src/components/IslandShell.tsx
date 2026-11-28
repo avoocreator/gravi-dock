@@ -27,8 +27,8 @@ import {
 } from "lucide-react";
 import { useIslandStore } from "../store/useIslandStore";
 import { isTauriRuntime, tauriApi } from "../lib/tauriBridge";
-import { AiSession, NobiMood, PillTab } from "../types/island";
-import { NobiCanvas } from "./NobiCanvas";
+import { AiSession, GraviMood, PillTab } from "../types/island";
+import { GraviCanvas } from "./GraviCanvas";
 import { AiLogo } from "./AiLogo";
 import { AgentPill } from "./pills/AgentPill";
 import { GitHubPill } from "./pills/GitHubPill";
@@ -453,10 +453,10 @@ export const IslandShell: React.FC = () => {
     let unlistenLeave: (() => void) | undefined;
     let unlistenEnter: (() => void) | undefined;
     if (isTauriRuntime()) {
-      void listen("nobi:cursor-leave", onDocLeave).then((u) => {
+      void listen("gravi:cursor-leave", onDocLeave).then((u) => {
         unlistenLeave = u;
       });
-      void listen("nobi:cursor-enter", onDocEnter).then((u) => {
+      void listen("gravi:cursor-enter", onDocEnter).then((u) => {
         unlistenEnter = u;
       });
     }
@@ -526,7 +526,7 @@ export const IslandShell: React.FC = () => {
         className={`island-spring-close macos-island ${
           isAttached ? "macos-island-attached rounded-b-full" : "rounded-full"
         } w-28 h-2.5 cursor-pointer hover:h-3.5 flex items-center justify-center`}
-        title="Arahkan kursor untuk memunculkan Nobi"
+        title="Arahkan kursor untuk memunculkan Gravi"
       >
         <div className="w-8 h-1 rounded-full bg-white/30" />
       </div>
@@ -611,7 +611,7 @@ export const IslandShell: React.FC = () => {
             isAttached ? "rounded-b-[26px]" : "rounded-[26px]"
           } bg-blue-500/15 backdrop-blur-md border-2 border-dashed border-blue-400 flex flex-col items-center justify-center gap-2 pointer-events-none`}
         >
-          <NobiCanvas size={56} mood="drop" />
+          <GraviCanvas size={56} mood="drop" />
           <div className="text-xs font-semibold text-blue-100 flex items-center gap-1.5">
             <Upload className="w-3.5 h-3.5" /> Lepaskan file untuk dibagikan via Local Drop
           </div>
@@ -631,7 +631,7 @@ export const IslandShell: React.FC = () => {
           ref={compactMeasureRef}
           className="px-3.5 py-1.5 flex items-center justify-center gap-2.5 w-max whitespace-nowrap"
         >
-          <NobiCanvas size={30} mood={mood} onMoodChange={setMood} />
+          <GraviCanvas size={30} mood={mood} onMoodChange={setMood} />
 
           <span className="text-[15px] font-bold tracking-tight text-white tabular-nums leading-none">
             {clock}
@@ -712,7 +712,7 @@ export const IslandShell: React.FC = () => {
           className="w-[330px] h-[58px] px-3.5 flex items-center justify-between gap-2.5 tab-reveal"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <NobiCanvas size={36} mood={(activeHud.mood as NobiMood) || "idle"} onMoodChange={setMood} />
+            <GraviCanvas size={36} mood={(activeHud.mood as GraviMood) || "idle"} onMoodChange={setMood} />
             <div className="min-w-0">
               <div className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
                 {hudIcon(activeHud.kind)}
@@ -744,7 +744,7 @@ export const IslandShell: React.FC = () => {
         <div ref={notifInnerRef} className="w-[376px] p-3 space-y-2 tab-reveal">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2.5 min-w-0">
-              <NobiCanvas size={36} mood="notif" onMoodChange={setMood} />
+              <GraviCanvas size={36} mood="notif" onMoodChange={setMood} />
               <div className="min-w-0 space-y-0.5">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-sky-500/20 text-sky-300 border border-sky-400/30">
@@ -815,7 +815,7 @@ export const IslandShell: React.FC = () => {
       {/* Expanded panel */}
       {renderExpandedDom && (
         <div
-          className={`w-[500px] max-h-[724px] overflow-y-auto nobi-scroll island-layer-fade ${
+          className={`w-[500px] max-h-[724px] overflow-y-auto gravi-scroll island-layer-fade ${
             isExpanded
               ? "opacity-100 scale-100 translate-y-0"
               : "opacity-0 scale-[0.96] -translate-y-1.5 pointer-events-none"
@@ -825,7 +825,7 @@ export const IslandShell: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between gap-2 px-0.5">
               <div className="flex items-center gap-2.5">
-                <NobiCanvas size={38} mood={mood} onMoodChange={setMood} />
+                <GraviCanvas size={38} mood={mood} onMoodChange={setMood} />
                 <div>
                   <div className="text-[13px] font-semibold tracking-tight text-white flex items-center gap-2 tabular-nums">
                     <span>{clock}</span>

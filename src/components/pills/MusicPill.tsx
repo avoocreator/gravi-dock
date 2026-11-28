@@ -269,7 +269,7 @@ export const MusicPill: React.FC = () => {
                 : "Belum ada aplikasi yang sedang mengeluarkan suara. Putar audio di Chrome, Spotify, atau Discord lalu klik refresh."}
             </div>
           ) : (
-            <div className="space-y-1.5 max-h-44 overflow-y-auto nobi-scroll pr-0.5">
+            <div className="space-y-1.5 max-h-44 overflow-y-auto gravi-scroll pr-0.5">
               {sessions.map((s) => (
                 <div
                   key={s.app_key}

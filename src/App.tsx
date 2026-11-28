@@ -50,7 +50,7 @@ export default function App() {
   useEffect(() => {
     if (!isTauriRuntime()) return;
     let unlisten: (() => void) | undefined;
-    void listen<AppSettings>("nobi:settings-updated", (e) => {
+    void listen<AppSettings>("gravi:settings-updated", (e) => {
       applySettings(e.payload);
     }).then((u) => {
       unlisten = u;
@@ -148,7 +148,7 @@ export default function App() {
 
     const unlisteners: Array<() => void> = [];
 
-    void listen("nobi:secrets-updated", () => {
+    void listen("gravi:secrets-updated", () => {
       void refreshSecretStatus().then(() => {
         void refreshGitHub();
         void refreshCalendar();
@@ -156,43 +156,43 @@ export default function App() {
       });
     }).then((u) => unlisteners.push(u));
 
-    void listen<AiSession[]>("nobi:ai-sessions", (e) => {
+    void listen<AiSession[]>("gravi:ai-sessions", (e) => {
       setAiSessions(e.payload);
     }).then((u) => unlisteners.push(u));
 
-    void listen<SystemStats>("nobi:system-stats", (e) => {
+    void listen<SystemStats>("gravi:system-stats", (e) => {
       setSystemStats(e.payload);
     }).then((u) => unlisteners.push(u));
 
-    void listen<PermissionRequest>("nobi:permission-request", (e) => {
+    void listen<PermissionRequest>("gravi:permission-request", (e) => {
       pushPermission(e.payload);
     }).then((u) => unlisteners.push(u));
 
-    void listen<Omit<AgentActivityEvent, "id" | "timestamp">>("nobi:agent-event", (e) => {
+    void listen<Omit<AgentActivityEvent, "id" | "timestamp">>("gravi:agent-event", (e) => {
       pushAgentEvent(e.payload);
     }).then((u) => unlisteners.push(u));
 
-    void listen<HudEventPayload>("nobi:hud-event", (e) => {
+    void listen<HudEventPayload>("gravi:hud-event", (e) => {
       showHud(e.payload);
     }).then((u) => unlisteners.push(u));
 
-    void listen<OsNotificationItem>("nobi:os-notification", (e) => {
+    void listen<OsNotificationItem>("gravi:os-notification", (e) => {
       pushOsNotification(e.payload);
     }).then((u) => unlisteners.push(u));
 
-    void listen<{ request_id: string; delta: string }>("nobi:chat-chunk", (e) => {
+    void listen<{ request_id: string; delta: string }>("gravi:chat-chunk", (e) => {
       appendChatChunk(e.payload.request_id, e.payload.delta);
     }).then((u) => unlisteners.push(u));
 
-    void listen<ReceivedDropItem>("nobi:drop-received", (e) => {
+    void listen<ReceivedDropItem>("gravi:drop-received", (e) => {
       pushReceivedDropItem(e.payload);
     }).then((u) => unlisteners.push(u));
 
-    void listen<number>("nobi:drop-clients", (e) => {
+    void listen<number>("gravi:drop-clients", (e) => {
       setLocalDropClients(e.payload);
     }).then((u) => unlisteners.push(u));
 
-    void listen("nobi:toggle-expand", () => {
+    void listen("gravi:toggle-expand", () => {
       const st = useIslandStore.getState();
       st.setMode(st.mode === "expanded" ? "compact" : "expanded");
     }).then((u) => unlisteners.push(u));

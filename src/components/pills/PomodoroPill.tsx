@@ -157,10 +157,10 @@ export const PomodoroPill: React.FC = () => {
           </div>
         )}
 
-        <div className="space-y-1 max-h-32 overflow-y-auto nobi-scroll">
+        <div className="space-y-1 max-h-32 overflow-y-auto gravi-scroll">
           {focusHabits.length === 0 ? (
             <div className="text-[11px] text-zinc-500 px-1 py-1">
-              Tambahkan target fokus hari ini. Nobi akan memberi alarm &amp; ekspresi panik sebelum jam batas kalau masih ada yang belum selesai!
+              Tambahkan target fokus hari ini. Gravi akan memberi alarm &amp; ekspresi panik sebelum jam batas kalau masih ada yang belum selesai!
             </div>
           ) : (
             focusHabits.map((item) => (

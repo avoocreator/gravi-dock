@@ -15,7 +15,7 @@ import {
   IslandMode,
   LocalDropStatus,
   MediaState,
-  NobiMood,
+  GraviMood,
   OsNotificationItem,
   PermissionRequest,
   PillTab,
@@ -24,7 +24,7 @@ import {
   SystemStats,
 } from "../types/island";
 import { isTauriRuntime, tauriApi } from "../lib/tauriBridge";
-import { playNobiSound } from "../lib/soundEffects";
+import { playGraviSound } from "../lib/soundEffects";
 
 export const DEFAULT_SETTINGS: AppSettings = {
   island_position: "top-center",
@@ -63,7 +63,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   chat_default_provider: "ollama",
   chat_default_model: "llama3.2",
   ollama_endpoint: "http://127.0.0.1:11434",
-  chat_system_prompt: "Kamu adalah Nobi, asisten developer yang ringkas dan membantu.",
+  chat_system_prompt: "Kamu adalah Gravi, asisten developer yang ringkas dan membantu.",
   max_drop_file_kb: 256,
   pomo_focus_mins: 25,
   pomo_break_mins: 5,
@@ -95,7 +95,7 @@ function toLocalIsoDate(d: Date): string {
 function loadTodayHabits(): FocusHabitItem[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(`nobi-habits-${toLocalIsoDate(new Date())}`);
+    const raw = window.localStorage.getItem(`gravi-habits-${toLocalIsoDate(new Date())}`);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -108,7 +108,7 @@ function saveTodayHabits(items: FocusHabitItem[]) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(
-      `nobi-habits-${toLocalIsoDate(new Date())}`,
+      `gravi-habits-${toLocalIsoDate(new Date())}`,
       JSON.stringify(items)
     );
   } catch {
@@ -118,9 +118,9 @@ function saveTodayHabits(items: FocusHabitItem[]) {
 const WELCOME_MSG: ChatMessage = {
   id: "welcome-1",
   role: "assistant",
-  provider: "nobi",
+  provider: "gravi",
   content:
-    "Halo! Aku Nobi. Kamu bisa tanya apa saja, lampirkan file lewat drag & drop ke island, atau pilih provider AI yang terdeteksi di atas.",
+    "Halo! Aku Gravi. Kamu bisa tanya apa saja, lampirkan file lewat drag & drop ke island, atau pilih provider AI yang terdeteksi di atas.",
   timestamp: Date.now(),
 };
 
@@ -174,7 +174,7 @@ const FALLBACK_PROVIDERS: DetectedAiProvider[] = [
 interface IslandStore {
   mode: IslandMode;
   activeTab: PillTab;
-  mood: NobiMood;
+  mood: GraviMood;
 
   // AI
   aiSessions: AiSession[];
@@ -241,7 +241,7 @@ interface IslandStore {
   // Actions
   setMode: (mode: IslandMode) => void;
   setActiveTab: (tab: PillTab) => void;
-  setMood: (mood: NobiMood) => void;
+  setMood: (mood: GraviMood) => void;
 
   setSystemStats: (stats: SystemStats) => void;
   setAiSessions: (sessions: AiSession[]) => void;
@@ -492,7 +492,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
 
   pushPermission: (req) => {
     const { settings } = get();
-    playNobiSound("alert", settings.sound_enabled, settings.sound_volume);
+    playGraviSound("alert", settings.sound_enabled, settings.sound_volume);
     set((s) => ({
       permissions: [req, ...s.permissions.filter((p) => p.id !== req.id)],
       mood: "alert",
@@ -504,11 +504,11 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
   resolvePermission: async (id, decision) => {
     if (isTauriRuntime()) {
       await tauriApi.respondPermission(id, decision).catch((err) => {
-        console.warn("[nobi] respondPermission failed:", err);
+        console.warn("[gravi] respondPermission failed:", err);
       });
     }
     const { settings } = get();
-    playNobiSound(
+    playGraviSound(
       decision === "deny" ? "pop" : "happy",
       settings.sound_enabled,
       settings.sound_volume
@@ -626,15 +626,15 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
     const { settings } = get();
     if (!settings.hud_enabled) return;
     if (hud.kind === "battery_low") {
-      playNobiSound("alert", settings.sound_enabled, settings.sound_volume);
+      playGraviSound("alert", settings.sound_enabled, settings.sound_volume);
     } else if (hud.kind === "ai_done" || hud.kind === "battery_full") {
-      playNobiSound("chime", settings.sound_enabled, settings.sound_volume);
+      playGraviSound("chime", settings.sound_enabled, settings.sound_volume);
     } else {
-      playNobiSound("pop", settings.sound_enabled, settings.sound_volume);
+      playGraviSound("pop", settings.sound_enabled, settings.sound_volume);
     }
     set({
       activeHud: hud,
-      mood: (hud.mood as NobiMood) || "idle",
+      mood: (hud.mood as GraviMood) || "idle",
     });
   },
 
@@ -690,7 +690,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
       return;
     }
 
-    playNobiSound("pop", settings.sound_enabled, settings.sound_volume);
+    playGraviSound("pop", settings.sound_enabled, settings.sound_volume);
     set({
       activeNotif: { ...item, count: 1 },
       activeHud: null,
@@ -747,7 +747,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
       const evMins = Number(m[1]) * 60 + Number(m[2]);
       const diff = evMins - nowTotalMins;
       if (diff >= 0 && diff <= leadMins) {
-        playNobiSound("alert", settings.sound_enabled, settings.sound_volume);
+        playGraviSound("alert", settings.sound_enabled, settings.sound_volume);
         set((s) => ({
           activeReminder: {
             eventId: ev.id,
@@ -815,7 +815,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
         attached_files: [],
         ollama_endpoint: settings.ollama_endpoint,
         system_prompt:
-          "Kamu adalah Nobi, asisten kalender yang ringkas, jelas, dan membantu dalam bahasa Indonesia. Jawab padat (maksimal 5 baris/poin) berdasarkan data kalender yang diberikan.",
+          "Kamu adalah Gravi, asisten kalender yang ringkas, jelas, dan membantu dalam bahasa Indonesia. Jawab padat (maksimal 5 baris/poin) berdasarkan data kalender yang diberikan.",
         max_file_kb: settings.max_drop_file_kb,
       });
       set({
@@ -839,7 +839,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
     if (!isTauriRuntime()) return;
     const nextPlaying = !get().media.is_playing;
     await tauriApi.mediaControl("play_pause").catch((err) => {
-      console.warn("[nobi] mediaControl failed:", err);
+      console.warn("[gravi] mediaControl failed:", err);
     });
     set((s) => ({
       media: { ...s.media, is_playing: nextPlaying },
@@ -853,7 +853,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
   skipMedia: async (dir) => {
     if (!isTauriRuntime()) return;
     await tauriApi.mediaControl(dir).catch((err) => {
-      console.warn("[nobi] mediaControl failed:", err);
+      console.warn("[gravi] mediaControl failed:", err);
     });
     setTimeout(() => {
       void get().refreshMedia();
@@ -867,7 +867,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
     }));
     if (!isTauriRuntime()) return;
     await tauriApi.mediaSeek(clamped).catch((err) => {
-      console.warn("[nobi] mediaSeek failed:", err);
+      console.warn("[gravi] mediaSeek failed:", err);
     });
     setTimeout(() => {
       void get().refreshMedia();
@@ -877,7 +877,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
   adjustMediaVolume: async (action) => {
     if (!isTauriRuntime()) return;
     await tauriApi.mediaControl(action).catch((err) => {
-      console.warn("[nobi] volume control failed:", err);
+      console.warn("[gravi] volume control failed:", err);
     });
   },
 
@@ -900,7 +900,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
       if (state) {
         const curMood = get().mood;
         const canDance = get().settings.media_dance_enabled;
-        const nextMood: NobiMood =
+        const nextMood: GraviMood =
           state.is_playing && canDance
             ? curMood === "idle" || curMood === "dancing"
               ? "dancing"
@@ -917,7 +917,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
   togglePomodoro: () => {
     const { settings, pomoRunning } = get();
     const nextRunning = !pomoRunning;
-    playNobiSound("pop", settings.sound_enabled, settings.sound_volume);
+    playGraviSound("pop", settings.sound_enabled, settings.sound_volume);
     set({
       pomoRunning: nextRunning,
       mood: nextRunning ? "focus" : "idle",
@@ -944,7 +944,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
       const nextMode = pomoMode === "focus" ? "break" : "focus";
       const focusMins = Math.max(1, settings.pomo_focus_mins || 25);
       const breakMins = Math.max(1, settings.pomo_break_mins || 5);
-      playNobiSound("chime", settings.sound_enabled, settings.sound_volume);
+      playGraviSound("chime", settings.sound_enabled, settings.sound_volume);
       set({
         pomoMode: nextMode,
         pomoRunning: false,
@@ -1065,7 +1065,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
 
   addDroppedFiles: (paths) => {
     const { settings } = get();
-    playNobiSound("happy", settings.sound_enabled, settings.sound_volume);
+    playGraviSound("happy", settings.sound_enabled, settings.sound_volume);
     set((s) => ({
       droppedFiles: Array.from(new Set([...s.droppedFiles, ...paths])),
       isDraggingFile: false,
@@ -1182,7 +1182,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
 
   pushReceivedDropItem: (item) => {
     const { settings } = get();
-    playNobiSound("chime", settings.sound_enabled, settings.sound_volume);
+    playGraviSound("chime", settings.sound_enabled, settings.sound_volume);
     set((s) => ({
       localDrop: {
         ...s.localDrop,
@@ -1227,13 +1227,13 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
     saveTodayHabits(next);
     const allDone = next.length > 0 && next.every((h) => h.done);
     if (allDone) {
-      playNobiSound("chime", settings.sound_enabled, settings.sound_volume);
+      playGraviSound("chime", settings.sound_enabled, settings.sound_volume);
       set({ focusHabits: next, mood: "celebrate" });
       setTimeout(() => {
         if (get().mood === "celebrate") set({ mood: "idle" });
       }, 2200);
     } else {
-      playNobiSound("pop", settings.sound_enabled, settings.sound_volume);
+      playGraviSound("pop", settings.sound_enabled, settings.sound_volume);
       set({ focusHabits: next });
     }
   },
@@ -1261,7 +1261,7 @@ export const useIslandStore = create<IslandStore>((set, get) => ({
     const warnMins = Math.max(5, settings.focus_habit_warn_mins || 30);
 
     if (nowMins >= deadlineMins - warnMins) {
-      playNobiSound("alert", settings.sound_enabled, settings.sound_volume);
+      playGraviSound("alert", settings.sound_enabled, settings.sound_volume);
       set({
         focusHabitAlarmFiredDate: todayIso,
         mood: "panic",

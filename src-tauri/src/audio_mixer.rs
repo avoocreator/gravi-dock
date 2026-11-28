@@ -104,7 +104,7 @@ mod win_mixer {
         let mut grouped: HashMap<String, AudioAppSession> = HashMap::new();
         with_sessions(|_pid, proc_name, simple_vol| {
             let key = proc_name.trim_end_matches(".exe").to_lowercase();
-            if key == "nobi-island" {
+            if key == "gravi" {
                 return;
             }
             let vol = unsafe { simple_vol.GetMasterVolume().unwrap_or(1.0) };

@@ -132,7 +132,7 @@ export const AgentPill: React.FC = () => {
               <Trash2 className="w-3 h-3" />
             </button>
           </div>
-          <div className="space-y-1 max-h-28 overflow-y-auto nobi-scroll">
+          <div className="space-y-1 max-h-28 overflow-y-auto gravi-scroll">
             {agentEvents.slice(0, 6).map((ev) => (
               <div
                 key={ev.id}

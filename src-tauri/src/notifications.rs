@@ -233,7 +233,7 @@ pub async fn start_notification_watcher(app: AppHandle) {
                 if cfg.notif_messaging_only && !item.is_messaging {
                     continue;
                 }
-                let _ = app.emit("nobi:os-notification", &item);
+                let _ = app.emit("gravi:os-notification", &item);
             }
         }
 
@@ -290,7 +290,7 @@ public class ChatWindowFinder {{
     [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
     [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
     private static readonly string[] Browsers = new[] {{ "chrome", "msedge", "brave", "firefox", "opera", "vivaldi", "arc" }};
-    private static readonly string[] Blocked = new[] {{ "winword", "excel", "powerpnt", "code", "notepad", "notepad++", "nobi-island" }};
+    private static readonly string[] Blocked = new[] {{ "winword", "excel", "powerpnt", "code", "notepad", "notepad++", "gravi" }};
 
     public static string GetTitle(IntPtr hWnd) {{
         var sb = new StringBuilder(256);
@@ -477,7 +477,7 @@ if ($null -ne $bestInput) {{
 #[tauri::command]
 pub fn trigger_test_notification(app: AppHandle) {
     let _ = app.emit(
-        "nobi:os-notification",
+        "gravi:os-notification",
         OsNotificationItem {
             id: format!("test-{}", chrono::Utc::now().timestamp_millis()),
             app_name: "WhatsApp".into(),

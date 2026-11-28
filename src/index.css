@@ -140,17 +140,17 @@ body,
   animation: eqBounce 0.9s ease-in-out infinite;
 }
 
-.nobi-scroll::-webkit-scrollbar {
+.gravi-scroll::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
-.nobi-scroll::-webkit-scrollbar-track {
+.gravi-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
-.nobi-scroll::-webkit-scrollbar-thumb {
+.gravi-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.14);
   border-radius: 9999px;
 }
-.nobi-scroll::-webkit-scrollbar-thumb:hover {
+.gravi-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.28);
 }

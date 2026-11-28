@@ -83,7 +83,7 @@ fn drop_save_dir() -> PathBuf {
         .or_else(|| std::env::var_os("HOME"))
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
-    let dir = base.join("Downloads").join("NobiDrop");
+    let dir = base.join("Downloads").join("GraviDrop");
     let _ = std::fs::create_dir_all(&dir);
     dir
 }
@@ -132,7 +132,7 @@ fn mobile_web_ui(files: &[SharedDropFile]) -> String {
         r#"<!DOCTYPE html>
 <html lang="id"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nobi iDrop · Instant Transfer</title>
+<title>Gravi iDrop · Instant Transfer</title>
 <style>
 *{{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}}
 body{{margin:0;background:#09090f;color:#f4f4f8;padding:16px;max-width:480px;margin:0 auto}}
@@ -152,7 +152,7 @@ textarea,input[type=file]{{width:100%;background:#09090f;color:#fff;border:1px s
 label.tog{{font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500}}
 </style></head><body>
 <div class="hdr">
-  <h1>Nobi iDrop</h1>
+  <h1>Gravi iDrop</h1>
   <span class="badge" id="liveBadge">● Terhubung</span>
 </div>
 
@@ -184,7 +184,7 @@ let files = {files_json};
 function fmtSz(b){{return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';}}
 function renderFiles(){{
   const el=document.getElementById('fileList');
-  if(!files.length){{el.innerHTML='<div class="empty">Drop file ke Nobi Island di laptop → otomatis tersimpan ke HP!</div>';return;}}
+  if(!files.length){{el.innerHTML='<div class="empty">Drop file ke Gravi di laptop → otomatis tersimpan ke HP!</div>';return;}}
   el.innerHTML=files.map(f=>`<a class="file-row" href="/download/${{f.id}}" download="${{f.name}}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${{f.name}}</span><span class="sz">${{fmtSz(f.size_bytes)}}</span></a>`).join('');
 }}
 function triggerAutoSave(f){{
@@ -240,14 +240,14 @@ async function sendFiles(){{
     }}
   }}
   pb.style.width='100%';
-  st.textContent='✓ Langsung tersimpan ke Downloads/NobiDrop!';
+  st.textContent='✓ Langsung tersimpan ke Downloads/GraviDrop!';
   inp.value=''; btn.disabled=false;
 }}
 async function sendText(){{
   const tx=document.getElementById('tx'),st=document.getElementById('st');
   if(!tx.value.trim())return;
   const r=await fetch('/text',{{method:'POST',body:tx.value}});
-  if(r.ok){{st.textContent='✓ Teks terkirim ke Nobi Island!';tx.value='';}}
+  if(r.ok){{st.textContent='✓ Teks terkirim ke Gravi!';tx.value='';}}
 }}
 </script></body></html>"#,
         files_json = files_json
@@ -310,7 +310,7 @@ async fn handle_http_connection(
             return;
         }
         state.connected_clients.fetch_add(1, Ordering::Relaxed);
-        let _ = app.emit("nobi:drop-clients", state.connected_clients.load(Ordering::Relaxed));
+        let _ = app.emit("gravi:drop-clients", state.connected_clients.load(Ordering::Relaxed));
 
         let mut rx = state.sse_tx.subscribe();
         loop {
@@ -335,7 +335,7 @@ async fn handle_http_connection(
             }
         }
         state.connected_clients.fetch_sub(1, Ordering::Relaxed);
-        let _ = app.emit("nobi:drop-clients", state.connected_clients.load(Ordering::Relaxed));
+        let _ = app.emit("gravi:drop-clients", state.connected_clients.load(Ordering::Relaxed));
         return;
     }
 
@@ -432,7 +432,7 @@ async fn handle_http_connection(
                 rec.insert(0, item.clone());
                 rec.truncate(20);
             }
-            let _ = app.emit("nobi:drop-received", &item);
+            let _ = app.emit("gravi:drop-received", &item);
             let _ = stream
                 .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK")
                 .await;
@@ -465,7 +465,7 @@ async fn handle_http_connection(
                 rec.insert(0, item.clone());
                 rec.truncate(20);
             }
-            let _ = app.emit("nobi:drop-received", &item);
+            let _ = app.emit("gravi:drop-received", &item);
         }
         let _ = stream
             .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK")

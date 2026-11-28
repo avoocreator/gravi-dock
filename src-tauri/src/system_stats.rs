@@ -159,7 +159,7 @@ pub async fn start_system_watcher(app: AppHandle) {
         tick = tick.wrapping_add(1);
 
         let stats = collect_stats(&mut sys, &gpu_cache);
-        let _ = app.emit("nobi:system-stats", &stats);
+        let _ = app.emit("gravi:system-stats", &stats);
         sleep(Duration::from_secs(2)).await;
     }
 }

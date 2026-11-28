@@ -2,7 +2,7 @@ use keyring::Entry;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
-const SERVICE_NAME: &str = "app.nobi.island";
+const SERVICE_NAME: &str = "app.gravi";
 
 #[derive(Serialize)]
 pub struct SecretStatus {
@@ -24,11 +24,11 @@ pub fn save_secret(app: AppHandle, key: String, value: String) -> Result<(), Str
     let entry = Entry::new(SERVICE_NAME, &key).map_err(|e| e.to_string())?;
     if value.trim().is_empty() {
         let _ = entry.delete_credential();
-        let _ = app.emit("nobi:secrets-updated", ());
+        let _ = app.emit("gravi:secrets-updated", ());
         return Ok(());
     }
     entry.set_password(value.trim()).map_err(|e| e.to_string())?;
-    let _ = app.emit("nobi:secrets-updated", ());
+    let _ = app.emit("gravi:secrets-updated", ());
     Ok(())
 }
 

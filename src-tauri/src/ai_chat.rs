@@ -40,7 +40,7 @@ fn emit_chunk(app: &AppHandle, req_id: Option<&str>, delta: &str) {
     }
     if let Some(id) = req_id {
         let _ = app.emit(
-            "nobi:chat-chunk",
+            "gravi:chat-chunk",
             ChatChunkEvent {
                 request_id: id.to_string(),
                 delta: delta.to_string(),

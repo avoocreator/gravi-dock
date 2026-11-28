@@ -30,7 +30,7 @@ type SettingsSection =
 
 const SECTIONS: Array<{ id: SettingsSection; label: string; keywords: string; icon: React.ReactNode }> = [
   { id: "general", label: "Umum & Island", keywords: "posisi floating attached notch menempel mengambang hover buka otomatis jam detik format 24 12 transparansi", icon: <Sliders className="w-4 h-4" /> },
-  { id: "character", label: "Karakter & Suara", keywords: "nobi eye tracking telinga squish dizzy ekspresi volume suara", icon: <Sparkles className="w-4 h-4" /> },
+  { id: "character", label: "Karakter & Suara", keywords: "gravi eye tracking telinga squish dizzy ekspresi volume suara", icon: <Sparkles className="w-4 h-4" /> },
   { id: "ai", label: "AI Monitor & Hooks", keywords: "claude gemini chatgpt antigravity copilot hermes openbot ipc hook", icon: <Bot className="w-4 h-4" /> },
   { id: "github", label: "GitHub", keywords: "pat token kontribusi 3b 6b 1t repo commit refresh", icon: <Github className="w-4 h-4" /> },
   { id: "calendar", label: "Google Calendar & AI", keywords: "ical oauth agenda ai provider model pengingat pekan senin minggu", icon: <CalendarDays className="w-4 h-4" /> },
@@ -79,7 +79,7 @@ export const SettingsWindow: React.FC = () => {
 
   const patch = (partial: Partial<AppSettings>) => {
     void updateSettings(partial);
-    setStatusBanner("Pengaturan tersinkronisasi real-time ke Nobi Island");
+    setStatusBanner("Pengaturan tersinkronisasi real-time ke Gravi");
     setTimeout(() => setStatusBanner(null), 1800);
   };
 
@@ -130,7 +130,7 @@ export const SettingsWindow: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-60 bg-[#111117] border-r border-white/[0.08] p-3 flex flex-col gap-3 shrink-0">
         <div className="px-1">
-          <div className="text-sm font-bold tracking-tight text-white">Pengaturan Nobi</div>
+          <div className="text-sm font-bold tracking-tight text-white">Pengaturan Gravi</div>
           <div className="text-[11px] text-zinc-400">Sinkronisasi real-time ke Island</div>
         </div>
 
@@ -144,7 +144,7 @@ export const SettingsWindow: React.FC = () => {
           />
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto nobi-scroll">
+        <nav className="flex-1 space-y-1 overflow-y-auto gravi-scroll">
           {filteredSections.map((s) => (
             <button
               key={s.id}
@@ -174,7 +174,7 @@ export const SettingsWindow: React.FC = () => {
       </aside>
 
       {/* Content */}
-      <main className="flex-1 p-5 overflow-y-auto nobi-scroll space-y-4">
+      <main className="flex-1 p-5 overflow-y-auto gravi-scroll space-y-4">
         {statusBanner && (
           <div className="rounded-xl bg-emerald-500/15 border border-emerald-400/30 px-3 py-2 text-xs text-emerald-200 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -363,12 +363,12 @@ export const SettingsWindow: React.FC = () => {
 
         {section === "character" && (
           <div className="space-y-3">
-            <h2 className="text-base font-semibold text-white">Karakter Nobi &amp; Suara</h2>
+            <h2 className="text-base font-semibold text-white">Karakter Gravi &amp; Suara</h2>
             <div className="macos-card rounded-2xl p-4 space-y-3.5 text-xs">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium text-white">Eye-Tracking Kursor Global</div>
-                  <div className="text-[11px] text-zinc-400">Mata LED Nobi mengikuti kursor di seluruh layar desktop</div>
+                  <div className="text-[11px] text-zinc-400">Mata LED Gravi mengikuti kursor di seluruh layar desktop</div>
                 </div>
                 <input
                   type="checkbox"
@@ -404,7 +404,7 @@ export const SettingsWindow: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium text-white">Efek Suara Interaksi</div>
-                  <div className="text-[11px] text-zinc-400">Suara halus untuk notifikasi izin, pomodoro &amp; interaksi Nobi</div>
+                  <div className="text-[11px] text-zinc-400">Suara halus untuk notifikasi izin, pomodoro &amp; interaksi Gravi</div>
                 </div>
                 <input
                   type="checkbox"
@@ -480,7 +480,7 @@ export const SettingsWindow: React.FC = () => {
                 </select>
               </div>
               <div className="rounded-xl bg-black/40 border border-white/[0.06] p-2.5 font-mono text-[11px] text-sky-300">
-                IPC Hook Server: 127.0.0.1:47891 (nobi-hook fail-open aktif)
+                IPC Hook Server: 127.0.0.1:47891 (gravi-hook fail-open aktif)
               </div>
             </div>
           </div>
@@ -745,7 +745,7 @@ export const SettingsWindow: React.FC = () => {
                   rows={2}
                   value={settings.chat_system_prompt}
                   onChange={(e) => patch({ chat_system_prompt: e.target.value })}
-                  placeholder="Instruksi kepribadian atau konteks default untuk Nobi..."
+                  placeholder="Instruksi kepribadian atau konteks default untuk Gravi..."
                   className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-1.5 text-xs outline-none resize-none"
                 />
               </div>
@@ -976,7 +976,7 @@ export const SettingsWindow: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-medium text-white">Nobi Menari saat Musik Diputar</div>
+                  <div className="font-medium text-white">Gravi Menari saat Musik Diputar</div>
                   <div className="text-[11px] text-zinc-400">Animasi menari + not musik otomatis saat ada lagu berjalan</div>
                 </div>
                 <input

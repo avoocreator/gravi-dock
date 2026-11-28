@@ -775,7 +775,7 @@ pub async fn start_watcher(app: AppHandle, cache: Arc<Mutex<Vec<AiSession>>>) {
                 if let Some(prev_st) = prev_statuses.get(&s.id) {
                     if (prev_st == "active" || prev_st == "waiting") && s.status == "idle" {
                         let _ = app.emit(
-                            "nobi:hud-event",
+                            "gravi:hud-event",
                             crate::system_hud::HudEventPayload {
                                 kind: "ai_done".into(),
                                 title: format!("{} Selesai", s.name),
@@ -800,7 +800,7 @@ pub async fn start_watcher(app: AppHandle, cache: Arc<Mutex<Vec<AiSession>>>) {
             let mut guard = cache.lock().await;
             *guard = sessions.clone();
         }
-        let _ = app.emit("nobi:ai-sessions", &sessions);
+        let _ = app.emit("gravi:ai-sessions", &sessions);
         let interval = crate::settings::get_settings(app.clone()).poll_interval_secs.clamp(1, 30) as u64;
         sleep(Duration::from_secs(interval)).await;
     }

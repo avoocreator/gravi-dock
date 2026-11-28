@@ -216,7 +216,7 @@ pub async fn fetch_calendar_events(
     if let Some(ical_url) = crate::secrets::read_secret_internal("google_ical_url") {
         let resp = client
             .get(&ical_url)
-            .header("User-Agent", "nobi-island/0.1.0")
+            .header("User-Agent", "gravi/0.1.0")
             .send()
             .await
             .map_err(|e| format!("Gagal mengunduh iCal URL: {}", e))?;

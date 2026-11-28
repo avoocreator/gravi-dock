@@ -50,7 +50,7 @@ pub async fn start_server(app: AppHandle, state: Arc<IpcState>) {
     let listener = match TcpListener::bind(IPC_ADDR).await {
         Ok(l) => l,
         Err(err) => {
-            eprintln!("[nobi-ipc] failed to bind {}: {}", IPC_ADDR, err);
+            eprintln!("[gravi-ipc] failed to bind {}: {}", IPC_ADDR, err);
             return;
         }
     };
@@ -92,7 +92,7 @@ pub async fn start_server(app: AppHandle, state: Arc<IpcState>) {
                     guard.insert(req_id.clone(), (req.clone(), tx));
                 }
 
-                let _ = app_clone.emit("nobi:permission-request", &req);
+                let _ = app_clone.emit("gravi:permission-request", &req);
 
                 let decision = match timeout(Duration::from_secs(300), rx).await {
                     Ok(Ok(d)) => d,
@@ -106,12 +106,12 @@ pub async fn start_server(app: AppHandle, state: Arc<IpcState>) {
                 let resp = format!("{{\"decision\":\"{}\"}}\n", decision);
                 let _ = writer.write_all(resp.as_bytes()).await;
             } else {
-                let _ = app_clone.emit("nobi:agent-event", &event);
+                let _ = app_clone.emit("gravi:agent-event", &event);
                 if event.event_type == "done" {
                     let cfg = crate::settings::get_settings(app_clone.clone());
                     if cfg.hud_enabled && cfg.hud_ai_done {
                         let _ = app_clone.emit(
-                            "nobi:hud-event",
+                            "gravi:hud-event",
                             crate::system_hud::HudEventPayload {
                                 kind: "ai_done".into(),
                                 title: format!("{} Selesai", event.agent),

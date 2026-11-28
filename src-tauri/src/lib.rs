@@ -70,7 +70,7 @@ fn spawn_or_focus_settings(app: &tauri::AppHandle) -> Result<(), String> {
         "settings",
         WebviewUrl::App("index.html".into()),
     )
-    .title("Pengaturan · Nobi Dynamic Island")
+    .title("Pengaturan · Gravi")
     .inner_size(840.0, 580.0)
     .min_inner_size(680.0, 460.0)
     .center()
@@ -139,7 +139,7 @@ pub fn run() {
                 position_island(&window, &saved.island_position, &saved.island_style);
             }
 
-            let show_item = MenuItem::with_id(app, "show", "Tampilkan Nobi Island", true, None::<&str>)?;
+            let show_item = MenuItem::with_id(app, "show", "Tampilkan Gravi", true, None::<&str>)?;
             let settings_item = MenuItem::with_id(app, "settings", "Pengaturan...", true, None::<&str>)?;
             let center_item = MenuItem::with_id(app, "recenter", "Posisikan Ulang", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Keluar", true, None::<&str>)?;
@@ -148,12 +148,12 @@ pub fn run() {
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
-                .tooltip("Nobi Dynamic Island")
+                .tooltip("Gravi")
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
-                            let _ = w.emit("nobi:toggle-expand", ());
+                            let _ = w.emit("gravi:toggle-expand", ());
                         }
                     }
                     "settings" => {
@@ -225,7 +225,7 @@ pub fn run() {
                             };
                             if moved {
                                 last_cursor = Some((lx, ly));
-                                let _ = w.emit("nobi:cursor-pos", CursorPosPayload { x: lx, y: ly });
+                                let _ = w.emit("gravi:cursor-pos", CursorPosPayload { x: lx, y: ly });
                             }
 
                             let (l, t, r, b) = hit_rect
@@ -244,9 +244,9 @@ pub fn run() {
                                 last_ignore = Some(should_ignore);
                                 let _ = w.emit(
                                     if should_ignore {
-                                        "nobi:cursor-leave"
+                                        "gravi:cursor-leave"
                                     } else {
-                                        "nobi:cursor-enter"
+                                        "gravi:cursor-enter"
                                     },
                                     (),
                                 );
@@ -297,5 +297,5 @@ pub fn run() {
             audio_mixer::set_app_audio_mute
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Nobi Island");
+        .expect("error while running Gravi");
 }

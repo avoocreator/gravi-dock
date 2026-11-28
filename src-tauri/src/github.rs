@@ -152,7 +152,7 @@ pub async fn fetch_github_summary(range_months: Option<u32>) -> Result<GitHubSum
     let resp = client
         .post("https://api.github.com/graphql")
         .header("Authorization", format!("Bearer {}", token.trim()))
-        .header("User-Agent", "nobi-island/0.1.0")
+        .header("User-Agent", "gravi/0.1.0")
         .json(&json!({
             "query": query,
             "variables": { "from": from, "to": to }
