@@ -1,6 +1,7 @@
 node_modules
 dist
 src-tauri/target
+src-tauri/resources
 hook-cli/target
 *.local
 .DS_Store

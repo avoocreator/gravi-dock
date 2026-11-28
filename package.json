@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:hook": "node scripts/prepare-hook.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
     "pack": "tauri build"

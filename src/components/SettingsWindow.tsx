@@ -13,10 +13,12 @@ import {
   Save,
   ScanSearch,
   Bell,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { useIslandStore } from "../store/useIslandStore";
-import { AppSettings } from "../types/island";
-import { tauriApi } from "../lib/tauriBridge";
+import { AppSettings, HookStatus } from "../types/island";
+import { isTauriRuntime, tauriApi } from "../lib/tauriBridge";
 
 type SettingsSection =
   | "general"
@@ -65,10 +67,20 @@ export const SettingsWindow: React.FC = () => {
   const [search, setSearch] = useState("");
   const [secretsInput, setSecretsInput] = useState<Record<string, string>>({});
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
+  const [hookStatus, setHookStatus] = useState<HookStatus | null>(null);
+  const [notifAccess, setNotifAccess] = useState<string>("allowed");
 
   useEffect(() => {
     void refreshSecretStatus();
     void refreshAiProviders();
+    if (isTauriRuntime()) {
+      void tauriApi.getHookStatus().then((h) => {
+        if (h) setHookStatus(h);
+      });
+      void tauriApi.getNotificationAccessStatus().then((st) => {
+        if (st) setNotifAccess(st);
+      });
+    }
   }, [refreshSecretStatus, refreshAiProviders]);
 
   const filteredSections = SECTIONS.filter((s) => {
@@ -479,8 +491,30 @@ export const SettingsWindow: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="rounded-xl bg-black/40 border border-white/[0.06] p-2.5 font-mono text-[11px] text-sky-300">
-                IPC Hook Server: 127.0.0.1:47891 (gravi-hook fail-open aktif)
+              <div className="rounded-xl bg-black/40 border border-white/[0.06] p-2.5 space-y-1.5 text-[11px]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-sky-300">
+                    IPC Hook: {hookStatus?.ipc_addr ?? "127.0.0.1:47891"} ({hookStatus?.installed ? "gravi-hook siap" : "gravi-hook belum terpasang"})
+                  </span>
+                  {hookStatus?.installed && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(hookStatus.sample_command);
+                        setStatusBanner("Perintah hook disalin ke clipboard");
+                        setTimeout(() => setStatusBanner(null), 2000);
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-white/[0.08] hover:bg-white/15 text-zinc-200 flex items-center gap-1 text-[10px]"
+                    >
+                      <Copy className="w-3 h-3" /> Salin
+                    </button>
+                  )}
+                </div>
+                {hookStatus && (
+                  <div className="font-mono text-[10px] text-zinc-400 break-all">
+                    {hookStatus.hook_path}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -835,6 +869,21 @@ export const SettingsWindow: React.FC = () => {
                   className="w-4 h-4 accent-blue-500"
                 />
               </div>
+
+              {settings.hud_enabled && settings.hud_windows_notif && (notifAccess === "denied" || notifAccess === "unspecified") && (
+                <div className="rounded-xl bg-amber-500/10 border border-amber-400/25 px-3 py-2 flex items-center justify-between gap-2 text-[11px] text-amber-200">
+                  <span>
+                    Izin baca notifikasi Windows belum aktif ({notifAccess}). Aktifkan akses notifikasi agar Gravi bisa menangkap pesan masuk.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void tauriApi.openNotificationSettings()}
+                    className="px-2.5 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-100 font-medium inline-flex items-center gap-1 shrink-0 transition"
+                  >
+                    <ExternalLink className="w-3 h-3" /> Buka Pengaturan
+                  </button>
+                </div>
+              )}
 
               {[
                 { key: "hud_capslock" as const, title: "HUD Caps Lock", desc: "Tampilkan indikator saat Caps Lock aktif/nonaktif" },

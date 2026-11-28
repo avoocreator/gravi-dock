@@ -353,3 +353,10 @@ export interface SystemStats {
   gpu: GpuInfo;
   top_processes: TopProcess[];
 }
+
+export interface HookStatus {
+  installed: boolean;
+  hook_path: string;
+  ipc_addr: string;
+  sample_command: string;
+}

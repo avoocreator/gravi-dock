@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:hook && npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -29,11 +29,14 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http: https: data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost ws: wss:;"
     }
   },
   "bundle": {
     "active": true,
+    "resources": [
+      "resources/*"
+    ],
     "targets": [
       "msi",
       "nsis",

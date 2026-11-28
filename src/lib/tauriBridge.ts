@@ -8,6 +8,7 @@ import {
   DetectedAiProvider,
   GitHubSummary,
   HardwareStatus,
+  HookStatus,
   LocalDropStatus,
   MediaState,
   PermissionRequest,
@@ -62,6 +63,7 @@ export const tauriApi = {
   fetchProviderModels: (provider: string, ollamaEndpoint?: string) =>
     safeInvoke<string[]>("fetch_provider_models", { provider, ollamaEndpoint }),
   getPendingPermissions: () => safeInvoke<PermissionRequest[]>("get_pending_permissions"),
+  getHookStatus: () => safeInvoke<HookStatus>("get_hook_status"),
   respondPermission: (id: string, decision: "allow" | "deny" | "always") =>
     safeInvoke<void>("respond_permission", { id, decision }),
   fetchGitHubSummary: (rangeMonths: 3 | 6 | 12) =>
@@ -90,6 +92,8 @@ export const tauriApi = {
   replyOsNotification: (appName: string, replyText: string, senderTitle?: string) =>
     safeInvoke<string>("reply_os_notification", { appName, senderTitle, replyText }),
   triggerTestNotification: () => safeInvoke<void>("trigger_test_notification"),
+  getNotificationAccessStatus: () => safeInvoke<string>("get_notification_access_status"),
+  openNotificationSettings: () => safeInvoke<void>("open_notification_settings"),
   getLocalDropStatus: () => safeInvoke<LocalDropStatus>("get_local_drop_status"),
   startLocalDrop: () => safeInvoke<LocalDropStatus>("start_local_drop"),
   stopLocalDrop: () => safeInvoke<LocalDropStatus>("stop_local_drop"),

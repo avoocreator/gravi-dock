@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Mutex};
@@ -159,4 +160,52 @@ pub async fn get_pending_permissions(
 ) -> Result<Vec<PermissionRequest>, String> {
     let guard = state.ipc.pending.lock().await;
     Ok(guard.values().map(|(req, _)| req.clone()).collect())
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct HookStatus {
+    pub installed: bool,
+    pub hook_path: String,
+    pub ipc_addr: String,
+    pub sample_command: String,
+}
+
+#[tauri::command]
+pub fn get_hook_status(app: AppHandle) -> HookStatus {
+    let bin_name = if cfg!(target_os = "windows") {
+        "gravi-hook.exe"
+    } else {
+        "gravi-hook"
+    };
+
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Ok(res_dir) = app.path().resource_dir() {
+        candidates.push(res_dir.join("resources").join(bin_name));
+        candidates.push(res_dir.join(bin_name));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("resources").join(bin_name));
+            candidates.push(dir.join(bin_name));
+        }
+    }
+    candidates.push(PathBuf::from("hook-cli").join("target").join("release").join(bin_name));
+
+    let found = candidates.into_iter().find(|p| p.is_file());
+    let (installed, hook_path) = match found {
+        Some(p) => (true, p.to_string_lossy().to_string()),
+        None => (false, bin_name.to_string()),
+    };
+
+    let sample_command = format!(
+        "\"{}\" --agent antigravity-cli --event permission",
+        hook_path.replace('\\', "\\\\")
+    );
+
+    HookStatus {
+        installed,
+        hook_path,
+        ipc_addr: IPC_ADDR.to_string(),
+        sample_command,
+    }
 }

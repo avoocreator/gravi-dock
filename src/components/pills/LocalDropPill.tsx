@@ -109,8 +109,14 @@ export const LocalDropPill: React.FC = () => {
         </div>
 
         {localDrop.running && localDrop.url && (
-          <div className="flex items-center gap-3 pt-1">
-            <QrSvg value={localDrop.url} size={104} />
+          <div className="space-y-2 pt-1">
+            {localDrop.ip === "127.0.0.1" && (
+              <div className="rounded-xl bg-amber-500/10 border border-amber-400/25 px-2.5 py-1.5 text-[10px] text-amber-200">
+                Laptop belum terhubung ke Wi-Fi/LAN lokal (hanya loopback 127.0.0.1). Hubungkan laptop dan HP ke Wi-Fi yang sama lalu nyalakan ulang Local Drop.
+              </div>
+            )}
+            <div className="flex items-center gap-3">
+              <QrSvg value={localDrop.url} size={104} />
             <div className="flex-1 min-w-0 space-y-2">
               <div className="space-y-0.5">
                 <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">
@@ -135,8 +141,9 @@ export const LocalDropPill: React.FC = () => {
               </div>
               <div className="text-[10px] text-zinc-400 leading-relaxed">
                 Tarik &amp; lepaskan file ke Island untuk langsung dibagikan ke HP. File masuk tersimpan di{" "}
-                <span className="font-mono text-zinc-300">Downloads/GraviDrop</span>.
+                <span className="font-mono text-zinc-300">Downloads/GraviDrop</span>. Jika HP gagal tersambung, izinkan Gravi di Windows Firewall.
               </div>
+            </div>
             </div>
           </div>
         )}

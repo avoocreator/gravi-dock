@@ -197,6 +197,10 @@ export default function App() {
       st.setMode(st.mode === "expanded" ? "compact" : "expanded");
     }).then((u) => unlisteners.push(u));
 
+    void listen("gravi:open-expand", () => {
+      useIslandStore.getState().setMode("expanded");
+    }).then((u) => unlisteners.push(u));
+
     void getCurrentWebview()
       .onDragDropEvent((event) => {
         if (event.payload.type === "over") {

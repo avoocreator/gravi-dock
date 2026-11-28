@@ -128,6 +128,12 @@ pub fn run() {
     };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.emit("gravi:open-expand", ());
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(app_state)
@@ -273,6 +279,7 @@ pub fn run() {
             ai_providers::fetch_provider_models,
             ipc_server::respond_permission,
             ipc_server::get_pending_permissions,
+            ipc_server::get_hook_status,
             github::fetch_github_summary,
             calendar::fetch_calendar_events,
             media::get_media_state,
@@ -284,6 +291,8 @@ pub fn run() {
             system_hud::trigger_test_hud,
             notifications::reply_os_notification,
             notifications::trigger_test_notification,
+            notifications::get_notification_access_status,
+            notifications::open_notification_settings,
             local_drop::get_local_drop_status,
             local_drop::start_local_drop,
             local_drop::stop_local_drop,

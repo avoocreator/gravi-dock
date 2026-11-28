@@ -475,6 +475,43 @@ if ($null -ne $bestInput) {{
 }
 
 #[tauri::command]
+pub fn get_notification_access_status() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::UI::Notifications::Management::{
+            UserNotificationListener, UserNotificationListenerAccessStatus,
+        };
+        let Ok(listener) = UserNotificationListener::Current() else {
+            return "unsupported".into();
+        };
+        match listener.GetAccessStatus() {
+            Ok(UserNotificationListenerAccessStatus::Allowed) => "allowed".into(),
+            Ok(UserNotificationListenerAccessStatus::Denied) => "denied".into(),
+            Ok(UserNotificationListenerAccessStatus::Unspecified) => "unspecified".into(),
+            _ => "unsupported".into(),
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        "unsupported".into()
+    }
+}
+
+#[tauri::command]
+pub fn open_notification_settings() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", "ms-settings:notifications"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn();
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn trigger_test_notification(app: AppHandle) {
     let _ = app.emit(
         "gravi:os-notification",
